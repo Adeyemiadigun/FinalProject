@@ -5,11 +5,13 @@ using System.Text;
 using System.Threading.Tasks;
 using Application.Interfaces.Services.GradingStrategyInterfaces.Interfaces;
 using Domain.Entitties;
+using Domain.Enum;
 
 namespace Application.Services.GradingStrategy.Implementation
-{
+{ 
     public class ObjectiveGradingStrategy : IGradingStrategy
     {
+        public QuestionType QuestionType => QuestionType.Objective;
         public Task GradeAsync(AnswerSubmission answerSubmission)
         {
             bool isCorrect = answerSubmission.SubmittedAnswer.Trim().Equals(answerSubmission.Question.Answer.AnswerText.Trim(), StringComparison.OrdinalIgnoreCase);
