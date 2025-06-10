@@ -16,7 +16,8 @@ namespace Infrastructure.Repositories
                 .Include(x => x.Options)
                 .Include(x => x.Tests)
                 .Include(x => x.AnswerSubmissions)
-                .Where(x => x.AssessmentId == assessmentId);
+                .Where(x => x.AssessmentId == assessmentId)
+                .OrderBy(x => x.Order);
             var totalRecord = query.Count();
             var totalPages = (int)Math.Ceiling((double)totalRecord / request.PageSize);
             var result = await query.Skip((request.CurrentPage - 1) * request.PageSize).Take(request.PageSize)

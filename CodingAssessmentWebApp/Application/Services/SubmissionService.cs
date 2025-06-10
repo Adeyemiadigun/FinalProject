@@ -19,7 +19,7 @@ namespace Application.Services
             if (student is null)
                 throw new ApiException("Student not found", 404, "StudentNotFound", null);
 
-            var assessment = await _assessmentRepository.GetAsync(x => x.Id == submission.AssessmentId);
+            var assessment = await _assessmentRepository.GetForSubmissionAsync(submission.AssessmentId);
             if (assessment is null)
                 throw new ApiException("Assessment not found", 404, "AssessmentNotFound", null);
 

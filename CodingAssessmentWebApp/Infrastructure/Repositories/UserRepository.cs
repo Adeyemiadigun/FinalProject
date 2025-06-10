@@ -14,9 +14,6 @@ namespace Infrastructure.Repositories
         public async Task<User?> GetAsync(Guid id)
         {
             return await _context.Set<User>()
-                .Include(x =>x.Assessments)
-                .Include(x => x.Submissions)
-                .Include(x => x.AssessmentAssignments)
                 .FirstOrDefaultAsync(x => x.Id == id);
         }
         public async Task<User?> GetAsync(Expression<Func<User, bool>> exp)

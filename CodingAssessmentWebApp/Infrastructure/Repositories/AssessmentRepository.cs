@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Application.Dtos;
 using Application.Interfaces.Repositories;
+using Application.Services;
 using Domain.Entitties;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -24,13 +25,7 @@ namespace Infrastructure.Repositories
                 .Include(x => x.AssessmentAssignments)
                 .Include(x => x.Submissions)
                 .FirstOrDefaultAsync(x => x.Id == id);
-        } public async Task<Assessment?> GetAsync(Expression<Func<Assessment,bool>> exp)
-        {
-           return await _context.Set<Assessment>()
-                .Include(x => x.AssessmentAssignments)
-                .Include(x => x.Submissions)
-                .FirstOrDefaultAsync(exp);
-        }
+        } 
         public Task<Assessment?> GetAsync(string name)
         {
             return _context.Set<Assessment>()
@@ -118,6 +113,13 @@ namespace Infrastructure.Repositories
                 .Where(exp);
          var res = await query.ToListAsync();
             return res;
+        }
+
+        public async Task<Assessment?> GetForSubmissionAsync(Guid id)
+        {
+            return await _context.Assessments
+                .Include(x => x. Submissions)
+                .FirstOrDefaultAsync(x => x.Id == id);
         }
     }
 }
