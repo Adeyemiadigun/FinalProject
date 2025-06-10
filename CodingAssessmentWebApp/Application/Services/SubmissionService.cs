@@ -23,7 +23,7 @@ namespace Application.Services
             if (assessment is null)
                 throw new ApiException("Assessment not found", 404, "AssessmentNotFound", null);
 
-            if (assessment.Submissions?.Any(s => s.StudentId == studentId) == true)
+            if (assessment.Submissions.Any(s => s.StudentId == studentId))
                 throw new ApiException("Duplicate submission detected.", 400, "DuplicateSubmission", null);
 
             if (DateTime.Now > assessment.EndDate)

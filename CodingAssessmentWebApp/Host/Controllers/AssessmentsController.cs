@@ -18,7 +18,7 @@ public class AssessmentsController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateAssessmentRequestModel model)
     {
         var response = await _assessmentService.CreateAssessmentAsync(model);
-        return StatusCode(response.Status ? 201 : 400, response);
+        return response.Status ? Created("response", response) : BadRequest(response);
     }
 
     // GET /api/assessments
@@ -26,7 +26,7 @@ public class AssessmentsController : ControllerBase
     public async Task<IActionResult> GetAll([FromQuery] PaginationRequest request)
     {
         var response = await _assessmentService.GetAllAssessmentsAsync(request);
-        return StatusCode(response.Status ? 200 : 400, response);
+        return response.Status ? Ok(response) : BadRequest(response);
     }
 
     // GET /api/assessments/{id}
@@ -34,31 +34,15 @@ public class AssessmentsController : ControllerBase
     public async Task<IActionResult> GetById(Guid id)
     {
         var response = await _assessmentService.GetAssessmentAsync(id);
-        return StatusCode(response.Status ? 200 : 404, response);
-    }
-
-    // GET /api/assessments/by-course/{courseId}
-    [HttpGet("by-course/{courseId:guid}")]
-    public async Task<IActionResult> GetByCourseId(Guid courseId)
-    {
-        var response = await _assessmentService.GetAllAssessmentsByCourseIdAsync(courseId);
-        return StatusCode(response.Status ? 200 : 404, response);
-    }
-
-    // GET /api/assessments/by-instructor/{instructorId}
-    [HttpGet("by-instructor/{instructorId:guid}")]
-    public async Task<IActionResult> GetByInstructorId(Guid instructorId, [FromQuery] PaginationRequest request)
-    {
-        var response = await _assessmentService.GetAllAssessmentsByInstructorIdAsync(instructorId, request);
-        return StatusCode(response.Status ? 200 : 404, response);
+        return response.Status ? Ok(response) : NotFound(response);
     }
 
     // POST /api/assessments/assign-students
-    [HttpPost("assign-students")]
-    public async Task<IActionResult> AssignStudents([FromBody] AssignStudentsModel model)
+    [HttpPost("{id:guid}/students")]
+    public async Task<IActionResult> AssignStudents(Guid id,[FromBody] AssignStudentsModel model)
     {
-        var response = await _assessmentService.AssignStudents(model);
-        return StatusCode(response.Status ? 200 : 400, response);
+        var response = await _assessmentService.AssignStudents(id,model);
+        return response.Status ? Ok(response) : BadRequest(response);
     }
 }
 

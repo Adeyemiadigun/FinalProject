@@ -28,8 +28,17 @@ namespace Application.Dtos
     }
     public class AssignStudentsModel
     {
-        public Guid AssessmentId { get; set; }
         public List<Guid> StudentIds { get; set; } = [];
+    }
+    public class UpdateAssessmentRequestModel
+    {
+        public string Title { get; set; }
+        public string Description { get; set; }
+        public string TechnologyStack { get; set; }
+        public int DurationInMinutes { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public double PassingScore { get; set; }
     }
 }
    
