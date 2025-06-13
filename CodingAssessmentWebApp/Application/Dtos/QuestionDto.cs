@@ -5,7 +5,23 @@ namespace Application.Dtos
 {
      public class QuestionDto
     {
-
+        public Guid Id { get; set; }
+        public string QuestionText { get; set; }
+        public QuestionType QuestionType { get; set; }
+        public int Marks { get; set; }
+        public int Order { get; set; }
+        public List<CreateOptionDto> Options { get; set; }
+        public List<CreateTestCaseDto> TestCases { get; set; } = [];
+        public CreateAnswerDto Answer { get; set; }
+    }
+    public class UpdateQuestionDto
+    {
+        public string QuestionText { get; set; }
+        public QuestionType QuestionType { get; set; }
+        public int Marks { get; set; }
+        public List<CreateOptionDto> Options { get; set; }
+        public List<CreateTestCaseDto> TestCases { get; set; } = [];
+        public CreateAnswerDto Answer { get; set; }
     }
     public class CreateQuestionRequestModel
     {
@@ -14,11 +30,9 @@ namespace Application.Dtos
         public int Marks { get; set; }
         public int Order { get; set; }
         public List<CreateOptionDto> Options { get; set; }
-        public string AnswerText { get; set; }
         public List<CreateTestCaseDto> TestCases { get; set; } = [];
         public CreateAnswerDto Answer { get; set; }
     }
-
     public class CreateOptionDto
     {
         public string OptionText { get; set; }

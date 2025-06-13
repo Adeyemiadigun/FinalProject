@@ -3,6 +3,9 @@ using Hangfire.PostgreSql;
 using Host.Configurations;
 using Host.Middlewares;
 using Infrastructure.Configurations;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Versioning;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.  
@@ -12,6 +15,21 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 // Register All the services needed  
 builder.Services.AddServices(builder.Configuration);
+//Api versioning
+builder.Services.AddApiVersioning(options =>
+{
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.ReportApiVersions = true;
+
+    // Optional: allow clients to specify the version via a query param or header
+    options.ApiVersionReader = ApiVersionReader.Combine(
+        new QueryStringApiVersionReader("api-version"),
+        new HeaderApiVersionReader("X-Version"),
+        new UrlSegmentApiVersionReader()
+    );
+});
+
 
 builder.Services.AddHangfire(config =>
   config.SetDataCompatibilityLevel(CompatibilityLevel.Version_170)

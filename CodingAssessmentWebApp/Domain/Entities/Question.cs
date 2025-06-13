@@ -11,7 +11,8 @@ namespace Domain.Entitties
     {
         public Guid Id { get; init; } = Guid.NewGuid();
         public Guid AssessmentId {  get; set; }
-        public string QuestionText { get; set; }
+        public Assessment Assessment { get; set; } = default!;
+        public string QuestionText { get; set; } = default!;
         public QuestionType QuestionType { get; set; }
         public short Marks { get; set; }
         public int Order { get; set; }

@@ -11,6 +11,7 @@ namespace Application.Interfaces.Repositories
         Task<ICollection<Question>> GetSelectedIds(ICollection<Guid> ids);
         Task<PaginationDto<Question>> GetAllAsync(Guid assessmentId, PaginationRequest request);
         Task<PaginationDto<Question>> GetAllAsync(Guid assessmentId, QuestionType questionType, PaginationRequest request);
+        Task Delete(Question question);
 
     }
 }

@@ -81,6 +81,13 @@ namespace Infrastructure.Repositories
                 .Where(x => ids.Contains(x.Id));
             return await res.ToListAsync();
         }
+
+        public Task Delete(Question question)
+        {
+            _context.Questions.Remove(question);
+
+            return Task.CompletedTask;
+        }
     }
 }
 
