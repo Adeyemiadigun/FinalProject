@@ -7,7 +7,6 @@ namespace Application.Dtos
     }
     public class AnswerSubmissionDto
     {
-        public Guid AssessmentId { get; set; }
         public List<QuestionAnswers> Answers { get; set; } 
     }
     public class QuestionAnswers

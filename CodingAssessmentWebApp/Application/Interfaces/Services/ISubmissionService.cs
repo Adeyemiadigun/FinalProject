@@ -5,7 +5,7 @@ namespace Application.Interfaces.Services
 {
     public interface ISubmissionService
     {
-        Task<BaseResponse<SubmissionDto>> SubmitAssessment(AnswerSubmissionDto submission);
+        Task<BaseResponse<SubmissionDto>> SubmitAssessment(Guid assessmentId, AnswerSubmissionDto submission);
         Task<Submission> GetAsync(Guid id);
         Task<Submission> GetWithAnswersAsync(Guid id);
         Task<PaginationDto<Submission>> GetAllAsync(Guid assessmentId, PaginationRequest request);

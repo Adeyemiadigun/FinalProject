@@ -170,17 +170,29 @@ namespace Application.Services
                 Data = paginationDto
             };
         }
-
-        public async Task<BaseResponse<PaginationDto<AssessmentDto>>> GetAllStudentAssessments(PaginationRequest request, Guid studentId = default)
+        public async Task<BaseResponse<PaginationDto<AssessmentDto>>> GetCurrentStudentAssessments(PaginationRequest request)
         {
-            var userId = studentId == default ? _currentUser.GetCurrentUserId() : studentId;
+            var userId = _currentUser.GetCurrentUserId();
             if (userId == Guid.Empty)
             {
                 throw new ApiException("User ID is required", (int)HttpStatusCode.BadRequest, "USER_ID_REQUIRED", null);
             }
+            return await GetAllStudentAssessments(request, userId);
+        }
 
+        public async Task<BaseResponse<PaginationDto<AssessmentDto>>> GetAssessmentsByStudentId(Guid studentId, PaginationRequest request)
+        {
+            if (studentId == Guid.Empty)
+            {
+                throw new ApiException("User ID is required", (int)HttpStatusCode.BadRequest, "USER_ID_REQUIRED", null);
+            }
+            return await GetAllStudentAssessments(request, studentId);
+        }
+        public async Task<BaseResponse<PaginationDto<AssessmentDto>>> GetAllStudentAssessments(PaginationRequest request, Guid studentId)
+        {
+           
             var assessments = await _assessmentRepository.GetAllAsync(
-                x => x.AssessmentAssignments.Any(a => a.StudentId == userId),
+                x => x.AssessmentAssignments.Any(a => a.StudentId == studentId),
                 request
             );
 

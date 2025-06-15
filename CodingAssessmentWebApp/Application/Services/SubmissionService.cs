@@ -9,7 +9,7 @@ namespace Application.Services
 {
     public class SubmissionService(IAssessmentRepository _assessmentRepository, ICurrentUser _currentUser, ISubmissionRepository _submissionRepository, IUnitOfWork _unitOfWork, IQuestionRepository _questionRepository, IGradingService _gradingService, IEmailService _emailService, IUserRepository _userRepository, IBackgroundService _backgroundService) : ISubmissionService
     {
-        public async Task<BaseResponse<SubmissionDto>> SubmitAssessment(AnswerSubmissionDto submission)
+        public async Task<BaseResponse<SubmissionDto>> SubmitAssessment(Guid assessmentId, AnswerSubmissionDto submission)
         {
             var studentId = _currentUser.GetCurrentUserId();
             if (studentId == Guid.Empty)
@@ -19,7 +19,7 @@ namespace Application.Services
             if (student is null)
                 throw new ApiException("Student not found", 404, "StudentNotFound", null);
 
-            var assessment = await _assessmentRepository.GetForSubmissionAsync(submission.AssessmentId);
+            var assessment = await _assessmentRepository.GetForSubmissionAsync(assessmentId);
             if (assessment is null)
                 throw new ApiException("Assessment not found", 404, "AssessmentNotFound", null);
 
@@ -55,7 +55,7 @@ namespace Application.Services
             {
                 StudentId = studentId,
                 Student = student,
-                AssessmentId = submission.AssessmentId,
+                AssessmentId = assessmentId,
                 SubmittedAt = DateTime.UtcNow,
             };
 

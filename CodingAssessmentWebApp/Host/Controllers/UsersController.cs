@@ -21,20 +21,6 @@ public class UserController : ControllerBase
         return response.Status ? Ok(response) : BadRequest(response);
     }
 
-    [HttpPost("register-instructor")]
-    public async Task<IActionResult> RegisterInstructor([FromBody] RegisterUserRequestModel model)
-    {
-        var response = await _userService.RegisterInstructor(model);
-        return response.Status ? Created("response",response) : BadRequest(response);
-    }
-
-    [HttpPost("register-students")]
-    public async Task<IActionResult> RegisterStudents([FromBody] BulkRegisterUserRequestModel model)
-    {
-        var response = await _userService.RegisterStudents(model);
-        return response.Status ? Created("Users Created", response) : BadRequest(response);
-    }
-
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetUser(Guid id)
     {

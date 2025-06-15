@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 [ApiController]
 [Route("api/v{version:apiVersion}/[controller]")]
 [ApiVersion("1.0")]
-public class AssessmentsController(IAssessmentService assessmentService, IQuestionService questionService) : ControllerBase
+public class AssessmentsController(IAssessmentService assessmentService, IQuestionService questionService, ISubmissionService _submissionService) : ControllerBase
 {
 
     // POST /api/assessments
@@ -58,6 +58,12 @@ public class AssessmentsController(IAssessmentService assessmentService, IQuesti
         return response.Status ? Ok(response) : NotFound(response);
     }
 
+    [HttpPost("{assessmentId:guid}/submit")]
+    public async Task<IActionResult> SubmitAssessment(Guid assessmentId, [FromBody] AnswerSubmissionDto model)
+    {
+        var response = await _submissionService.SubmitAssessment(assessmentId, model);
+        return response.Status ? Ok(response) : BadRequest(response);
+    }
 
 }
 
