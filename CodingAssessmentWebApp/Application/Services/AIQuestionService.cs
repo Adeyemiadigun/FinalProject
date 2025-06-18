@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
+﻿using System.Net;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Application.Dtos;
 using Application.Exceptions;
 using Application.Interfaces.ExternalServices.AIProviderStrategy;
@@ -21,22 +16,36 @@ namespace Application.Services
         {
             _aiProviderGateway = gateway;
         }
-        public async Task<object> GenerateQuestionAsync(AiQuestionGenerationRequestDto request)
+        public async Task<BaseResponse<object>> GenerateQuestionAsync(AiQuestionGenerationRequestDto request)
         {
             string prompt = BuildPrompt(request);
 
-            var aiResponse = await _aiProviderGateway.GenerateTextAsync(request,prompt);
+            var aiResponse = await _aiProviderGateway.GenerateTextAsync(request, prompt);
             if (string.IsNullOrEmpty(aiResponse))
             {
                 throw new ApiException("AI response is empty or null", (int)HttpStatusCode.UnprocessableEntity, "EmptyResponse", null);
             }
-            return request.QuestionType switch
+            try
             {
-                QuestionType.MCQ => JsonSerializer.Deserialize<AIMCQResponseDto>(aiResponse),
-                QuestionType.Objective => JsonSerializer.Deserialize<AIObjectiveResponseDto>(aiResponse),
-                QuestionType.Coding => JsonSerializer.Deserialize<AICodingResponseDto>(aiResponse),
-                _ => throw new ArgumentException("Invalid question type")
-            };
+                object deserializedResponse = request.QuestionType switch
+                {
+                    QuestionType.MCQ => JsonSerializer.Deserialize<AIMCQResponseDto>(aiResponse),
+                    QuestionType.Objective => JsonSerializer.Deserialize<AIObjectiveResponseDto>(aiResponse),
+                    QuestionType.Coding => JsonSerializer.Deserialize<AICodingResponseDto>(aiResponse),
+                    _ => throw new ArgumentException("Invalid question type")
+                };
+
+                return new BaseResponse<object>
+                {
+                    Data = deserializedResponse,
+                    Status = true,
+                    Message = "Question generated successfully"
+                };
+            }
+            catch (Exception ex)
+            {
+                throw new ApiException("Error deserializing AI response", (int)HttpStatusCode.InternalServerError, "DeserializationError", ex);
+            }
         }
 
         private string BuildPrompt(AiQuestionGenerationRequestDto request)

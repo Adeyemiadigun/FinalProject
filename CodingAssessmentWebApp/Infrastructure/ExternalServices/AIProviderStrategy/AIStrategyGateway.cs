@@ -39,9 +39,20 @@ namespace Infrastructure.ExternalServices.AIProviderStrategy
                 var payload = _payloadBuilder.BuildPayload(model.Name, prompt);
                 if (payload is null)
                     continue;
-
-                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", model.ApiKey);
-                var response = await _httpClient.PostAsJsonAsync(model.ApiUrl, payload);
+                string finalUrl = string.Empty;
+                    if (model.AuthType == "Bearer")
+                    {
+                        _httpClient.DefaultRequestHeaders.Authorization =
+                            new AuthenticationHeaderValue("Bearer", model.ApiKey);
+                        finalUrl = model.ApiUrl;
+                    }
+                    if (model.AuthType == "Query")
+                    {
+                        _httpClient.DefaultRequestHeaders.Authorization = null;
+                        finalUrl = $"{model.ApiUrl}?key={model.ApiKey}";
+                    }
+                    
+                var response = await _httpClient.PostAsJsonAsync(finalUrl, payload);
                 if (response.IsSuccessStatusCode)
                 {
                     var content = await response.Content.ReadAsStringAsync();

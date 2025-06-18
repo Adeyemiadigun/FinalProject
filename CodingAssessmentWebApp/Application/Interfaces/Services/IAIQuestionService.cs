@@ -10,7 +10,7 @@ namespace Application.Interfaces.Services
 
     public interface IAIQuestionService
     {
-        Task<object> GenerateQuestionAsync(AiQuestionGenerationRequestDto request);
+        Task<BaseResponse<object>> GenerateQuestionAsync(AiQuestionGenerationRequestDto request);
     }
 
     
