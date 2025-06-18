@@ -30,6 +30,18 @@ namespace Infrastructure.Repositories
             };
         }
 
+        public async Task<ICollection<Submission?>> GetAllAsync(Expression<Func<Submission, bool>> exp)
+        {
+
+            var result = await _context.Set<Submission>()
+                .Include(x => x.AnswerSubmissions)
+                .ThenInclude(x => x.Question)
+                .Where(exp)
+                .ToListAsync();
+
+            return result;
+        }
+
         public async Task<Submission?> GetAsync(Guid id)
         {
             return await _context.Set<Submission>()
@@ -38,11 +50,12 @@ namespace Infrastructure.Repositories
                 .FirstOrDefaultAsync(x => x.Id == id);
         }
 
-        public async Task<Submission> GetAsync(Expression<Func<Submission, bool>> exp)
+        public async Task<Submission?> GetAsync(Expression<Func<Submission, bool>> exp)
         {
             return await _context.Set<Submission>()
                .Include(x => x.AnswerSubmissions)
                .ThenInclude(x => x.Question)
+                .Include(x => x.Assessment)
                .FirstOrDefaultAsync(exp);
         }
 

@@ -1,34 +1,40 @@
-﻿using System.Net.Http.Headers;
-using System.Net.Http.Json;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http.Headers;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
+using Application.Dtos;
 using Application.Exceptions;
 using Application.Interfaces.ExternalServices.AIProviderStrategy;
-using Domain.Enum;
+using Application.Services;
 using Infrastructure.Configurations;
+using Domain.Enum;
 using Microsoft.Extensions.Options;
+using System.Net.Http.Json;
 
 namespace Infrastructure.ExternalServices.AIProviderStrategy
 {
-    public class McqAIProviderStrategy : IAIProviderStrategy
+    public class AIStrategyGateway : IAIProviderGateway
     {
-        public QuestionType QuestionType => QuestionType.MCQ;
         private readonly HttpClient _httpClient;
         private readonly AISettings aISettings;
         private readonly IPayloadBuider _payloadBuilder;
-        public McqAIProviderStrategy(HttpClient httpClient, IOptions<AISettings> option,IPayloadBuider payloadBuider)
+        public AIStrategyGateway(HttpClient httpClient, IOptions<AISettings> option, IPayloadBuider payloadBuider)
         {
             _httpClient = httpClient;
             aISettings = option.Value;
             _payloadBuilder = payloadBuider;
         }
-
-        public async Task<string> GenerateTextAsync(string prompt)
+        public async Task<string> GenerateTextAsync(AiQuestionGenerationRequestDto request, string prompt)
         {
             if (string.IsNullOrWhiteSpace(prompt))
             {
                 throw new ApiException("Prompt cannot be null or empty.", 400, nameof(prompt), null);
             }
-            var models = aISettings.QuestionTypeProviders["MCQ"];
-            foreach( var model in models )
+            var models = aISettings.QuestionTypeProviders[request.QuestionType.ToString()];
+            foreach (var model in models)
             {
                 var payload = _payloadBuilder.BuildPayload(model.Name, prompt);
                 if (payload is null)
@@ -43,7 +49,6 @@ namespace Infrastructure.ExternalServices.AIProviderStrategy
                 }
             }
             return null!;
-       
         }
     }
 }

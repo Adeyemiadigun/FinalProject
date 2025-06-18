@@ -69,39 +69,6 @@ namespace Application.Services
             };
         }
 
-        public async Task<BaseResponse<UserDto>> LoginAsync(LoginRequestModel user)
-        {
-            var LoggedUser = await _userRepository.GetAsync(x => x.Email == user.Email);
-            if (LoggedUser == null) 
-            {
-                return new BaseResponse<UserDto>()
-                {
-                    Message = "Email does not exist",
-                    Status = false
-                };
-            }
-            if(!BCrypt.Net.BCrypt.Verify(user.Password,LoggedUser.PasswordHash))
-            {
-                return new BaseResponse<UserDto>()
-                {
-                    Message = "Password does not Match",
-                    Status = false
-                };
-            }
-            return new BaseResponse<UserDto>()
-            {
-                Message = "Logged in successfully",
-                Status = true,
-                Data = new UserDto()
-                {
-                    Id = LoggedUser.Id,
-                    Email = user.Email,
-                    Role = LoggedUser.Role,
-
-                },
-            };
-        }
-
         public async Task<BaseResponse<UserDto>> RegisterInstructor(RegisterUserRequestModel model)
         {
             var user = await _userRepository.CheckAsync(x => x.Email == model.Email);

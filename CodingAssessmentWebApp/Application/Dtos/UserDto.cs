@@ -17,14 +17,7 @@ namespace Application.Dtos
         public required string Email { get; set; }
         public Role Role { get; set; }
     }
-    public class LoginRequestModel
-    {
-        [Required]
-        public required string Email { get; set; }
-        [Required]
-        public required string Password { get; set; }
 
-    }
     public class RegisterUserRequestModel
     {
         public string FullName { get; set; }
@@ -33,7 +26,7 @@ namespace Application.Dtos
     } 
     public class BulkRegisterUserRequestModel
     {
-        public List<RegisterUserRequestModel> Users { get; set; }
+        public List<RegisterUserRequestModel> Users { get; set; } = [];
     }
     public class UpdateUserRequsteModel
     {

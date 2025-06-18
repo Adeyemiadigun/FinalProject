@@ -1,35 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Application.Dtos;
+﻿using Application.Dtos;
+using Application.Exceptions;
 using Application.Interfaces.ExternalServices.AIProviderStrategy;
-using Domain.Enum;
-using Infrastructure.Configurations;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
 
 namespace Infrastructure.ExternalServices.AIProviderStrategy
 {
     public class AIProviderStrategyFactory : IAIProviderStrategyFactory
     {
-        private readonly HttpClient _httpClient;
-        private readonly IOptions<HuggingFaceSettings> _huggingFaceSettings;
+        private readonly IEnumerable<IAIProviderStrategy> _aiprovider;
 
-        public AIProviderStrategyFactory(HttpClient httpClient, IOptions<HuggingFaceSettings> huggingFaceSettings)
+        public AIProviderStrategyFactory(IEnumerable<IAIProviderStrategy> aiprovider)
         {
-            _httpClient = httpClient;
-            _huggingFaceSettings = huggingFaceSettings;
+            _aiprovider = aiprovider;
         }
 
         public IAIProviderStrategy GetProviderStrategy(AiQuestionGenerationRequestDto request)
         {
-            return request.QuestionType switch
-            {
-                QuestionType.MCQ => new McqAIProviderStrategy(_httpClient, _huggingFaceSettings),
-                _ => throw new NotSupportedException($"Question type {request.QuestionType} is not supported.")
-            };
+            return _aiprovider.FirstOrDefault(x => x.QuestionType == request.QuestionType)
+                ?? throw new ApiException(
+                    message: "No matching AI provider strategy found.",
+                    statusCode: 404,
+                    errorCode: "AI_PROVIDER_NOT_FOUND",
+                    error: new { request.QuestionType });
         }
     }
 }

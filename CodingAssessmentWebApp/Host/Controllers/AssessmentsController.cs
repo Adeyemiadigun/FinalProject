@@ -64,6 +64,17 @@ public class AssessmentsController(IAssessmentService assessmentService, IQuesti
         var response = await _submissionService.SubmitAssessment(assessmentId, model);
         return response.Status ? Ok(response) : BadRequest(response);
     }
-
+    [HttpGet("{assessmentId:guid}/submission")]
+    public async Task<IActionResult> GetMySubmission(Guid assessmentId)
+    {
+        var response = await _submissionService.GetCurrentStudentSubmission(assessmentId);
+        return response.Status ? Ok(response) : NotFound(response);
+    }
+    [HttpGet("{assessmentId:guid}/submissions/{studentId:guid}")]
+    public async Task<IActionResult> GetSubmissionByStudent(Guid assessmentId, Guid studentId)
+    {
+        var response = await _submissionService.GetStudentSubmissionAsync(assessmentId, studentId);
+        return response.Status ? Ok(response) : NotFound(response);
+    }
 }
 

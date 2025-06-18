@@ -15,17 +15,18 @@ namespace Application.Services
 {
     public class AIQuestionService : IAIQuestionService
     {
-        private readonly IAIProviderStrategy _aiProvider;
-
-        public AIQuestionService(IAIProviderStrategy aiProvider)
+        private readonly IAIProviderGateway _aiProviderGateway;
+       
+        public AIQuestionService(IAIProviderGateway gateway)
         {
-            _aiProvider = aiProvider;
+            _aiProviderGateway = gateway;
         }
         public async Task<object> GenerateQuestionAsync(AiQuestionGenerationRequestDto request)
         {
             string prompt = BuildPrompt(request);
-            string aiResponse = await _aiProvider.GenerateTextAsync(prompt);
-            if (string.IsNullOrEmpty(aiResponse) || aiResponse is null)
+
+            var aiResponse = await _aiProviderGateway.GenerateTextAsync(request,prompt);
+            if (string.IsNullOrEmpty(aiResponse))
             {
                 throw new ApiException("AI response is empty or null", (int)HttpStatusCode.UnprocessableEntity, "EmptyResponse", null);
             }

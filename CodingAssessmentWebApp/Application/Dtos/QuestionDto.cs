@@ -10,7 +10,7 @@ namespace Application.Dtos
         public QuestionType QuestionType { get; set; }
         public int Marks { get; set; }
         public int Order { get; set; }
-        public List<CreateOptionDto> Options { get; set; }
+        public List<OptionDto> Options { get; set; }
         public List<CreateTestCaseDto> TestCases { get; set; } = [];
         public CreateAnswerDto Answer { get; set; }
     }
@@ -19,7 +19,7 @@ namespace Application.Dtos
         public string QuestionText { get; set; }
         public QuestionType QuestionType { get; set; }
         public int Marks { get; set; }
-        public List<CreateOptionDto> Options { get; set; }
+        public List<OptionDto> Options { get; set; }
         public List<CreateTestCaseDto> TestCases { get; set; } = [];
         public CreateAnswerDto Answer { get; set; }
     }
@@ -29,11 +29,11 @@ namespace Application.Dtos
         public QuestionType QuestionType { get; set; }
         public int Marks { get; set; }
         public int Order { get; set; }
-        public List<CreateOptionDto> Options { get; set; }
+        public List<OptionDto> Options { get; set; }
         public List<CreateTestCaseDto> TestCases { get; set; } = [];
         public CreateAnswerDto Answer { get; set; }
     }
-    public class CreateOptionDto
+    public class OptionDto
     {
         public string OptionText { get; set; }
         public bool IsCorrect { get; set; }

@@ -12,9 +12,9 @@ namespace Application.Interfaces.Repositories
     public interface ISubmissionRepository : IBaseRepository<Submission>
     {
         Task<Submission> GetAsync(Guid id);
-        Task<Submission> GetAsync(Expression<Func<Submission,bool>> id);
+        Task<Submission> GetAsync(Expression<Func<Submission,bool>> exp);
         Task<PaginationDto<Submission>> GetAllAsync(Guid assessmentId, PaginationRequest request);
-        Task<ICollection<Submission>> GetAllAsync(Expression<Func<Submission, bool>> id);
+        Task<ICollection<Submission?>> GetAllAsync(Expression<Func<Submission, bool>> exp);
         Task<PaginationDto<Submission>> GetStudentSubmissionsAsync(Guid studentId, PaginationRequest request);
         Task<ICollection<Submission>> GetSelectedIds(ICollection<Guid> ids);
     }

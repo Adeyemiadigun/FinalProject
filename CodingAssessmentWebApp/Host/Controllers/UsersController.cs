@@ -14,13 +14,6 @@ public class UserController : ControllerBase
         _userService = userService;
     }
 
-    [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginRequestModel model)
-    {
-        var response = await _userService.LoginAsync(model);
-        return response.Status ? Ok(response) : BadRequest(response);
-    }
-
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetUser(Guid id)
     {

@@ -4,6 +4,7 @@ using Application.Interfaces.ExternalServices;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Domain.Entitties;
+using Domain.Enum;
 
 namespace Application.Services
 {
@@ -111,5 +112,72 @@ namespace Application.Services
         {
             throw new NotImplementedException();
         }
+        public Task<BaseResponse<SubmissionDto>> GetCurrentStudentSubmission(Guid assessmentId)
+        {
+            var userId = _currentUser.GetCurrentUserId();
+            if(Guid.Empty == userId)
+            {
+                throw new ApiException("Current user ID is not set or invalid.", 400, "InvalidUserId", null);
+            }
+            return GetStudentSubmissionAsync(assessmentId, userId);
+        }
+       public async Task<BaseResponse<SubmissionDto>> GetStudentSubmissionAsync(Guid assessmentId, Guid studentId)
+        {
+            var submission = await _submissionRepository.GetAsync(s => s.AssessmentId == assessmentId && s.StudentId == studentId);
+
+            if (submission == null)
+            {
+                return new BaseResponse<SubmissionDto>
+                {
+                    Status = false,
+                    Message = "Submission not found"
+                };
+            }
+
+            var submissionDto = new SubmissionDto
+            {
+                Id = submission.Id,
+                AssessmentId = submission.AssessmentId,
+                Title = submission.Assessment.Title,
+                SubmittedAt = submission.SubmittedAt,
+                TotalScore = submission.TotalScore,
+                FeedBack = submission.FeedBack,
+                SubmittedAnswers = submission.AnswerSubmissions.Select(a => new SubmittedAnswerDto
+                {
+                    QuestionId = a.QuestionId,
+                    QuestionText = a.Question.QuestionText,
+                    QuestionType = a.Question.QuestionType,
+                    SubmittedAnswer = a.SubmittedAnswer,
+                    Order = a.Question.Order,
+                    IsCorrect = a.IsCorrect,
+                    Score = a.Score,
+
+                    Options = a.Question.QuestionType == QuestionType.MCQ
+                        ? a.Question.Options.Select(o => new OptionDto
+                        {
+                            OptionText = o.OptionText,
+                            IsCorrect = o.IsCorrect
+                        }).ToList()
+                        : new(),
+
+                    //TestCases = a.Question.QuestionType == QuestionType.Coding
+                    //    ? a.Question.TestCases.Select(t => new TestCaseDto
+                    //    {
+                    //        Input = t.Input,
+                    //        ExpectedOutput = t.ExpectedOutput
+                    //    }).ToList()
+                    //    : new()
+                }).ToList()
+            };
+
+
+            return new BaseResponse<SubmissionDto>
+            {
+                Status = true,
+                Message = "Submission fetched successfully",
+                Data = submissionDto
+            };
+        }
+
     }
 }

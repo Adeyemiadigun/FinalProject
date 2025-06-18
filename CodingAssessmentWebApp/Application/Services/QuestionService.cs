@@ -119,7 +119,7 @@ namespace Application.Services
                 {
                     AnswerText = q.QuestionText,
                 } ?? null!,
-                Options = q.Options?.Select(o => new CreateOptionDto
+                Options = q.Options?.Select(o => new OptionDto
                 {
                     OptionText = o.OptionText,
                 }).ToList() ?? null!,
@@ -207,7 +207,7 @@ namespace Application.Services
                     AnswerText = question.QuestionText,
                 } ?? null!,
 
-                Options = question.Options?.Select(o => new CreateOptionDto
+                Options = question.Options?.Select(o => new OptionDto
                 {
                     OptionText = o.OptionText,
                 }).ToList() ?? null!,

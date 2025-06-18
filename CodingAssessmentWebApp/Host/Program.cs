@@ -37,8 +37,13 @@ builder.Services.AddHangfire(config =>
         .UseRecommendedSerializerSettings()
         .UsePostgreSqlStorage(builder.Configuration.GetConnectionString("HangfireConnection"))
 );
-builder.Services.Configure<HuggingFaceSettings>(
-   builder.Configuration.GetSection("HuggingFace"));
+// Register the AI settings configuration
+builder.Services.Configure<AISettings>(
+   builder.Configuration.GetSection("AISettings"));builder.Services.Configure<PayloadTemplateSettings>(
+   builder.Configuration.GetSection("PayloadTemplates"));
+
+builder.Services.Configure<JwtSettings>(
+   builder.Configuration.GetSection("JwtSettings"));
 
 // This lets you use BackgroundJob.Enqueue and dashboard  
 builder.Services.AddHangfireServer(); // No changes needed here if the Hangfire package is correctly referenced  
