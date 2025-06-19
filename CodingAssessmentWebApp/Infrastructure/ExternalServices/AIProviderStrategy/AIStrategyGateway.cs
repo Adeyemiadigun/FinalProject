@@ -36,6 +36,7 @@ namespace Infrastructure.ExternalServices.AIProviderStrategy
             var models = aISettings.QuestionTypeProviders[request.QuestionType.ToString()];
             foreach (var model in models)
             {
+                _httpClient.DefaultRequestHeaders.Clear();
                 var payload = _payloadBuilder.BuildPayload(model.Name, prompt);
                 if (payload is null)
                     continue;
@@ -51,12 +52,13 @@ namespace Infrastructure.ExternalServices.AIProviderStrategy
                         _httpClient.DefaultRequestHeaders.Authorization = null;
                         finalUrl = $"{model.ApiUrl}?key={model.ApiKey}";
                     }
-                    
-                var response = await _httpClient.PostAsJsonAsync(finalUrl, payload);
+
+                var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync(finalUrl, content);
                 if (response.IsSuccessStatusCode)
                 {
-                    var content = await response.Content.ReadAsStringAsync();
-                    return content;
+                    var modelResponse = await response.Content.ReadAsStringAsync();
+                    return modelResponse;
                 }
             }
             return null!;
