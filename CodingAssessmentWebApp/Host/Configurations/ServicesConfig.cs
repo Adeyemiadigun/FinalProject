@@ -9,6 +9,8 @@ using Infrastructure.Configurations;
 using Infrastructure.ExternalServices.AIProviderStrategy;
 using Infrastructure.ExternalServices;
 using Infrastructure.Repositories;
+using Application.Interfaces.Services.AuthService;
+using Application.Services.AuthService;
 
 namespace Host.Configurations
 {
@@ -25,6 +27,10 @@ namespace Host.Configurations
             builder.AddScoped<IUserService, UserService>();
             builder.AddScoped<IGradingService, GradingService>();
             builder.AddScoped<ICurrentUser, CurrentUser>();
+            builder.AddScoped<IAuthService, AuthService>();
+            builder.AddScoped<IRefreshTokenStore, InMemoryRefreshTokenStore>();
+
+
 
             // Grading Strategy
             builder.AddScoped<IGradingStrategyFactory, GradingStrategyFactory>();
@@ -42,16 +48,8 @@ namespace Host.Configurations
             builder.AddScoped<IEmailService, EmailService>();
             builder.AddScoped<IBackgroundService, BackgroundJobService>();
 
-            // AI Provider Strategies and Factory
-            builder.AddScoped<IAIProviderStrategy, McqAIProviderStrategy>();
-            builder.AddScoped<IAIProviderStrategyFactory, AIProviderStrategyFactory>();
-
-            // HttpClient for AIProviderStrategy
-            builder.AddHttpClient<AIProviderStrategyFactory>();
-
-            // Configuration for HuggingFace
-            builder.Configure<HuggingFaceSettings>(
-                configuration.GetSection("HuggingFace")); // Use the passed IConfiguration instance
+            builder.AddScoped<IAIProviderGateway, AIStrategyGateway>();
+            builder.AddScoped<IPayloadBuider, PayloadBuilder>();
             return builder;
         }
     }

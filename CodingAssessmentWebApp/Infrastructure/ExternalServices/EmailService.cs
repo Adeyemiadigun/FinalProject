@@ -126,7 +126,7 @@ namespace Infrastructure.ExternalServices
                       Please click the link below to access the assessment:
                     </p>
                     <p>
-                      <a href='{assessmentLink}' style='background-color: #4A90E2; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 4px;'>Start Assessment</a>
+                      <a href='assessmentLink' style='background-color: #4A90E2; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 4px;'>Start Assessment</a>
                     </p>
                     <br/>
                     <p>If you have any questions, feel free to reply to this email.</p>

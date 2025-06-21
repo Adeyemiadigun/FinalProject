@@ -5,10 +5,10 @@ using Microsoft.Extensions.Options;
 
 namespace Application.Services
 {
-    public class PaylaodBuilder : IPayloadBuider
+    public class PayloadBuilder : IPayloadBuider
     {
         private readonly PayloadTemplateSettings _payloadTemplate;
-        public PaylaodBuilder(IOptions<PayloadTemplateSettings> payloadBuider)
+        public PayloadBuilder(IOptions<PayloadTemplateSettings> payloadBuider)
         {
             _payloadTemplate = payloadBuider.Value;
         }

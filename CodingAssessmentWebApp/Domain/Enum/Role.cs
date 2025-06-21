@@ -9,6 +9,7 @@ namespace Domain.Enum
     public enum Role
     {
         Instructor = 1,
-        Student
+        Student,
+        Admin
     }
 }

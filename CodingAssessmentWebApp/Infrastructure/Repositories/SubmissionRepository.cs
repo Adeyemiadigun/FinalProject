@@ -49,6 +49,22 @@ namespace Infrastructure.Repositories
                 .ThenInclude(x => x.Question)
                 .FirstOrDefaultAsync(x => x.Id == id);
         }
+        public async Task<Submission?> GetFullSubmissionWithRelationsAsync(Guid submissionId)
+        {
+            return await _context.Submissions
+                .Include(x => x.Assessment)
+                .Include(x => x.Student)
+                .Include(x => x.AnswerSubmissions)
+                    .ThenInclude(x => x.Question)
+                        .ThenInclude(q => q.Options)
+                .Include(x => x.AnswerSubmissions)
+                    .ThenInclude(x => x.Question)
+                        .ThenInclude(q => q.Tests)
+                .Include(x => x.AnswerSubmissions)
+                    .ThenInclude(x => x.Question)
+                        .ThenInclude(q => q.Answer)
+                .FirstOrDefaultAsync(x => x.Id == submissionId);
+        }
 
         public async Task<Submission?> GetAsync(Expression<Func<Submission, bool>> exp)
         {

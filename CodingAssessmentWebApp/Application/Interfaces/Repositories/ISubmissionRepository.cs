@@ -13,6 +13,7 @@ namespace Application.Interfaces.Repositories
     {
         Task<Submission> GetAsync(Guid id);
         Task<Submission> GetAsync(Expression<Func<Submission,bool>> exp);
+        Task<Submission?> GetFullSubmissionWithRelationsAsync(Guid submissionId);
         Task<PaginationDto<Submission>> GetAllAsync(Guid assessmentId, PaginationRequest request);
         Task<ICollection<Submission?>> GetAllAsync(Expression<Func<Submission, bool>> exp);
         Task<PaginationDto<Submission>> GetStudentSubmissionsAsync(Guid studentId, PaginationRequest request);

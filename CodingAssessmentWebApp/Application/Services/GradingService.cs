@@ -1,4 +1,5 @@
 ﻿using Application.Exceptions;
+using Application.Interfaces.ExternalServices;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Application.Interfaces.Services.GradingStrategyInterfaces.Interfaces;
@@ -6,10 +7,19 @@ using Domain.Entitties;
 
 namespace Application.Services
 {
-    public class GradingService(IGradingStrategyFactory gradingStrategyFactory) : IGradingService
+    public class GradingService(IGradingStrategyFactory gradingStrategyFactory, ISubmissionRepository _submissionRepository,IEmailService _emailService,IUnitOfWork _unitOfWork) : IGradingService
     {
-        public async Task GradeSubmissionAsync(Submission submission)
+        public async Task GradeSubmissionAndNotifyAsync(Guid submissionId, Guid studentId)
         {
+            var submission = await _submissionRepository.GetFullSubmissionWithRelationsAsync(submissionId);
+            if (submission == null)
+            {
+                throw new ApiException("Submission not found", 404, "SUBMISSION_NOT_FOUND", null);
+            }
+            if (submission.AnswerSubmissions == null || !submission.AnswerSubmissions.Any())
+            {
+                throw new ApiException("No answers found for this submission", 400, "NO_ANSWERS_FOUND", null);
+            }
             var totalScore = 0;
             foreach (var answer in submission.AnswerSubmissions)
             {
@@ -27,6 +37,11 @@ namespace Application.Services
                 totalScore += answer.Score;
             }
             submission.TotalScore = (short)totalScore;
+            submission.FeedBack = submission.TotalScore >= submission.Assessment.PassingScore ? "You Passed the assessment" : "You failed the assessment";
+             _submissionRepository.Update(submission);
+            await _unitOfWork.SaveChangesAsync();
+            await _emailService.SendResultEmailAsync(submission, submission.Student);
+
         }
     }
 }

@@ -72,10 +72,10 @@ namespace Application.Services
             }).ToList();
             submissionEntity.AnswerSubmissions = answerSubmissions;
             await _submissionRepository.CreateAsync(submissionEntity);
-            await _gradingService.GradeSubmissionAsync(submissionEntity);
-            submissionEntity.FeedBack = submissionEntity.TotalScore >= assessment.PassingScore ? "You Passed the assessment" : "You failed the assessment";
-            _backgroundService.Enqueue<IEmailService>(emailService => emailService.SendResultEmailAsync(submissionEntity, student!));
+           
             await _unitOfWork.SaveChangesAsync();
+            _backgroundService.Enqueue<IGradingService>(gradingService => gradingService.GradeSubmissionAndNotifyAsync(submissionEntity.Id, student.Id!));
+            
             return new BaseResponse<SubmissionDto>()
             {
                 Message = "Submission created successfully",
