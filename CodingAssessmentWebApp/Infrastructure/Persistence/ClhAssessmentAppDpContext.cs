@@ -1,4 +1,5 @@
-﻿using Domain.Entitties;
+﻿using Domain.Entities;
+using Domain.Entitties;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence
@@ -14,10 +15,11 @@ namespace Infrastructure.Persistence
         public DbSet<Submission> Submissions => Set<Submission>();
         public DbSet<TestCase> TestCases => Set<TestCase>();
         public DbSet<User> Users => Set<User>();
+        public DbSet<TestCaseResult> TestCaseResults=> Set<TestCaseResult>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.HasDefaultSchema("app");
+            modelBuilder.HasDefaultSchema("Clh_Project");
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(ClhAssessmentAppDpContext).Assembly);
             base.OnModelCreating(modelBuilder);
         }

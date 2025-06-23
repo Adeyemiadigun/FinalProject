@@ -11,5 +11,7 @@ namespace Application.Interfaces.Services.AuthService
         Task SaveTokenAsync(Guid userId, string token);
         Task<(bool Isvalid, Guid UserId)> IsTokenValidAsync( string token);
         Task RemoveExpiredTokensAsync();
+        Task RemoveToken(string token);
+
     }
 }

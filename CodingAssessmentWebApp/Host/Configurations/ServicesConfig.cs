@@ -28,7 +28,7 @@ namespace Host.Configurations
             builder.AddScoped<IGradingService, GradingService>();
             builder.AddScoped<ICurrentUser, CurrentUser>();
             builder.AddScoped<IAuthService, AuthService>();
-            builder.AddScoped<IRefreshTokenStore, InMemoryRefreshTokenStore>();
+            builder.AddSingleton<IRefreshTokenStore, InMemoryRefreshTokenStore>();
 
 
 

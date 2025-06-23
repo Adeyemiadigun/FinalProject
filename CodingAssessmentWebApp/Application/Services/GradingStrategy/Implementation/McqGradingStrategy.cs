@@ -7,7 +7,7 @@ namespace Application.Services.GradingStrategy.Implementation
     public class McqGradingStrategy : IGradingStrategy
     {
         public QuestionType QuestionType =>  QuestionType.MCQ;
-        public Task GradeAsync(AnswerSubmission answerSubmission)
+        public async Task GradeAsync(AnswerSubmission answerSubmission)
         {
             var correctOptionIds = answerSubmission.Question.Options.Where(o => o.IsCorrect).Select(o => o.Id).ToList();
             var selectedOptionIds = answerSubmission.SelectedOptionIds ?? [];
@@ -17,7 +17,6 @@ namespace Application.Services.GradingStrategy.Implementation
 
             answerSubmission.IsCorrect = isCorrect;
             answerSubmission.Score = isCorrect ? answerSubmission.Question.Marks : (short)0;
-            return Task.CompletedTask;
         }
     }
 

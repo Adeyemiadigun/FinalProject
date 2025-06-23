@@ -1,4 +1,6 @@
-﻿namespace Domain.Entitties
+﻿using Domain.Entities;
+
+namespace Domain.Entitties
 {
     public class AnswerSubmission
     {
@@ -11,7 +13,7 @@
         public short Score { get; set; }
         public bool IsCorrect { get; set; }
         public List<Guid> SelectedOptionIds { get; set; } = [];
-    
+        public List<TestCaseResult> TestCaseResults { get; set; } = [];
 
     }
 }

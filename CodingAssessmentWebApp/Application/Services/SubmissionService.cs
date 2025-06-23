@@ -27,14 +27,14 @@ namespace Application.Services
             if (assessment.Submissions.Any(s => s.StudentId == studentId))
                 throw new ApiException("Duplicate submission detected.", 400, "DuplicateSubmission", null);
 
-            if (DateTime.Now > assessment.EndDate)
+            if (DateTime.UtcNow > assessment.EndDate)
                 return new BaseResponse<SubmissionDto>
                 {
                     Message = "Assessment is closed",
                     Status = false
                 };
 
-            if (DateTime.Now < assessment.StartDate)
+            if (DateTime.UtcNow < assessment.StartDate)
                 return new BaseResponse<SubmissionDto>
                 {
                     Message = "Assessment has not started yet",
@@ -59,14 +59,42 @@ namespace Application.Services
                 AssessmentId = assessmentId,
                 SubmittedAt = DateTime.UtcNow,
             };
+            var questionDict = questions.ToDictionary(q => q.Id);
+            foreach (var submittedAnswer in submission.Answers)
+            {
+                if (!questionDict.TryGetValue(submittedAnswer.QuestionId, out var question))
+                {
+                    throw new ApiException("Invalid question ID submitted.", 400, "QUESTION_NOT_FOUND", null);
+                }
+
+                switch (question.QuestionType)
+                {
+                    case QuestionType.MCQ:
+                        if (submittedAnswer.SelectedOptionIds == null || submittedAnswer.SelectedOptionIds.Count == 0)
+                            throw new ApiException($"No options selected for MCQ question '{question.QuestionText}'", 400, "NO_MCQ_OPTION_SELECTED", null);
+
+     
+                        break;
+
+                    case QuestionType.Objective:
+                    case QuestionType.Coding:
+                        if (string.IsNullOrWhiteSpace(submittedAnswer.SubmittedAnswer))
+                            throw new ApiException($"No textual answer provided for question '{question.QuestionText}'", 400, "MISSING_TEXT_ANSWER", null);
+                        break;
+
+                    default:
+                        throw new ApiException("Unsupported question type.", 400, "INVALID_QUESTION_TYPE", null);
+                }
+            }
 
             var answerSubmissions = submission.Answers.Select(x => new AnswerSubmission()
             {
                 SubmissionId = submissionEntity.Id,
                 Submission = submissionEntity,
                 QuestionId = x.QuestionId,
-                Question = questions.FirstOrDefault(q => q.Id == x.QuestionId)!,
+                Question = questionDict[x.QuestionId],
                 SubmittedAnswer = x.SubmittedAnswer,
+                SelectedOptionIds = x.SelectedOptionIds,
                 Score = 0,
                 IsCorrect = false,
             }).ToList();
@@ -74,7 +102,7 @@ namespace Application.Services
             await _submissionRepository.CreateAsync(submissionEntity);
            
             await _unitOfWork.SaveChangesAsync();
-            _backgroundService.Enqueue<IGradingService>(gradingService => gradingService.GradeSubmissionAndNotifyAsync(submissionEntity.Id, student.Id!));
+            _backgroundService.Enqueue<IGradingService>(gradingService => gradingService.GradeSubmissionAndNotifyAsync(submissionEntity.Id, student.Id));
             
             return new BaseResponse<SubmissionDto>()
             {

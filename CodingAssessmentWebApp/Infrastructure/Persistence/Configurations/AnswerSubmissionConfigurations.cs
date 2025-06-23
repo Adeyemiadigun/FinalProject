@@ -23,6 +23,9 @@ namespace Infrastructure.Persistence.Configurations
                 .IsRequired();
             builder.Property(x => x.SelectedOptionIds)
     .HasColumnType("uuid[]");
+            builder.HasMany(x => x.TestCaseResults)
+                .WithOne(x => x.AnswerSubmission)
+                .HasForeignKey(x => x.AnswerSubmissionId);
             builder.HasOne(x => x.Submission)
                 .WithMany(s => s.AnswerSubmissions)
                 .HasForeignKey(x => x.SubmissionId);

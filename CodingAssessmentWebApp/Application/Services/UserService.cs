@@ -1,5 +1,6 @@
 ﻿using System.Net.WebSockets;
 using Application.Dtos;
+using Application.Exceptions;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Domain.Entitties;
@@ -73,13 +74,8 @@ namespace Application.Services
         {
             var user = await _userRepository.CheckAsync(x => x.Email == model.Email);
             if (user)
-            {
-                return new BaseResponse<UserDto>()
-                {
-                    Message = "Email already exists",
-                    Status = false
-                };
-            }
+                throw new ApiException("User with the provided email already exists", 400, "DuplicateEmail", null); // Fix for CS7036 and CS1002
+
             var newUser = new User()
             {
                 FullName = model.FullName,
@@ -96,26 +92,22 @@ namespace Application.Services
                 Status = true,
                 Data = new UserDto()
                 {
-                   Id = newUser.Id,
-                   Email = model.Email,
-                   Role = newUser.Role,
+                    Id = newUser.Id,
+                    Email = model.Email,
+                    Role = newUser.Role,
                 },
             };
-            
         }
 
-        public async  Task<BaseResponse<UserDto>> RegisterStudents(BulkRegisterUserRequestModel model)
+        public async Task<BaseResponse<UserDto>> RegisterStudents(BulkRegisterUserRequestModel model)
         {
             var emails = model.Users.Select(x => x.Email).ToList();
             var existingUsers = await _userRepository.GetAllAsync(user => emails.Contains(user.Email));
             if (existingUsers.Any())
-            {
-                return new BaseResponse<UserDto>()
-                {
-                    Message = "Some emails already exist",
-                    Status = false
-                };
-            }
+                throw new ApiException("One or more users already exist with the provided emails", 400, "DuplicateEmails", null); // Fix for CS7036 and CS1002
+
+            if (model.Users == null || !model.Users.Any())
+                throw new ApiException("User list cannot be empty", 400, "EmptyUserList", null); // Fix for CS7036 and CS1002
 
             var users = new List<User>();
             foreach (var user in model.Users)
@@ -143,22 +135,12 @@ namespace Application.Services
         {
             var user = await _userRepository.GetAsync(model.Id);
             if (user == null)
-            {
-                return new BaseResponse<UserDto>()
-                {
-                    Message = "User not found",
-                    Status = false
-                };
-            }
+                throw new ApiException("User not found", 404, "UserNotFound", null);
+
             var check = await _userRepository.CheckAsync(x => x.Email == model.Email && x.Id != user.Id);
             if (check)
-            {
-                return new BaseResponse<UserDto>()
-                {
-                    Message = "Email already exists",
-                    Status = false
-                };
-            }
+                throw new ApiException("Email already exists for another user", 400, "DuplicateEmail", null); 
+
             user.FullName = model.FullName;
             user.Email = model.Email;
             _userRepository.Update(user);

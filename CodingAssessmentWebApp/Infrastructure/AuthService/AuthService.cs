@@ -93,6 +93,7 @@ namespace Application.Services.AuthService
             {
                 throw new ApiException("Invalid refresh token", 401, "INVALID_REFRESH_TOKEN", null);
             }
+            await _refreshTokenStore.RemoveToken(refreshToken);
             var user = await _userRepository.GetAsync(response.UserId);
             var userDto = new UserDto
             {

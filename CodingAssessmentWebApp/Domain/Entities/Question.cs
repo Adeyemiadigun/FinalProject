@@ -16,6 +16,7 @@ namespace Domain.Entitties
         public QuestionType QuestionType { get; set; }
         public short Marks { get; set; }
         public int Order { get; set; }
+        public TechnologyStack? TechnologyStack { get; set; }
         public ICollection<Option> Options { get; set; } = [];
         public Answer Answer { get; set; }
         public ICollection<TestCase> Tests { get; set; } = [];
