@@ -12,8 +12,9 @@ namespace Domain.Entitties
         public string SubmittedAnswer { get; set; }
         public short Score { get; set; }
         public bool IsCorrect { get; set; }
-        public List<Guid> SelectedOptionIds { get; set; } = [];
         public List<TestCaseResult> TestCaseResults { get; set; } = [];
+        public ICollection<SelectedOption> SelectedOptions { get; set; } = [];
+
 
     }
 }

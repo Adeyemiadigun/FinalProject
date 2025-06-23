@@ -12,7 +12,5 @@ namespace Application.Interfaces.Services
         Task<PaginationDto<Submission>> GetAllAsync(Guid assessmentId, PaginationRequest request);
         Task<BaseResponse<SubmissionDto>> GetCurrentStudentSubmission(Guid assessmentId);
        Task<PaginationDto<Submission>> GetStudentSubmissionsAsync(Guid studentId, PaginationRequest request);
-        Task<bool> CheckSubmissionExistsAsync(Guid id);
-        Task<bool> CheckSubmissionExistsAsync(Guid studentId, Guid assessmentId);
     }
 }

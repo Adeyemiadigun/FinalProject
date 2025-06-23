@@ -3,8 +3,10 @@ using Application.Exceptions;
 using Application.Interfaces.ExternalServices;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
+using Domain.Entities;
 using Domain.Entitties;
 using Domain.Enum;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 
 namespace Application.Services
 {
@@ -16,70 +18,97 @@ namespace Application.Services
             if (studentId == Guid.Empty)
                 throw new ApiException("Current user ID is not set or invalid.", 400, "InvalidUserId", null);
 
-            var student = await _userRepository.GetAsync(studentId);
-            if (student is null)
-                throw new ApiException("Student not found", 404, "StudentNotFound", null);
+            var student = await _userRepository.GetAsync(studentId)
+                ?? throw new ApiException("Student not found", 404, "StudentNotFound", null);
 
-            var assessment = await _assessmentRepository.GetForSubmissionAsync(assessmentId);
-            if (assessment is null)
-                throw new ApiException("Assessment not found", 404, "AssessmentNotFound", null);
+            var assessment = await _assessmentRepository.GetForSubmissionAsync(assessmentId)
+                ?? throw new ApiException("Assessment not found", 404, "AssessmentNotFound", null);
 
             if (assessment.Submissions.Any(s => s.StudentId == studentId))
                 throw new ApiException("Duplicate submission detected.", 400, "DuplicateSubmission", null);
 
             if (DateTime.UtcNow > assessment.EndDate)
-                return new BaseResponse<SubmissionDto>
-                {
-                    Message = "Assessment is closed",
-                    Status = false
-                };
+                return new BaseResponse<SubmissionDto> { Message = "Assessment is closed", Status = false };
 
             if (DateTime.UtcNow < assessment.StartDate)
-                return new BaseResponse<SubmissionDto>
-                {
-                    Message = "Assessment has not started yet",
-                    Status = false
-                };
+                return new BaseResponse<SubmissionDto> { Message = "Assessment has not started yet", Status = false };
+
+            // Check for duplicated answers
+            if (submission.Answers.Select(a => a.QuestionId).Distinct().Count() != submission.Answers.Count)
+                throw new ApiException("Duplicate answers for the same question are not allowed.", 400, "DUPLICATE_QUESTION_ANSWERS", null);
 
             var questionIds = submission.Answers.Select(x => x.QuestionId).ToList();
             var questions = await _questionRepository.GetSelectedIds(questionIds);
-            if (questionIds.Count != questions.Count)
-            {
-                return new BaseResponse<SubmissionDto>
-                {
-                    Status = false,
-                    Message = "Some Question IDs are invalid."
-                };
-            }
 
-            var submissionEntity = new Submission()
+            if (questionIds.Count != questions.Count)
+                return new BaseResponse<SubmissionDto> { Status = false, Message = "Some Question IDs are invalid." };
+
+            var questionDict = questions.ToDictionary(q => q.Id);
+            var submissionEntity = new Submission
             {
                 StudentId = studentId,
                 Student = student,
                 AssessmentId = assessmentId,
                 SubmittedAt = DateTime.UtcNow,
             };
-            var questionDict = questions.ToDictionary(q => q.Id);
+
+            var answerSubmissions = new List<AnswerSubmission>();
+
             foreach (var submittedAnswer in submission.Answers)
             {
                 if (!questionDict.TryGetValue(submittedAnswer.QuestionId, out var question))
-                {
                     throw new ApiException("Invalid question ID submitted.", 400, "QUESTION_NOT_FOUND", null);
-                }
 
+                // Validate input by question type
                 switch (question.QuestionType)
                 {
                     case QuestionType.MCQ:
-                        if (submittedAnswer.SelectedOptionIds == null || submittedAnswer.SelectedOptionIds.Count == 0)
-                            throw new ApiException($"No options selected for MCQ question '{question.QuestionText}'", 400, "NO_MCQ_OPTION_SELECTED", null);
+                        var selectedOptions = question.Options
+                            .Where(o => submittedAnswer.SelectedOptionIds.Contains(o.Id))
+                            .ToList();
 
-     
+                        if (selectedOptions.Count != submittedAnswer.SelectedOptionIds.Count)
+                        {
+                            var invalidIds = submittedAnswer.SelectedOptionIds
+                                .Where(id => !question.Options.Any(o => o.Id == id))
+                                .ToList();
+
+                            throw new ApiException($"Some selected options are invalid for question '{question.QuestionText}'",
+                                400, "INVALID_MCQ_OPTIONS", new { InvalidOptionIds = invalidIds });
+                        }
+
+                        answerSubmissions.Add(new AnswerSubmission
+                        {
+                            Submission = submissionEntity,
+                            SubmissionId = submissionEntity.Id,
+                            Question = question,
+                            QuestionId = question.Id,
+                            SubmittedAnswer = submittedAnswer.SubmittedAnswer,
+                            SelectedOptions = selectedOptions.Select(o => new SelectedOption
+                            {
+                                OptionId = o.Id,
+                                Option  = o,
+                            }).ToList(),
+                            Score = 0,
+                            IsCorrect = false
+                        });
                         break;
 
                     case QuestionType.Objective:
                     case QuestionType.Coding:
                         if (string.IsNullOrWhiteSpace(submittedAnswer.SubmittedAnswer))
-                            throw new ApiException($"No textual answer provided for question '{question.QuestionText}'", 400, "MISSING_TEXT_ANSWER", null);
+                            throw new ApiException($"Answer required for question '{question.QuestionText}'", 400, "MISSING_TEXT_ANSWER", null);
+
+                        answerSubmissions.Add(new AnswerSubmission
+                        {
+                            Submission = submissionEntity,
+                            SubmissionId = submissionEntity.Id,
+                            Question = question,
+                            QuestionId = question.Id,
+                            SubmittedAnswer = submittedAnswer.SubmittedAnswer,
+                            Score = 0,
+                            IsCorrect = false
+                        });
                         break;
 
                     default:
@@ -87,39 +116,22 @@ namespace Application.Services
                 }
             }
 
-            var answerSubmissions = submission.Answers.Select(x => new AnswerSubmission()
-            {
-                SubmissionId = submissionEntity.Id,
-                Submission = submissionEntity,
-                QuestionId = x.QuestionId,
-                Question = questionDict[x.QuestionId],
-                SubmittedAnswer = x.SubmittedAnswer,
-                SelectedOptionIds = x.SelectedOptionIds,
-                Score = 0,
-                IsCorrect = false,
-            }).ToList();
             submissionEntity.AnswerSubmissions = answerSubmissions;
+
             await _submissionRepository.CreateAsync(submissionEntity);
-           
             await _unitOfWork.SaveChangesAsync();
-            _backgroundService.Enqueue<IGradingService>(gradingService => gradingService.GradeSubmissionAndNotifyAsync(submissionEntity.Id, student.Id));
-            
-            return new BaseResponse<SubmissionDto>()
+
+            _backgroundService.Enqueue<IGradingService>(g =>
+                g.GradeSubmissionAndNotifyAsync(submissionEntity.Id, studentId));
+
+            return new BaseResponse<SubmissionDto>
             {
-                Message = "Submission created successfully",
                 Status = true,
+                Message = "Submission created successfully"
             };
         }
 
-        public Task<bool> CheckSubmissionExistsAsync(Guid id)
-        {
-            throw new NotImplementedException();
-        }
 
-        public Task<bool> CheckSubmissionExistsAsync(Guid studentId, Guid assessmentId)
-        {
-            throw new NotImplementedException();
-        }
 
         public Task<PaginationDto<Submission>> GetAllAsync(Guid assessmentId, PaginationRequest request)
         {

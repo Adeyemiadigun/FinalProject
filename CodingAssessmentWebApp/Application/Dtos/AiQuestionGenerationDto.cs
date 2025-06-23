@@ -22,20 +22,20 @@ namespace Application.Dtos
     public class AIMCQResponseDto
     {
         public string QuestionText { get; set; }
-        public QuestionType QuestionType { get; set; }
-        public List<CreateOptionDto> Options { get; set; }
+        public QuestionType QuestionType { get; set; } = QuestionType.MCQ;
+        public List<OptionDto> Options { get; set; }
     }
     public class AIObjectiveResponseDto
     {
         public string QuestionText { get; set; }
-        public QuestionType QuestionType { get; set; }
+        public QuestionType QuestionType { get; set; } = QuestionType.Objective;
         public string AnswerText { get; set; }
         public CreateAnswerDto Answer { get; set; }
     }
     public class AICodingResponseDto
     {
         public string QuestionText { get; set; }
-        public QuestionType QuestionType { get; set; }
+        public QuestionType QuestionType { get; set; } = QuestionType.Coding; 
         public List<CreateTestCaseDto> TestCases { get; set; } = [];
     }
     

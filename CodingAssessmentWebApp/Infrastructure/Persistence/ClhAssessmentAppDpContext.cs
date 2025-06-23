@@ -16,7 +16,8 @@ namespace Infrastructure.Persistence
         public DbSet<TestCase> TestCases => Set<TestCase>();
         public DbSet<User> Users => Set<User>();
         public DbSet<TestCaseResult> TestCaseResults=> Set<TestCaseResult>();
-
+        public DbSet<SelectedOption
+            > selectedOptions => Set<SelectedOption>();
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.HasDefaultSchema("Clh_Project");
