@@ -64,7 +64,7 @@ public class AssessmentsController(IAssessmentService assessmentService, IQuesti
         var response = await _submissionService.SubmitAssessment(assessmentId, model);
         return response.Status ? Ok(response) : BadRequest(response);
     }
-    [HttpGet("{assessmentId:guid}/submission")]
+    [HttpGet("{assessmentId:guid}/submissions")]
     public async Task<IActionResult> GetMySubmission(Guid assessmentId)
     {
         var response = await _submissionService.GetCurrentStudentSubmission(assessmentId);

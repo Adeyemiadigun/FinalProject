@@ -23,7 +23,7 @@ namespace Host.Controllers
             var response = await _assementService.GetAssessmentsByStudentId( studentId, request);
             return response.Status ? Ok(response) : NotFound(response);
         }
-        [HttpGet("/assessments")]
+        [HttpGet("assessments")]
         public async Task<IActionResult> GetStudentsAssessment( PaginationRequest request)
         {
             var response = await _assementService.GetCurrentStudentAssessments(request);

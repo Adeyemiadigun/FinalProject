@@ -8,9 +8,9 @@ namespace Application.Services
 {
     public class CurrentUser : ICurrentUser
     {
-        private readonly HttpContextAccessor _http;
+        private readonly IHttpContextAccessor _http;
 
-        public CurrentUser(HttpContextAccessor http)
+        public CurrentUser(IHttpContextAccessor http)
         {
             _http = http;
         }

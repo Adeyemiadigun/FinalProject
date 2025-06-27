@@ -15,7 +15,7 @@ namespace Infrastructure.Persistence.Configurations
         {
             builder.ToTable("Answer");
             builder.HasKey(x => x.Id);
-            builder.Property(x => x.AnswerText).IsRequired().HasMaxLength(200);
+            builder.Property(x => x.AnswerText).IsRequired().HasMaxLength(300);
             builder.Property(x => x.QuestionId).IsRequired();
             builder.HasOne(x => x.Question)
                 .WithOne( q => q.Answer)

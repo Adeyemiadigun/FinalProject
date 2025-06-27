@@ -14,7 +14,7 @@ namespace Application.Services
         }
         public string BuildPayload(string name, string prompt)
         {
-            var template = _payloadTemplate.PayloadTemplates[name];
+            var template = _payloadTemplate.PayloadTemplateSetting[name];
             if (string.IsNullOrWhiteSpace(template))
             {
                 return null!;

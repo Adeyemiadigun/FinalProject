@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Concurrent;
 using Application.Dtos;
 using Application.Interfaces.ExternalServices;
-using Domain.ValueObjects;
 
 namespace Infrastructure.ExternalServices
 {

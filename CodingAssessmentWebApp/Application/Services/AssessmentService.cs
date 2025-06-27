@@ -69,6 +69,11 @@ namespace Application.Services
 
         public async Task<BaseResponse<AssessmentDto>> CreateAssessmentAsync(CreateAssessmentRequestModel model)
         {
+            var currentUser = _currentUser.GetCurrentUserId();
+            if (currentUser == Guid.Empty)
+                throw new ApiException("Current user ID is invalid", (int)HttpStatusCode.BadRequest, "INVALID_USER_ID", null);
+            var user = await _userRepository.GetAsync(currentUser) ?? throw new ApiException("User not found", (int)HttpStatusCode.NotFound, "USER_NOT_FOUND", null);
+
             var assessment = new Assessment()
             {
                 Title = model.Title,
@@ -78,6 +83,7 @@ namespace Application.Services
                 StartDate = model.StartDate,
                 EndDate = model.EndDate,
                 PassingScore = model.PassingScore,
+                InstructorId = user.Id
             };
             await _assessmentRepository.CreateAsync(assessment);
             if (model.AssignedStudentIds is not null && model.AssignedStudentIds.Count > 0)
@@ -109,7 +115,7 @@ namespace Application.Services
                     PassingScore = model.PassingScore
                 }));
             }
-         
+
             await _unitOfWork.SaveChangesAsync();
             return new BaseResponse<AssessmentDto>()
             {

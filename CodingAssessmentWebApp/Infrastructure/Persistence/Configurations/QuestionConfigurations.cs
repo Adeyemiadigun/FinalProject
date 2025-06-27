@@ -17,13 +17,16 @@ namespace Infrastructure.Persistence.Configurations
             builder.ToTable("Question");
             builder.HasKey(x => x.Id);
             builder.Property(x => x.AssessmentId).IsRequired();
-            builder.Property(x => x.QuestionText).IsRequired();
+            builder.Property(x => x.QuestionText).IsRequired().HasMaxLength(5000);
             builder.Property(x => x.QuestionType).IsRequired();
             builder.Property(x => x.Marks).IsRequired();
             builder.Property(x => x.Order).IsRequired();
             builder.HasMany(x => x.Options)
                 .WithOne(o => o.Question)
                 .HasForeignKey(o => o.QuestionId);
+            builder.HasOne(q => q.Assessment)
+                .WithMany(a => a.Questions)
+                .HasForeignKey(q => q.AssessmentId);
             builder.HasMany(x => x.Tests)
                 .WithOne(t => t.Question)
                 .HasForeignKey(t => t.QuestionId);

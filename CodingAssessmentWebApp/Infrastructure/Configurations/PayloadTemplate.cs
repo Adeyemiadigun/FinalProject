@@ -2,6 +2,6 @@
 {
     public class PayloadTemplateSettings
     {
-        public Dictionary<string, string> PayloadTemplates { get; set; } = new();
+        public Dictionary<string, string> PayloadTemplateSetting { get; set; } = new();
     }
 }

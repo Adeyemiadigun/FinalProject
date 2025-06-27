@@ -30,16 +30,15 @@ namespace Infrastructure.Repositories
             };
         }
 
-        public async Task<ICollection<Submission?>> GetAllAsync(Expression<Func<Submission, bool>> exp)
+        public async Task<ICollection<Submission>> GetAllAsync(Expression<Func<Submission, bool>> exp)
         {
 
-            var result = await _context.Set<Submission>()
+            var result =  _context.Set<Submission>()
                 .Include(x => x.AnswerSubmissions)
                 .ThenInclude(x => x.Question)
-                .Where(exp)
-                .ToListAsync();
+                .Where(exp);
 
-            return result;
+            return await result.ToListAsync();
         }
 
         public async Task<Submission?> GetAsync(Guid id)

@@ -5,18 +5,20 @@ using Application.Interfaces.Services.GradingStrategyInterfaces.Interfaces;
 using Application.Interfaces.Services;
 using Application.Services.GradingStrategy.Implementation;
 using Application.Services;
-using Infrastructure.Configurations;
 using Infrastructure.ExternalServices.AIProviderStrategy;
 using Infrastructure.ExternalServices;
 using Infrastructure.Repositories;
 using Application.Interfaces.Services.AuthService;
 using Application.Services.AuthService;
+using Application.Validation;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 
 namespace Host.Configurations
 {
     public static class ServicesConfig
     {
-        public static IServiceCollection AddServices(this IServiceCollection builder, IConfiguration configuration)
+        public static IServiceCollection AddServices(this IServiceCollection builder)
         {
             // Application Services
             builder.AddScoped<IAIQuestionService, AIQuestionService>();
@@ -28,15 +30,17 @@ namespace Host.Configurations
             builder.AddScoped<IGradingService, GradingService>();
             builder.AddScoped<ICurrentUser, CurrentUser>();
             builder.AddScoped<IAuthService, AuthService>();
+            builder.AddHttpClient();
+            builder.AddHttpContextAccessor();
             builder.AddSingleton<IRefreshTokenStore, InMemoryRefreshTokenStore>();
 
-
-
+            //FluentValidation
+            builder.AddFluentValidationAutoValidation();
+            builder.AddValidatorsFromAssemblyContaining<RegisterUserRequestModelValidator>();
             // Grading Strategy
             builder.AddScoped<IGradingStrategyFactory, GradingStrategyFactory>();
             builder.AddScoped<IGradingStrategy, McqGradingStrategy>();
             builder.AddScoped<IGradingStrategy, ObjectiveGradingStrategy>();
-
             // Repositories
             builder.AddScoped<IAssessmentRepository, AssessmentRepository>();
             builder.AddScoped<IQuestionRepository, QuestionRepository>();
@@ -47,7 +51,9 @@ namespace Host.Configurations
             // External Services
             builder.AddScoped<IEmailService, EmailService>();
             builder.AddScoped<IBackgroundService, BackgroundJobService>();
-
+            builder.AddScoped<ICodeExcution, Judge0CodeExecution>();
+            builder.AddScoped<IJudge0LanguageService, Judge0LanguageService>();
+            builder.AddSingleton<IJudge0LanguageStore, Judge0LanguageStore>();
             builder.AddScoped<IAIProviderGateway, AIStrategyGateway>();
             builder.AddScoped<IPayloadBuider, PayloadBuilder>();
             return builder;

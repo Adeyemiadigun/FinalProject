@@ -6,11 +6,10 @@ using Application.Interfaces.Services;
 using Domain.Entities;
 using Domain.Entitties;
 using Domain.Enum;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
 
 namespace Application.Services
 {
-    public class SubmissionService(IAssessmentRepository _assessmentRepository, ICurrentUser _currentUser, ISubmissionRepository _submissionRepository, IUnitOfWork _unitOfWork, IQuestionRepository _questionRepository, IGradingService _gradingService, IEmailService _emailService, IUserRepository _userRepository, IBackgroundService _backgroundService) : ISubmissionService
+    public class SubmissionService(IAssessmentRepository _assessmentRepository, ICurrentUser _currentUser, ISubmissionRepository _submissionRepository, IUnitOfWork _unitOfWork, IQuestionRepository _questionRepository, IUserRepository _userRepository, IBackgroundService _backgroundService) : ISubmissionService
     {
         public async Task<BaseResponse<SubmissionDto>> SubmitAssessment(Guid assessmentId, AnswerSubmissionDto submission)
         {
