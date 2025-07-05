@@ -1,7 +1,6 @@
 ﻿using Domain.Entitties;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace Infrastructure.Persistence.Configurations
 {
@@ -34,6 +33,9 @@ namespace Infrastructure.Persistence.Configurations
             builder.HasMany(x => x.AssessmentAssignments)
                 .WithOne( x => x.Assessment)
                 .HasForeignKey(x => x.AssessmentId);
+            builder.HasMany(x => x.BatchAssessment)
+                .WithOne(a => a.Assessment)
+                .HasForeignKey(a => a.AssessmentId);
         }
     }
 }

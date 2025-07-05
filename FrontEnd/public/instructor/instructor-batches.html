@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" x-data="instructorBatchesPage()" x-init="initPage()">
+<head>
+  <meta charset="UTF-8" />
+  <title>Instructor Batches</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-800">
+  <!-- Sidebar & Navbar -->
+  <div id="sidebar-placeholder"></div>
+  <div class="md:ml-64 p-6 space-y-6" x-cloak>
+    <div id="navbar-placeholder"></div>
+
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-2xl font-bold">🎓 My Batches</h2>
+    </div>
+
+    <!-- Batch List -->
+    <template x-if="pagedBatches.length > 0">
+      <div class="space-y-6">
+        <template x-for="batch in pagedBatches" :key="batch.id">
+          <section class="bg-white p-6 rounded shadow">
+            <!-- Batch Info -->
+            <div class="flex justify-between items-center mb-2">
+              <h3 class="text-xl font-semibold" x-text="batch.name"></h3>
+              <span class="text-sm text-gray-500">Batch #<span x-text="batch.batchNumber"></span></span>
+            </div>
+
+            <!-- Students -->
+            <div class="mb-4">
+              <h4 class="text-sm font-semibold mb-1">👥 Students</h4>
+              <ul class="list-disc ml-5 text-sm text-gray-700">
+                <template x-for="student in batch.students" :key="student.id">
+                  <li><span x-text="student.name"></span> — <span x-text="student.email"></span></li>
+                </template>
+              </ul>
+            </div>
+
+            <!-- Assessments -->
+            <div class="mb-4">
+              <h4 class="text-sm font-semibold mb-1">📝 Assessments by You</h4>
+              <ul class="space-y-1 text-sm">
+                <template x-for="assessment in batch.assessments" :key="assessment.id">
+                  <li class="flex justify-between">
+                    <span class="font-medium" x-text="assessment.title"></span>
+                    <span class="text-gray-500" x-text="`${assessment.durationInMinutes} mins`"></span>
+                  </li>
+                </template>
+              </ul>
+            </div>
+
+            <!-- Chart -->
+            <div>
+              <h4 class="text-sm font-semibold mb-2">📊 Avg Scores by Assessment</h4>
+              <div class="relative h-48">
+                <canvas :id="`chart-${batch.id}`" class="absolute top-0 left-0 w-full h-full"></canvas>
+              </div>
+            </div>
+          </section>
+        </template>
+
+        <!-- Pagination -->
+        <div class="flex justify-end gap-2 mt-2">
+          <button @click="prevPage" :disabled="page === 1" class="px-3 py-1 bg-gray-300 rounded disabled:opacity-50">Prev</button>
+          <span class="text-sm" x-text="`Page ${page} of ${totalPages}`"></span>
+          <button @click="nextPage" :disabled="page === totalPages" class="px-3 py-1 bg-gray-300 rounded disabled:opacity-50">Next</button>
+        </div>
+      </div>
+    </template>
+
+    <!-- Empty State -->
+    <template x-if="pagedBatches.length === 0">
+      <div class="text-center text-gray-500 mt-12">No batches available.</div>
+    </template>
+  </div>
+
+  <!-- Alpine Script -->
+  <script>
+    function instructorBatchesPage() {
+      return {
+        batches: [],
+        page: 1,
+        perPage: 2,
+        chartRefs: {},
+
+        initPage() {
+          loadComponent('sidebar-placeholder', '../components/sidebar.html');
+          loadComponent('navbar-placeholder', '../components/nav.html');
+          this.loadData();
+          this.$nextTick(() => this.renderCharts());
+        },
+
+        get pagedBatches() {
+          const start = (this.page - 1) * this.perPage;
+          return this.batches.slice(start, start + this.perPage);
+        },
+
+        get totalPages() {
+          return Math.ceil(this.batches.length / this.perPage);
+        },
+
+        nextPage() {
+          if (this.page < this.totalPages) {
+            this.page++;
+            this.$nextTick(() => this.renderCharts());
+          }
+        },
+
+        prevPage() {
+          if (this.page > 1) {
+            this.page--;
+            this.$nextTick(() => this.renderCharts());
+          }
+        },
+
+        loadData() {
+          this.batches = [
+            {
+              id: 1,
+              name: "Batch Alpha",
+              batchNumber: 1,
+              students: [
+                { id: 1, name: "Grace Hill", email: "grace@example.com", score: 85 },
+                { id: 2, name: "John Doe", email: "john@example.com", score: 78 }
+              ],
+              assessments: [
+                { id: 101, title: "OOP Assessment", durationInMinutes: 60, assignedStudentIds: [1, 2] },
+                { id: 102, title: "EF Core Quiz", durationInMinutes: 45, assignedStudentIds: [1] }
+              ]
+            },
+            {
+              id: 2,
+              name: "Batch Beta",
+              batchNumber: 2,
+              students: [
+                { id: 3, name: "Alice King", email: "alice@example.com", score: 66 },
+                { id: 4, name: "Bob Ray", email: "bob@example.com", score: 70 }
+              ],
+              assessments: [
+                { id: 103, title: "LINQ Challenge", durationInMinutes: 30, assignedStudentIds: [3, 4] }
+              ]
+            }
+          ];
+        },
+
+        renderCharts() {
+          this.pagedBatches.forEach(batch => {
+            const canvasId = `chart-${batch.id}`;
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+
+            // Destroy old chart instance
+            if (this.chartRefs[canvasId]) {
+              this.chartRefs[canvasId].destroy();
+              this.chartRefs[canvasId] = null;
+            }
+
+            const ctx = canvas.getContext("2d");
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const labels = batch.assessments.map(a => a.title);
+            const avgScores = batch.assessments.map(a => {
+              const scores = a.assignedStudentIds.map(id => {
+                const student = batch.students.find(s => s.id === id);
+                return student?.score || 0;
+              });
+              const total = scores.reduce((sum, val) => sum + val, 0);
+              return scores.length ? Math.round(total / scores.length) : 0;
+            });
+
+            this.chartRefs[canvasId] = new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels,
+                datasets: [{
+                  label: 'Avg Score (%)',
+                  data: avgScores,
+                  backgroundColor: '#3b82f6'
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    max: 100
+                  }
+                }
+              }
+            });
+          });
+        }
+      };
+    }
+
+    async function loadComponent(id, path) {
+      const res = await fetch(path);
+      const html = await res.text();
+      document.getElementById(id).innerHTML = html;
+    }
+  </script>
+</body>
+</html>

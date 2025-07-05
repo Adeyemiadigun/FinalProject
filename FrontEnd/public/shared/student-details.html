@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" x-data="studentDetailsPage()">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Student Details</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>[x-cloak] { display: none !important; }</style>
+</head>
+
+<body class="bg-gray-100 text-gray-800" x-cloak>
+
+  <!-- Sidebar & Navbar -->
+  <div id="sidebar-placeholder"></div>
+  <div class="md:ml-64 p-6 space-y-6">
+    <div id="navbar-placeholder"></div>
+
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+      <h2 class="text-2xl font-bold">Student Details</h2>
+    </div>
+
+    <!-- Profile Info -->
+    <div class="bg-white p-6 rounded shadow grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <h3 class="text-lg font-semibold mb-2">👤 Profile</h3>
+        <p><strong>Name:</strong> <span x-text="student.name"></span></p>
+        <p><strong>Email:</strong> <span x-text="student.email"></span></p>
+        <p><strong>Status:</strong> <span x-text="student.status"></span></p>
+        <p><strong>Batch:</strong> <span x-text="student.batch"></span></p>
+        <p><strong>Joined:</strong> <span x-text="student.joinDate"></span></p>
+      </div>
+      <div x-show="isAdmin || isInstructor">
+        <h3 class="text-lg font-semibold mb-2">⚙️ Actions</h3>
+        <div class="space-x-2">
+          <button class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Reassign Batch</button>
+          <button class="px-3 py-1 bg-yellow-500 text-white text-sm rounded hover:bg-yellow-600">Resend Assessment</button>
+          <button class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700" x-show="student.status === 'Active'">Suspend</button>
+          <button class="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700" x-show="student.status === 'Inactive'">Activate</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-white p-4 rounded shadow">
+        <div class="text-sm text-gray-500">📘 Total Assessments</div>
+        <div class="text-xl font-semibold" x-text="student.analytics.total"></div>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <div class="text-sm text-gray-500">✍️ Attempted</div>
+        <div class="text-xl font-semibold" x-text="student.analytics.attempted"></div>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <div class="text-sm text-gray-500">✅ Completion Rate</div>
+        <div class="text-xl font-semibold" x-text="student.analytics.completionRate + '%'"></div>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <div class="text-sm text-gray-500">📊 Average Score</div>
+        <div class="text-xl font-semibold" x-text="student.analytics.avgScore + '%'"></div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-white p-4 rounded shadow">
+        <h4 class="font-medium mb-2">Score Trend</h4>
+        <canvas id="scoreTrendChart"></canvas>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <h4 class="font-medium mb-2">Type Distribution</h4>
+        <canvas id="typeDistChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Assessment History Table -->
+    <div class="bg-white p-6 rounded shadow mt-4">
+      <h3 class="text-lg font-semibold mb-4">📄 Assessment History</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="text-left p-2">Title</th>
+              <th class="text-left p-2">Type</th>
+              <th class="text-left p-2">Score</th>
+              <th class="text-left p-2">Status</th>
+              <th class="text-left p-2">Assigned</th>
+              <th class="text-left p-2">Submitted</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="a in student.assessments" :key="a.title">
+              <tr class="border-t">
+                <td class="p-2" x-text="a.title"></td>
+                <td class="p-2" x-text="a.type"></td>
+                <td class="p-2" x-text="a.score + '%'"></td>
+                <td class="p-2" x-text="a.status"></td>
+                <td class="p-2" x-text="a.assignedDate"></td>
+                <td class="p-2" x-text="a.submittedDate"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alpine Logic -->
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      await loadComponent("sidebar-placeholder", "../components/sidebar.html");
+      await loadComponent("navbar-placeholder", "../components/nav.html");
+      studentDetailsPage().loadStudent();
+    });
+
+    async function loadComponent(id, path) {
+      try {
+        const res = await fetch(path);
+        const html = await res.text();
+        document.getElementById(id).innerHTML = html;
+      } catch (err) {
+        console.error(`Failed to load ${path}`, err);
+      }
+    }
+
+    function studentDetailsPage() {
+      return {
+        isAdmin: true,
+        isInstructor: true,
+        student: {
+          name: "Grace Hill",
+          email: "grace@example.com",
+          status: "Active",
+          batch: "Batch 2",
+          joinDate: "2024-01-20",
+          analytics: {
+            total: 5,
+            attempted: 3,
+            avgScore: 74,
+            passRate: 80,
+            get completionRate() {
+              return this.total === 0 ? 0 : Math.round((this.attempted / this.total) * 100);
+            }
+          },
+          assessments: [
+            { title: "OOP Basics", type: "MCQ", score: 78, status: "Submitted", assignedDate: "2024-05-12", submittedDate: "2024-05-14" },
+            { title: "LINQ Challenge", type: "Coding", score: 69, status: "Submitted", assignedDate: "2024-05-20", submittedDate: "2024-05-21" },
+            { title: "Entity Framework", type: "MCQ", score: 85, status: "Submitted", assignedDate: "2024-06-01", submittedDate: "2024-06-03" }
+          ]
+        },
+
+        loadStudent() {
+          this.drawCharts();
+        },
+
+        drawCharts() {
+          new Chart(document.getElementById("scoreTrendChart"), {
+            type: "line",
+            data: {
+              labels: this.student.assessments.map(a => a.title),
+              datasets: [{
+                label: "Score (%)",
+                data: this.student.assessments.map(a => a.score),
+                fill: false,
+                borderColor: "rgb(59,130,246)",
+                tension: 0.3
+              }]
+            }
+          });
+
+          const typeCounts = this.student.assessments.reduce((acc, a) => {
+            acc[a.type] = (acc[a.type] || 0) + 1;
+            return acc;
+          }, {});
+
+          new Chart(document.getElementById("typeDistChart"), {
+            type: "doughnut",
+            data: {
+              labels: Object.keys(typeCounts),
+              datasets: [{
+                data: Object.values(typeCounts),
+                backgroundColor: ["#3b82f6", "#f59e0b", "#10b981", "#f43f5e"]
+              }]
+            }
+          });
+        }
+      };
+    }
+  </script>
+</body>
+</html>

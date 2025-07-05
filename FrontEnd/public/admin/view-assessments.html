@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en" x-data="{ sidebarOpen: false }">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Assessments | Admin</title>
+
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- AlpineJS -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-gray-100 text-gray-800">
+  <!-- Sidebar -->
+  <div id="sidebar-placeholder"></div>
+
+  <!-- Main content -->
+  <div class="md:ml-64 p-6 space-y-6">
+
+    <!-- Navbar -->
+    <div id="navbar-placeholder"></div>
+
+    <!-- Page title & filters -->
+    <div class="flex flex-wrap justify-between items-center">
+      <h2 class="text-2xl font-bold">Assessments Overview</h2>
+      <div class="flex gap-2 mt-2 md:mt-0">
+        <select id="filter-batch" class="px-3 py-2 rounded border bg-white shadow-sm text-sm">
+          <option value="all">All Batches</option>
+          <option value="Batch 1">Batch 1</option>
+          <option value="Batch 2">Batch 2</option>
+          <option value="Batch 3">Batch 3</option>
+        </select>
+        <select id="filter-instructor" class="px-3 py-2 rounded border bg-white shadow-sm text-sm">
+          <option value="all">All Instructors</option>
+          <option value="Jane Doe">Jane Doe</option>
+          <option value="John Smith">John Smith</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div id="metrics-cards"></div>
+
+    <!-- Chart Section -->
+    <div id="charts-section"></div>
+
+    <!-- Assessment Table -->
+    <div class="bg-white rounded shadow p-4">
+      <h3 class="font-medium mb-2 text-lg">Recent Assessments</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 text-left">
+            <tr>
+              <th class="p-2">Title</th>
+              <th class="p-2">Type</th>
+              <th class="p-2">Instructor</th>
+              <th class="p-2">Batch</th>
+              <th class="p-2">Status</th>
+              <th class="p-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="border-t">
+              <td class="p-2">Intro to JS</td>
+              <td class="p-2">MCQ</td>
+              <td class="p-2">Jane Doe</td>
+              <td class="p-2">Batch 3</td>
+              <td class="p-2 text-green-600 font-medium">Active</td>
+              <td class="p-2 space-x-2">
+                <button class="text-blue-600 hover:underline">View</button>
+                <button class="text-yellow-600 hover:underline">Edit</button>
+                <button class="text-red-600 hover:underline">Delete</button>
+              </td>
+            </tr>
+            <tr class="border-t">
+              <td class="p-2">Data Structures</td>
+              <td class="p-2">Code</td>
+              <td class="p-2">John Smith</td>
+              <td class="p-2">Batch 2</td>
+              <td class="p-2 text-gray-500 font-medium">Closed</td>
+              <td class="p-2 space-x-2">
+                <button class="text-blue-600 hover:underline">View</button>
+                <button class="text-yellow-600 hover:underline">Edit</button>
+                <button class="text-red-600 hover:underline">Delete</button>
+              </td>
+            </tr>
+            <tr class="border-t">
+              <td class="p-2">SQL Queries</td>
+              <td class="p-2">Objective</td>
+              <td class="p-2">Jane Doe</td>
+              <td class="p-2">Batch 1</td>
+              <td class="p-2 text-green-600 font-medium">Upcoming</td>
+              <td class="p-2 space-x-2">
+                <button class="text-blue-600 hover:underline">View</button>
+                <button class="text-yellow-600 hover:underline">Edit</button>
+                <button class="text-red-600 hover:underline">Delete</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Dynamic Component Loaders -->
+  <script>
+    async function loadComponent(id, path) {
+      const res = await fetch(path);
+      const html = await res.text();
+      document.getElementById(id).innerHTML = html;
+    }
+
+    loadComponent('sidebar-placeholder', '../components/sidebar.html');
+    loadComponent('navbar-placeholder', '../components/nav.html');
+    loadComponent('metrics-cards', '../components/metrics-cards.html');
+    loadComponent('charts-section', '../components/charts-section.html');
+  </script>
+  <script>
+    async function loadComponent(id, path) {
+      const res = await fetch(path);
+      const html = await res.text();
+      document.getElementById(id).innerHTML = html;
+    }
+  
+    async function init() {
+      await loadComponent('sidebar-placeholder', '../components/sidebar.html');
+      await loadComponent('navbar-placeholder', '../components/nav.html');
+      await loadComponent('metrics-cards', '../components/metrics-cards.html');
+      await loadComponent('charts-section', '../components/charts-section.html');
+      drawCharts(); // ⬅️ Only run after chart containers are loaded
+    }
+  
+    init();
+  
+    function drawCharts() {
+      // 1. Average Score per Question Type
+      new Chart(document.getElementById("avgScoreChart"), {
+        type: 'bar',
+        data: {
+          labels: ["MCQ", "Code", "Objective"],
+          datasets: [{
+            label: "Avg. Score (%)",
+            data: [78, 65, 82],
+            backgroundColor: ["#4f46e5", "#10b981", "#f59e0b"]
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { beginAtZero: true, max: 100 } }
+        }
+      });
+  
+      // 2. Pass Rate per Batch
+      new Chart(document.getElementById("passRateBatchChart"), {
+        type: 'bar',
+        data: {
+          labels: ["Batch 1", "Batch 2", "Batch 3"],
+          datasets: [{
+            label: "Pass Rate (%)",
+            data: [80, 60, 72],
+            backgroundColor: "#6366f1"
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { beginAtZero: true, max: 100 } }
+        }
+      });
+  
+      // 3. Score Trends Over Time
+      new Chart(document.getElementById("scoreTrendsChart"), {
+        type: 'line',
+        data: {
+          labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
+          datasets: [{
+            label: "Avg. Score",
+            data: [68, 72, 75, 79],
+            fill: false,
+            borderColor: "#4f46e5",
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { beginAtZero: true, max: 100 } }
+        }
+      });
+  
+      // 4. Assessments Created Over Time
+      new Chart(document.getElementById("createdOverTimeChart"), {
+        type: 'line',
+        data: {
+          labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+          datasets: [{
+            label: "Assessments Created",
+            data: [5, 8, 6, 10, 14, 9],
+            fill: false,
+            borderColor: "#10b981",
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+  </script>
+  
+</body>
+</html>

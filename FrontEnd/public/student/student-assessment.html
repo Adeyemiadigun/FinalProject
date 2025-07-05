@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" x-data="studentAssessments()" x-init="init()">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Assessments</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-800" x-data="{ sidebarOpen: false }" x-init="initLayout()">
+
+  <div id="sidebar-placeholder" class="fixed inset-y-0 left-0 w-64 z-40 hidden md:block"></div>
+
+  <div class="md:ml-64 flex flex-col min-h-screen">
+    <div id="navbar-placeholder"></div>
+
+    <main class="flex-grow px-6 py-8 space-y-10">
+      <h1 class="text-2xl font-bold">📝 My Assessments</h1>
+
+      <!-- Filters -->
+      <div class="flex flex-wrap gap-4 items-center">
+        <select class="px-3 py-2 border rounded text-sm" x-model="filters.status" @change="applyFilters">
+          <option value="">All Status</option>
+          <option value="Upcoming">Upcoming</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Completed">Completed</option>
+        </select>
+       
+      </div>
+
+      <!-- Table -->
+      <div class="bg-white shadow rounded p-4 overflow-x-auto">
+        <table class="w-full table-auto text-sm text-left">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="p-2">Title</th>
+              <th class="p-2">Type</th>
+              <th class="p-2">Status</th>
+              <th class="p-2">Start Time</th>
+              <th class="p-2">Countdown</th>
+              <th class="p-2">Score</th>
+              <th class="p-2">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="a in filtered" :key="a.id">
+              <tr class="border-t hover:bg-gray-50">
+                <td class="p-2" x-text="a.title"></td>
+                <td class="p-2" x-text="a.type"></td>
+                <td class="p-2" x-text="a.status"></td>
+                <td class="p-2" x-text="new Date(a.start).toLocaleString()"></td>
+                <td class="p-2">
+                  <template x-if="a.status === 'Upcoming'">
+                    <span x-text="a.countdown"></span>
+                  </template>
+                  <template x-if="a.status !== 'Upcoming'">
+                    —
+                  </template>
+                </td>
+                <td class="p-2" x-text="a.status === 'Completed' ? a.score + '%' : '—'"></td>
+                <td class="p-2">
+                  <template x-if="a.status === 'Upcoming'">
+                    <button @click="startAssessment(a.id)" class="text-sm px-3 py-1 bg-indigo-600 text-white rounded">Start</button>
+                  </template>
+                  <template x-if="a.status === 'In Progress'">
+                    <button @click="resumeAssessment(a.id)" class="text-sm px-3 py-1 bg-yellow-500 text-white rounded">Resume</button>
+                  </template>
+                  <template x-if="a.status === 'Completed'">
+                    <button @click="viewResult(a.id)" class="text-sm px-3 py-1 bg-gray-300 text-gray-700 rounded">View</button>
+                  </template>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    async function loadComponent(id, path) {
+      const res = await fetch(path);
+      const html = await res.text();
+      document.getElementById(id).innerHTML = html;
+    }
+
+    function initLayout() {
+      loadComponent('sidebar-placeholder', '/public/components/sidebar-student.html');
+      loadComponent('navbar-placeholder', '/public/components/navbar-student.html');
+    }
+
+    function studentAssessments() {
+      return {
+        assessments: [
+          { id: 1, title: 'HTML Basics', type: 'MCQ', status: 'Completed', score: 85, start: '2024-06-25T10:00:00' },
+          { id: 2, title: 'Git & GitHub', type: 'Objective', status: 'In Progress', score: null, start: '2024-07-01T14:00:00' },
+          { id: 3, title: 'JavaScript Quiz', type: 'MCQ', status: 'Upcoming', score: null, start: '2025-07-05T11:00:00' },
+          { id: 4, title: 'C# Basics', type: 'Code', status: 'Upcoming', score: null, start: '2025-07-07T09:00:00' }
+        ],
+        filters: { status: '', type: '' },
+        filtered: [],
+        interval: null,
+        init() {
+          this.filtered = this.assessments;
+          this.startCountdown();
+        },
+        applyFilters() {
+          this.filtered = this.assessments.filter(a => {
+            return (this.filters.status === '' || a.status === this.filters.status) &&
+                   (this.filters.type === '' || a.type === this.filters.type);
+          });
+        },
+        startCountdown() {
+          this.interval = setInterval(() => {
+            this.assessments.forEach(a => {
+              if (a.status === 'Upcoming') {
+                const diff = new Date(a.start) - new Date();
+                if (diff <= 0) {
+                  a.status = 'In Progress';
+                  a.countdown = 'Now';
+                } else {
+                  const h = Math.floor(diff / (1000 * 60 * 60));
+                  const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                  const s = Math.floor((diff % (1000 * 60)) / 1000);
+                  a.countdown = `${h}h ${m}m ${s}s`;
+                }
+              }
+            });
+          }, 1000);
+        },
+        startAssessment(id) {
+          window.location.href = `/student/take.html?id=${id}`;
+        },
+        resumeAssessment(id) {
+          window.location.href = `/student/take.html?id=${id}`;
+        },
+        viewResult(id) {
+          window.location.href = `/student/view-result.html?id=${id}`;
+        }
+      }
+    }
+  </script>
+</body>
+</html>

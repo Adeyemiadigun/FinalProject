@@ -76,5 +76,11 @@ public class AssessmentsController(IAssessmentService assessmentService, IQuesti
         var response = await _submissionService.GetStudentSubmissionAsync(assessmentId, studentId);
         return response.Status ? Ok(response) : NotFound(response);
     }
+    [HttpGet("resents")]
+    public async Task<IActionResult> GetRecentAssessments()
+    {
+        var response = await assessmentService.GetRecentAssessment();
+        return response.Status ? Ok(response) : NotFound(response);
+    }
 }
 

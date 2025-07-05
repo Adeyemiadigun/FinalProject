@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en" x-data="batchDetailsPage()" x-cloak>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Batch Details | Admin</title>
+
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- AlpineJS -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-gray-100 text-gray-800">
+  <!-- Sidebar -->
+  <div id="sidebar-placeholder"></div>
+
+  <!-- Main Content -->
+  <div class="md:ml-64 p-6 space-y-6">
+    <!-- Navbar -->
+    <div id="navbar-placeholder"></div>
+
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+      <h2 class="text-2xl font-bold">Batch Details</h2>
+      <button @click="openModal = true" class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">
+        + New Batch
+      </button>
+    </div>
+
+    <!-- Filter -->
+    <div class="flex gap-4 items-center">
+      <label class="text-sm font-medium text-gray-700">Filter Batch:</label>
+      <select x-model="selectedBatch" @change="updateCharts" class="px-3 py-2 border rounded shadow-sm text-sm">
+        <template x-for="batch in batchList" :key="batch">
+          <option x-text="batch"></option>
+        </template>
+      </select>
+    </div>
+
+    <!-- Analytics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <template x-if="analytics[selectedBatch]">
+        <div class="bg-white p-4 rounded shadow" x-data="{ a: analytics[selectedBatch] }">
+          <div>
+            <div class="text-sm text-gray-500">🎯 Pass Rate</div>
+            <div class="text-lg font-semibold" x-text="a.passRate + '%'"></div>
+          </div>
+          <div>
+            <div class="text-sm text-gray-500">🧮 Avg Score</div>
+            <div class="text-lg font-semibold" x-text="a.avgScore + '%'"></div>
+          </div>
+          <div>
+            <div class="text-sm text-gray-500">📊 Completion</div>
+            <div class="text-lg font-semibold" x-text="a.completionRate + '%'"></div>
+          </div>
+          <div>
+            <div class="text-sm text-gray-500">🕒 Avg Time</div>
+            <div class="text-lg font-semibold" x-text="a.avgTime"></div>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <div class="bg-white p-4 rounded shadow">
+        <h3 class="text-lg font-medium mb-2">Performance Trend</h3>
+        <canvas id="performanceChart"></canvas>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <h3 class="text-lg font-medium mb-2">Difficulty Distribution</h3>
+        <canvas id="difficultyChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Student List -->
+    <div class="bg-white p-4 rounded shadow" x-show="students[selectedBatch]?.length">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="text-lg font-medium">Students in <span x-text="selectedBatch"></span></h3>
+        <span class="text-sm text-gray-500">Page <span x-text="currentPage + 1"></span> of <span x-text="totalPages"></span></span>
+      </div>
+
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-left">
+          <tr><th class="p-2">Name</th><th class="p-2">Email</th></tr>
+        </thead>
+        <tbody>
+          <template x-for="student in paginatedStudents()" :key="student.email">
+            <tr class="border-t">
+              <td class="p-2" x-text="student.name"></td>
+              <td class="p-2" x-text="student.email"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+
+      <div class="flex justify-between items-center mt-4">
+        <button @click="prevPage" :disabled="currentPage === 0" class="px-3 py-1 bg-gray-200 rounded text-sm disabled:opacity-50">Previous</button>
+        <button @click="nextPage" :disabled="currentPage >= totalPages - 1" class="px-3 py-1 bg-gray-200 rounded text-sm disabled:opacity-50">Next</button>
+      </div>
+    </div>
+
+    <!-- Create Batch Modal -->
+    <div x-show="openModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div @click.away="openModal = false" class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+        <h2 class="text-xl font-semibold mb-4">Create New Batch</h2>
+        <form @submit.prevent="createBatch" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Batch Name</label>
+            <input type="text" x-model="newBatch.name" class="mt-1 w-full px-3 py-2 border rounded text-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Batch Number</label>
+            <input type="number" x-model="newBatch.number" class="mt-1 w-full px-3 py-2 border rounded text-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Instructor</label>
+            <select x-model="newBatch.instructor" class="mt-1 w-full px-3 py-2 border rounded text-sm">
+              <option value="">Select</option>
+              <option>Jane Doe</option>
+              <option>John Smith</option>
+            </select>
+          </div>
+          <div class="flex justify-end gap-2 pt-4">
+            <button type="button" @click="openModal = false" class="bg-gray-200 px-4 py-2 rounded text-sm">Cancel</button>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded text-sm">Create</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load Components -->
+  <script>
+    async function loadComponent(id, path) {
+      const res = await fetch(path);
+      const html = await res.text();
+      document.getElementById(id).innerHTML = html;
+    }
+    loadComponent("sidebar-placeholder", "../components/sidebar.html");
+    loadComponent("navbar-placeholder", "../components/nav.html");
+  </script>
+
+  <!-- Alpine Component -->
+  <script>
+    function batchDetailsPage() {
+      return {
+        openModal: false,
+        selectedBatch: "Batch 1",
+        batchList: ["Batch 1", "Batch 2", "Batch 3"],
+        newBatch: { name: "", number: "", instructor: "" },
+        currentPage: 0,
+        itemsPerPage: 5,
+        analytics: {
+          "Batch 1": { passRate: 78, avgScore: 74, completionRate: 82, avgTime: "16m 20s" },
+          "Batch 2": { passRate: 68, avgScore: 71, completionRate: 75, avgTime: "17m 10s" },
+          "Batch 3": { passRate: 58, avgScore: 66, completionRate: 69, avgTime: "18m 45s" }
+        },
+        students: {
+          "Batch 1": [
+            { name: "Alice Johnson", email: "alice@example.com" },
+            { name: "Bob Smith", email: "bob@example.com" },
+            { name: "Carlos Diaz", email: "carlos@example.com" },
+            { name: "Diana Rose", email: "diana@example.com" },
+            { name: "Evan Stone", email: "evan@example.com" },
+            { name: "Faith Lee", email: "faith@example.com" }
+          ],
+          "Batch 2": [
+            { name: "Grace Hill", email: "grace@example.com" },
+            { name: "Henry Gray", email: "henry@example.com" }
+          ],
+          "Batch 3": [
+            { name: "Ivy White", email: "ivy@example.com" }
+          ]
+        },
+        paginatedStudents() {
+          const all = this.students[this.selectedBatch] || [];
+          const start = this.currentPage * this.itemsPerPage;
+          return all.slice(start, start + this.itemsPerPage);
+        },
+        get totalPages() {
+          const all = this.students[this.selectedBatch] || [];
+          return Math.ceil(all.length / this.itemsPerPage);
+        },
+        prevPage() {
+          if (this.currentPage > 0) this.currentPage--;
+        },
+        nextPage() {
+          if (this.currentPage < this.totalPages - 1) this.currentPage++;
+        },
+        createBatch() {
+          alert(`Batch "${this.newBatch.name}" created!`);
+          this.openModal = false;
+        },
+        updateCharts() {
+          this.currentPage = 0;
+          if (window.performanceChart && window.difficultyChart) {
+            window.performanceChart.data.datasets[0].data = [65, 70, 75, 80].map(x => x + Math.floor(Math.random() * 5));
+            window.performanceChart.update();
+            window.difficultyChart.data.datasets[0].data = [40, 45, 15].map(x => x + Math.floor(Math.random() * 3));
+            window.difficultyChart.update();
+          }
+        }
+      };
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const ctx1 = document.getElementById("performanceChart").getContext("2d");
+      window.performanceChart = new Chart(ctx1, {
+        type: "line",
+        data: {
+          labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
+          datasets: [{
+            label: "Average Score",
+            data: [70, 74, 75, 78],
+            borderColor: "#3b82f6",
+            tension: 0.4
+          }]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
+      });
+
+      const ctx2 = document.getElementById("difficultyChart").getContext("2d");
+      window.difficultyChart = new Chart(ctx2, {
+        type: "pie",
+        data: {
+          labels: ["Easy", "Medium", "Hard"],
+          datasets: [{
+            data: [40, 45, 15],
+            backgroundColor: ["#10b981", "#f59e0b", "#ef4444"]
+          }]
+        },
+        options: { responsive: true }
+      });
+    });
+  </script>
+</body>
+</html>

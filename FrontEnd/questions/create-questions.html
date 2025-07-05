@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" x-data="questionForm()" x-init="loadComponent('sidebar-placeholder', '../public/components/sidebar.html'); loadComponent('navbar-placeholder', '../public/components/nav.html')">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Create Question</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+
+<body class="bg-gray-100 text-gray-800">
+  <!-- Sidebar & Navbar -->
+  <div id="sidebar-placeholder"></div>
+  <div class="md:ml-64 p-6 space-y-6" x-cloak>
+    <div id="navbar-placeholder"></div>
+
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-2xl font-bold">Create New Question</h2>
+    </div>
+
+    <!-- Form -->
+    <form @submit.prevent="submit" class="bg-white p-6 rounded shadow space-y-4">
+      <!-- Question Metadata -->
+      <div>
+        <label class="block font-semibold mb-1">Question Text</label>
+        <textarea x-model="questionText" rows="3" class="w-full border px-4 py-2 rounded" placeholder="Enter your question here..."></textarea>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block font-semibold mb-1">Marks</label>
+          <input type="number" x-model="marks" min="1" class="w-full border px-4 py-2 rounded" />
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Order</label>
+          <input type="number" x-model="order" min="1" class="w-full border px-4 py-2 rounded" />
+        </div>
+        <div>
+          <label class="block font-semibold mb-1">Question Type</label>
+          <select x-model="questionType" class="w-full border px-4 py-2 rounded">
+            <option value="">Select Type</option>
+            <option value="MCQ">MCQ</option>
+            <option value="Objective">Objective</option>
+            <option value="Coding">Coding</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- MCQ Options -->
+      <template x-if="questionType === 'MCQ'">
+        <div class="space-y-2">
+          <label class="block font-semibold mt-4">Options</label>
+          <template x-for="(option, index) in mcqOptions" :key="index">
+            <div class="flex items-center gap-2">
+              <input type="text" class="flex-1 border px-3 py-1 rounded" x-model="option.optionText" placeholder="Option text" />
+              <label class="inline-flex items-center gap-1">
+                <input type="checkbox" x-model="option.isCorrect" />
+                Correct
+              </label>
+              <button type="button" class="text-red-600 text-sm" @click="removeOption(index)">✕</button>
+            </div>
+          </template>
+          <button type="button" @click="addOption" class="mt-2 text-blue-600 text-sm">+ Add Option</button>
+        </div>
+      </template>
+
+      <!-- Objective Question -->
+      <template x-if="questionType === 'Objective'">
+        <div>
+          <label class="block font-semibold mt-4">Expected Answer</label>
+          <input type="text" x-model="objectiveAnswer" class="w-full border px-4 py-2 rounded" placeholder="Expected answer" />
+        </div>
+      </template>
+
+      <!-- Coding Question -->
+      <template x-if="questionType === 'Coding'">
+        <div class="space-y-4">
+          <div>
+            <label class="block font-semibold">Expected Code Answer</label>
+            <textarea x-model="expectedAnswer" rows="4" class="w-full border px-4 py-2 rounded" placeholder="Enter expected code or answer..."></textarea>
+          </div>
+
+          <div>
+            <label class="block font-semibold mb-2">Test Cases</label>
+            <template x-for="(test, index) in codingTestCases" :key="index">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-2 items-center mb-2">
+                <input type="text" x-model="test.input" placeholder="Input" class="border px-3 py-1 rounded" />
+                <input type="text" x-model="test.expectedOutput" placeholder="Expected Output" class="border px-3 py-1 rounded" />
+                <input type="number" x-model="test.weight" min="0" step="0.1" class="border px-3 py-1 rounded" placeholder="Weight" />
+                <button type="button" class="text-red-600 text-sm" @click="removeTestCase(index)">✕</button>
+              </div>
+            </template>
+            <button type="button" @click="addTestCase" class="text-blue-600 text-sm">+ Add Test Case</button>
+          </div>
+        </div>
+      </template>
+
+      <!-- Submit Button -->
+      <div class="pt-4">
+        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">✅ Submit</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Alpine.js Logic -->
+  <script>
+    function questionForm() {
+      return {
+        questionType: '',
+        questionText: '',
+        marks: 1,
+        order: 1,
+        objectiveAnswer: '',
+        expectedAnswer: '',
+
+        mcqOptions: [
+          { optionText: '', isCorrect: false }
+        ],
+        codingTestCases: [
+          { input: '', expectedOutput: '', weight: 1.0 }
+        ],
+
+        addOption() {
+          this.mcqOptions.push({ optionText: '', isCorrect: false });
+        },
+        removeOption(index) {
+          this.mcqOptions.splice(index, 1);
+        },
+
+        addTestCase() {
+          this.codingTestCases.push({ input: '', expectedOutput: '', weight: 1.0 });
+        },
+        removeTestCase(index) {
+          this.codingTestCases.splice(index, 1);
+        },
+
+        submit() {
+          const base = {
+            questionText: this.questionText,
+            marks: this.marks,
+            order: this.order,
+            questionType: this.questionType
+          };
+
+          let payload = {};
+
+          if (this.questionType === 'MCQ') {
+            payload = {
+              ...base,
+              options: this.mcqOptions,
+              answer: {
+                answerText: this.mcqOptions.filter(o => o.isCorrect).map(o => o.optionText).join(', ')
+              }
+            };
+          }
+
+          if (this.questionType === 'Objective') {
+            payload = {
+              ...base,
+              answer: {
+                answerText: this.objectiveAnswer
+              }
+            };
+          }
+
+          if (this.questionType === 'Coding') {
+            payload = {
+              ...base,
+              testCases: this.codingTestCases,
+              answer: {
+                answerText: this.expectedAnswer
+              }
+            };
+          }
+
+          console.log("✅ Final Payload:", payload);
+          // You can now POST to API
+        }
+      };
+    }
+
+    async function loadComponent(id, path) {
+      const res = await fetch(path);
+      const html = await res.text();
+      document.getElementById(id).innerHTML = html;
+    }
+  </script>
+</body>
+</html>

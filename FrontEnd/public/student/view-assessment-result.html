@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" x-data="viewResult()" x-init="init()">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>View Assessment Result</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+  <div class="max-w-5xl mx-auto p-6 mt-10 bg-white rounded shadow space-y-8">
+
+    <!-- Header -->
+    <div>
+      <h1 class="text-2xl font-bold">📄 Assessment Result</h1>
+      <p class="text-sm text-gray-500" x-text="result.title + ' • ' + result.date"></p>
+    </div>
+
+    <!-- Score Summary -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+      <div class="bg-gray-50 p-4 rounded">
+        <div class="text-sm text-gray-500">Score</div>
+        <div class="text-xl font-bold" x-text="result.score + '%'"></div>
+      </div>
+      <div class="bg-gray-50 p-4 rounded">
+        <div class="text-sm text-gray-500">Time Taken</div>
+        <div class="text-xl font-bold" x-text="result.timeTaken"></div>
+      </div>
+      <div class="bg-gray-50 p-4 rounded">
+        <div class="text-sm text-gray-500">Correct</div>
+        <div class="text-xl font-bold text-green-600" x-text="result.correct"></div>
+      </div>
+      <div class="bg-gray-50 p-4 rounded">
+        <div class="text-sm text-gray-500">Wrong</div>
+        <div class="text-xl font-bold text-red-600" x-text="result.wrong"></div>
+      </div>
+    </div>
+
+    <!-- Answers Review -->
+    <div>
+      <h2 class="text-lg font-semibold mb-4">📝 Answers Review</h2>
+      <template x-for="(q, index) in result.questions" :key="index">
+        <div class="mb-6 p-4 border rounded shadow-sm bg-gray-50">
+          <div class="mb-2 text-sm text-gray-500">Question <span x-text="index + 1"></span></div>
+          <div class="font-medium text-gray-800 mb-2" x-text="q.text"></div>
+
+          <!-- MCQ / Objective -->
+          <template x-if="q.type !== 'Code'">
+            <div class="space-y-1 text-sm">
+              <p><span class="font-semibold">Your Answer:</span> 
+                <span :class="q.isCorrect ? 'text-green-600' : 'text-red-600'" x-text="q.studentAnswer || '—'"></span>
+              </p>
+              <template x-if="!q.isCorrect">
+                <p><span class="font-semibold">Correct Answer:</span> 
+                  <span class="text-green-600" x-text="q.correctAnswer"></span>
+                </p>
+              </template>
+              <p><span class="font-semibold">Status:</span> 
+                <span :class="q.isCorrect ? 'text-green-600' : 'text-red-600'" x-text="q.isCorrect ? 'Correct' : 'Wrong'"></span>
+              </p>
+            </div>
+          </template>
+
+          <!-- Coding Question -->
+          <template x-if="q.type === 'Code'">
+            <div class="space-y-3 text-sm">
+              <div>
+                <span class="font-semibold">Your Code:</span>
+                <pre class="bg-black text-green-200 text-xs p-3 rounded overflow-auto mt-1"><code x-text="q.studentCode"></code></pre>
+              </div>
+              <div>
+                <span class="font-semibold">Expected Output:</span>
+                <pre class="bg-gray-200 text-xs p-2 rounded overflow-auto" x-text="q.expectedOutput"></pre>
+              </div>
+              <div>
+                <span class="font-semibold">Your Output:</span>
+                <pre class="bg-gray-100 text-xs p-2 rounded overflow-auto" x-text="q.actualOutput"></pre>
+              </div>
+              <p><span class="font-semibold">Verdict:</span> 
+                <span :class="q.isCorrect ? 'text-green-600' : 'text-red-600'" x-text="q.isCorrect ? 'Passed' : 'Failed'"></span>
+              </p>
+            </div>
+          </template>
+        </div>
+      </template>
+    </div>
+
+    <!-- Back Button -->
+    <div>
+      <a href="/student/assessments.html" class="text-indigo-600 hover:underline text-sm">← Back to My Assessments</a>
+    </div>
+  </div>
+
+  <script>
+    function viewResult() {
+      return {
+        result: {
+          title: "JavaScript Fundamentals",
+          date: "July 1, 2025",
+          score: 85,
+          timeTaken: "22 mins",
+          correct: 17,
+          wrong: 3,
+          questions: [
+            {
+              type: "MCQ",
+              text: "What does `===` mean in JavaScript?",
+              studentAnswer: "`Strict equality` comparison",
+              correctAnswer: "`Strict equality` comparison",
+              isCorrect: true
+            },
+            {
+              type: "Objective",
+              text: "Which company developed JavaScript?",
+              studentAnswer: "Microsoft",
+              correctAnswer: "Netscape",
+              isCorrect: false
+            },
+            {
+              type: "MCQ",
+              text: "Which of these is NOT a JavaScript data type?",
+              studentAnswer: "float",
+              correctAnswer: "float",
+              isCorrect: false
+            },
+            {
+              type: "Objective",
+              text: "How do you declare a constant in JavaScript?",
+              studentAnswer: "const",
+              correctAnswer: "const",
+              isCorrect: true
+            },
+            {
+              type: "Code",
+              text: "Write a function that returns the sum of two numbers.",
+              studentCode: `function sum(a, b) {\n  return a + b;\n}`,
+              expectedOutput: "sum(2, 3) => 5",
+              actualOutput: "sum(2, 3) => 5",
+              isCorrect: true
+            },
+            {
+              type: "Code",
+              text: "Write a function that reverses a string.",
+              studentCode: `function reverse(str) {\n  return str;\n}`,
+              expectedOutput: "reverse('abc') => 'cba'",
+              actualOutput: "reverse('abc') => 'abc'",
+              isCorrect: false
+            }
+          ]
+        },
+        init() {
+          // Optional: fetch based on ID from query string
+        }
+      }
+    }
+  </script>
+
+</body>
+</html>

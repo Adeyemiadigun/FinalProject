@@ -21,10 +21,10 @@ namespace Application.Dtos
         public string Description { get; set; }
         public string TechnologyStack { get; set; }
         public int DurationInMinutes { get; set; }
+        public List<Guid> BatchIds { get; set; } = [];
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public double PassingScore { get; set; }
-        public List<Guid> AssignedStudentIds { get; set; } = [];
     }
     public class AssignStudentsModel
     {

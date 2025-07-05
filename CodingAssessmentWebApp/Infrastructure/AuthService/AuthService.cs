@@ -60,11 +60,11 @@ namespace Application.Services.AuthService
             var LoggedUser = await _userRepository.GetAsync(x => x.Email == user.Email);
             if (LoggedUser == null)
             {
-                throw new ApiException("User not found", 404, "USER_NOT_FOUND", null);
+                throw new ApiException("Invalid Credentials", 404, "INVALID_CREDENTIALS", null);
             }
             if (!BCrypt.Net.BCrypt.Verify(user.Password, LoggedUser.PasswordHash))
             {
-                throw new ApiException("Invalid password", 401, "INVALID_PASSWORD", null);
+                throw new ApiException("Invalid Credentials", 401, "INVALID_PASSWORD", null);
             }
             var userDto = new UserDto()
             {

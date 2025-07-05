@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Application.Dtos;
+﻿using Application.Dtos;
 
 namespace Application.Interfaces.Services
 {
@@ -18,5 +13,10 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<PaginationDto<AssessmentDto>>> GetAssessmentsByStudentId(Guid studentId, PaginationRequest request);
         Task<BaseResponse<AssessmentDto>> AssignStudents(Guid id, AssignStudentsModel model);
         Task<BaseResponse<AssessmentDto>> UpdateAssessmentAsync(Guid id, UpdateAssessmentRequestModel model);
+        Task<BaseResponse<PaginationDto<AssessmentDto>>> GetAssessmentsByBatchId(Guid id, PaginationRequest request);
+        Task<BaseResponse<List<AssessmentPerformanceDto>>> GetTopAssessments();
+        Task<BaseResponse<List<AssessmentPerformanceDto>>> GetLowestAssessments();
+        Task<BaseResponse<List<AssessmentDto>>> GetRecentAssessment();
+            
     }
 }

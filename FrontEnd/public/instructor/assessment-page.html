@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en" x-data="instructorAssessmentsPage()" x-init="loadComponent('sidebar-placeholder', '../components/sidebar.html'); loadComponent('navbar-placeholder', '../components/nav.html'); loadAssessments()">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Instructor Assessments</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-gray-100 text-gray-800">
+  <div id="sidebar-placeholder"></div>
+  <div class="md:ml-64 p-6 space-y-6" x-cloak>
+    <div id="navbar-placeholder"></div>
+
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+      <h2 class="text-2xl font-bold">📘 My Assessments</h2>
+      <button @click="showCreateModal = true" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">➕ Create Assessment</button>
+    </div>
+
+    <!-- Assessment List -->
+    <div class="bg-white p-6 rounded shadow">
+      <template x-if="assessments.length > 0">
+        <div class="space-y-4">
+          <template x-for="assessment in pagedAssessments" :key="assessment.id">
+            <div class="border rounded p-4">
+              <div class="flex justify-between items-center mb-2">
+                <div>
+                  <h3 class="text-lg font-semibold" x-text="assessment.title"></h3>
+                  <p class="text-sm text-gray-600" x-text="assessment.technologyStack"></p>
+                  <p class="text-sm text-gray-500" x-text="`🕒 ${assessment.durationInMinutes} mins | 📅 ${assessment.startDate} - ${assessment.endDate}`"></p>
+                </div>
+                <div>
+                  <a :href="`/pages/instructor/questions.html?assessmentId=${assessment.id}`" class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">➕ Add Questions</a>
+                </div>
+              </div>
+
+              <!-- Chart -->
+              <div class="mt-2">
+                <h4 class="text-sm font-semibold mb-1">Batch Performance</h4>
+                <canvas :id="`batchChart-${assessment.id}`" class="w-full h-32"></canvas>
+              </div>
+
+              <!-- Students -->
+              <div class="mt-4">
+                <h4 class="text-sm font-semibold mb-2">Student Scores</h4>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-sm">
+                    <thead class="bg-gray-100">
+                      <tr>
+                        <th class="p-2 text-left">Student</th>
+                        <th class="p-2 text-left">Email</th>
+                        <th class="p-2 text-left">Batch</th>
+                        <th class="p-2 text-left">Score</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template x-for="student in assessment.students" :key="student.id">
+                        <tr class="border-t">
+                          <td class="p-2" x-text="student.name"></td>
+                          <td class="p-2" x-text="student.email"></td>
+                          <td class="p-2" x-text="student.batch"></td>
+                          <td class="p-2" x-text="`${student.score}%`"></td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- Pagination -->
+          <div class="flex justify-end mt-4 space-x-2">
+            <button @click="prevPage" :disabled="page === 1" class="px-3 py-1 bg-gray-300 rounded disabled:opacity-50">Prev</button>
+            <span class="px-3 py-1 text-sm" x-text="`Page ${page} of ${totalPages}`"></span>
+            <button @click="nextPage" :disabled="page === totalPages" class="px-3 py-1 bg-gray-300 rounded disabled:opacity-50">Next</button>
+          </div>
+        </div>
+      </template>
+
+      <template x-if="assessments.length === 0">
+        <div class="text-center text-gray-500">No assessments found.</div>
+      </template>
+    </div>
+  </div>
+
+  <!-- Create Assessment Modal -->
+  <div x-show="showCreateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.outside="showCreateModal = false">
+    <div class="bg-white w-full max-w-lg p-6 rounded shadow space-y-4">
+      <h3 class="text-lg font-bold">➕ Create New Assessment</h3>
+
+      <div class="space-y-2">
+        <input x-model="newAssessment.title" type="text" class="w-full border px-4 py-2 rounded" placeholder="Title" />
+        <input x-model="newAssessment.technologyStack" type="text" class="w-full border px-4 py-2 rounded" placeholder="Technology Stack" />
+        <input x-model.number="newAssessment.durationInMinutes" type="number" class="w-full border px-4 py-2 rounded" placeholder="Duration (in minutes)" />
+        <textarea x-model="newAssessment.description" rows="2" class="w-full border px-4 py-2 rounded" placeholder="Description (optional)"></textarea>
+
+        <div class="grid grid-cols-2 gap-4">
+          <input x-model="newAssessment.startDate" type="date" class="w-full border px-4 py-2 rounded" />
+          <input x-model="newAssessment.endDate" type="date" class="w-full border px-4 py-2 rounded" />
+        </div>
+      </div>
+
+      <div class="text-right pt-2">
+        <button @click="submitAssessment" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">✅ Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AlpineJS Logic -->
+  <script>
+    function instructorAssessmentsPage() {
+      return {
+        assessments: [],
+        page: 1,
+        perPage: 2,
+        showCreateModal: false,
+        newAssessment: {
+          title: '',
+          technologyStack: '',
+          durationInMinutes: 60,
+          description: '',
+          startDate: '',
+          endDate: ''
+        },
+
+        get pagedAssessments() {
+          const start = (this.page - 1) * this.perPage;
+          return this.assessments.slice(start, start + this.perPage);
+        },
+        get totalPages() {
+          return Math.ceil(this.assessments.length / this.perPage);
+        },
+        prevPage() {
+          if (this.page > 1) this.page--;
+          this.drawAllCharts();
+        },
+        nextPage() {
+          if (this.page < this.totalPages) this.page++;
+          this.drawAllCharts();
+        },
+
+        loadAssessments() {
+          this.assessments = [
+            {
+              id: 1,
+              title: "OOP Assessment",
+              technologyStack: "C#",
+              durationInMinutes: 60,
+              description: "",
+              startDate: "2024-07-01",
+              endDate: "2024-07-03",
+              students: [
+                { id: 1, name: "Grace Hill", email: "grace@example.com", batch: "Batch Alpha", score: 85 },
+                { id: 2, name: "John Doe", email: "john@example.com", batch: "Batch Alpha", score: 78 }
+              ]
+            }
+          ];
+          this.drawAllCharts();
+        },
+
+        drawAllCharts() {
+          this.pagedAssessments.forEach(a => {
+            const ctx = document.getElementById(`batchChart-${a.id}`);
+            if (ctx) {
+              const scoresByBatch = a.students.reduce((acc, s) => {
+                acc[s.batch] = acc[s.batch] || [];
+                acc[s.batch].push(s.score);
+                return acc;
+              }, {});
+              const labels = Object.keys(scoresByBatch);
+              const data = labels.map(batch => {
+                const scores = scoresByBatch[batch];
+                return Math.round(scores.reduce((sum, val) => sum + val, 0) / scores.length);
+              });
+
+              new Chart(ctx, {
+                type: "bar",
+                data: {
+                  labels: labels,
+                  datasets: [{
+                    label: "Avg Score (%)",
+                    data: data,
+                    backgroundColor: "#3b82f6"
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false
+                }
+              });
+            }
+          });
+        },
+
+        submitAssessment() {
+          const newId = this.assessments.length + 1;
+          const newItem = {
+            ...this.newAssessment,
+            id: newId,
+            students: []
+          };
+          this.assessments.push(newItem);
+          this.showCreateModal = false;
+          this.newAssessment = {
+            title: '',
+            technologyStack: '',
+            durationInMinutes: 60,
+            description: '',
+            startDate: '',
+            endDate: ''
+          };
+          this.drawAllCharts();
+        }
+      };
+    }
+    
+    async function loadComponent(id, path) {
+      const res = await fetch(path);
+      const html = await res.text();
+      document.getElementById(id).innerHTML = html;
+    }
+  </script>
+</body>
+</html>

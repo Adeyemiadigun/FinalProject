@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" x-data="instructorBatchesPage()" x-init="
+  loadComponent('sidebar-placeholder', '../components/sidebar.html');
+  loadComponent('navbar-placeholder', '../components/nav.html');
+  loadData();
+">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Instructor Batches</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+
+<body class="bg-gray-100 text-gray-800">
+  <!-- Sidebar & Navbar -->
+  <div id="sidebar-placeholder"></div>
+
+  <div class="md:ml-64 p-6 space-y-6" x-cloak>
+    <div id="navbar-placeholder"></div>
+
+    <!-- Page Header -->
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-2xl font-bold">🎓 Instructor Batches</h2>
+    </div>
+
+    <!-- Batch List -->
+    <template x-if="filteredBatches.length > 0">
+      <div class="space-y-6">
+        <template x-for="batch in filteredBatches" :key="batch.id">
+          <div class="bg-white p-6 rounded shadow space-y-4">
+            <!-- Batch Header -->
+            <div class="flex justify-between items-center">
+              <div>
+                <h3 class="text-lg font-semibold" x-text="batch.name"></h3>
+                <p class="text-sm text-gray-600">Batch Number: <span x-text="batch.batchNumber"></span></p>
+              </div>
+            </div>
+
+            <!-- Students List -->
+            <div>
+              <h4 class="font-semibold mb-2">👨‍🎓 Students</h4>
+              <ul class="list-disc list-inside space-y-1 text-sm">
+                <template x-for="student in batch.students" :key="student.id">
+                  <li>
+                    <span x-text="student.name"></span> (<span x-text="student.email"></span>)
+                  </li>
+                </template>
+              </ul>
+            </div>
+
+            <!-- Relevant Assessments -->
+            <div>
+              <h4 class="font-semibold mb-2">📝 Assessments by You</h4>
+              <template x-if="batch.assessments.length > 0">
+                <ul class="list-disc list-inside space-y-1 text-sm">
+                  <template x-for="assess in batch.assessments" :key="assess.id">
+                    <li>
+                      <span x-text="assess.title"></span> - <span class="text-gray-500 text-xs" x-text="assess.technologyStack"></span>
+                    </li>
+                  </template>
+                </ul>
+              </template>
+              <template x-if="batch.assessments.length === 0">
+                <p class="text-sm text-gray-500">No assessments by you for this batch.</p>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+    </template>
+
+    <!-- No Relevant Batches -->
+    <template x-if="filteredBatches.length === 0">
+      <p class="text-gray-500 text-center">No batches have students who took your assessments.</p>
+    </template>
+  </div>
+
+  <!-- AlpineJS Logic -->
+  <script>
+    function instructorBatchesPage() {
+      return {
+        allBatches: [],
+        allStudents: [],
+        allAssessments: [],
+        instructorId: 'instructor-123', // change to actual ID later
+
+        get filteredBatches() {
+          const relevantBatches = [];
+
+          this.allBatches.forEach(batch => {
+            const studentsInBatch = this.allStudents.filter(s => s.batchId === batch.id);
+            const studentIds = studentsInBatch.map(s => s.id);
+
+            const relevantAssessments = this.allAssessments.filter(a =>
+              a.createdBy === this.instructorId &&
+              a.assignedStudentIds.some(id => studentIds.includes(id))
+            );
+
+            if (relevantAssessments.length > 0) {
+              relevantBatches.push({
+                ...batch,
+                students: studentsInBatch,
+                assessments: relevantAssessments
+              });
+            }
+          });
+
+          return relevantBatches;
+        },
+
+        loadData() {
+          // Dummy data
+          this.allBatches = [
+            { id: 1, name: 'Batch Alpha', batchNumber: 101 },
+            { id: 2, name: 'Batch Beta', batchNumber: 102 },
+            { id: 3, name: 'Batch Gamma', batchNumber: 103 }
+          ];
+
+          this.allStudents = [
+            { id: 1, name: 'Alice', email: 'alice@example.com', batchId: 1 },
+            { id: 2, name: 'Bob', email: 'bob@example.com', batchId: 1 },
+            { id: 3, name: 'Charlie', email: 'charlie@example.com', batchId: 2 },
+            { id: 4, name: 'Diana', email: 'diana@example.com', batchId: 3 }
+          ];
+
+          this.allAssessments = [
+            {
+              id: 1001,
+              title: 'OOP Basics',
+              technologyStack: 'C#',
+              createdBy: 'instructor-123',
+              assignedStudentIds: [1, 2]
+            },
+            {
+              id: 1002,
+              title: 'EF Core Queries',
+              technologyStack: '.NET',
+              createdBy: 'instructor-123',
+              assignedStudentIds: [3]
+            },
+            {
+              id: 1003,
+              title: 'JavaScript Fundamentals',
+              technologyStack: 'JS',
+              createdBy: 'another-instructor',
+              assignedStudentIds: [4]
+            }
+          ];
+        }
+      };
+    }
+
+    async function loadComponent(id, path) {
+      const res = await fetch(path);
+      const html = await res.text();
+      document.getElementById(id).innerHTML = html;
+    }
+  </script>
+</body>
+
+</html>

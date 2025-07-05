@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en" x-data="studentsPage()" x-init="init(); loadSidebarAndNavbar();">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Students | Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>[x-cloak] { display: none !important; }</style>
+</head>
+
+<body class="bg-gray-100 text-gray-800">
+  <!-- Sidebar -->
+  <div id="sidebar-placeholder"></div>
+
+  <!-- Main Content -->
+  <div class="md:ml-64 p-6 space-y-6" x-cloak>
+    <!-- Navbar -->
+    <div id="navbar-placeholder"></div>
+
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+      <h2 class="text-2xl font-bold">Students</h2>
+      <button @click="openCreateModal = true"
+              class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">+ New Student</button>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap gap-4 items-center">
+      <div>
+        <label class="text-sm font-medium text-gray-700">Batch:</label>
+        <select x-model="selectedBatch" @change="onBatchChange"
+                class="mt-1 px-3 py-2 rounded border bg-white text-sm shadow-sm">
+          <template x-for="batch in batches" :key="batch.id">
+            <option :value="batch.id" x-text="batch.name"></option>
+          </template>
+        </select>
+      </div>
+
+      <div class="flex-1">
+        <label class="text-sm font-medium text-gray-700 block">Search:</label>
+        <input x-model="searchQuery" @input.debounce.400ms="onSearch"
+               placeholder="Search by name or email"
+               class="mt-1 w-full px-3 py-2 border rounded text-sm shadow-sm" />
+      </div>
+    </div>
+
+    <!-- Students Table -->
+    <div class="bg-white rounded shadow p-4">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="p-2 text-left">Name</th>
+              <th class="p-2 text-left">Email</th>
+              <th class="p-2 text-left">Status</th>
+              <th class="p-2 text-left">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="(student, index) in paginatedStudents()" :key="index">
+              <tr class="border-t">
+                <td class="p-2" x-text="student.name"></td>
+                <td class="p-2" x-text="student.email"></td>
+                <td class="p-2" x-text="student.status"></td>
+                <td class="p-2 space-x-2">
+                  <button @click="editStudent(student, index)" class="text-yellow-600 hover:underline">Edit</button>
+                  <button @click="deleteStudent(index)" class="text-red-600 hover:underline">Delete</button>
+                </td>
+              </tr>
+            </template>
+            <tr x-show="filteredStudents().length === 0">
+              <td colspan="4" class="p-4 text-center text-gray-500">No students found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="flex justify-between items-center mt-4">
+        <button @click="prevPage" :disabled="!hasPreviousPage"
+                class="px-3 py-1 rounded bg-gray-200 text-sm hover:bg-gray-300 disabled:opacity-50">Previous</button>
+        <span class="text-sm">Page <span x-text="currentPage + 1"></span> of <span x-text="totalPages()"></span></span>
+        <button @click="nextPage" :disabled="!hasNextPage"
+                class="px-3 py-1 rounded bg-gray-200 text-sm hover:bg-gray-300 disabled:opacity-50">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Modal -->
+  <div x-show="openCreateModal" x-cloak class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div @click.away="openCreateModal = false" class="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+      <h2 class="text-xl font-semibold mb-4">Create Student</h2>
+      <form @submit.prevent="createStudent" class="space-y-3">
+        <input type="text" x-model="newStudent.name" placeholder="Name" class="w-full px-3 py-2 border rounded text-sm" required />
+        <input type="email" x-model="newStudent.email" placeholder="Email" class="w-full px-3 py-2 border rounded text-sm" required />
+        <select x-model="newStudent.status" class="w-full px-3 py-2 border rounded text-sm">
+          <option>Active</option>
+          <option>Inactive</option>
+        </select>
+        <div class="flex justify-end gap-2">
+          <button @click="openCreateModal = false" type="button" class="bg-gray-200 px-4 py-2 rounded text-sm">Cancel</button>
+          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded text-sm">Create</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div x-show="openEditModal" x-cloak class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div @click.away="openEditModal = false" class="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+      <h2 class="text-xl font-semibold mb-4">Edit Student</h2>
+      <form @submit.prevent="updateStudent" class="space-y-3">
+        <input type="text" x-model="editStudentData.name" class="w-full px-3 py-2 border rounded text-sm" required />
+        <input type="email" x-model="editStudentData.email" class="w-full px-3 py-2 border rounded text-sm" required />
+        <select x-model="editStudentData.status" class="w-full px-3 py-2 border rounded text-sm">
+          <option>Active</option>
+          <option>Inactive</option>
+        </select>
+        <div class="flex justify-end gap-2">
+          <button @click="openEditModal = false" type="button" class="bg-gray-200 px-4 py-2 rounded text-sm">Cancel</button>
+          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded text-sm">Update</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- AlpineJS Logic -->
+  <script>
+    function studentsPage() {
+      return {
+        batches: [
+          { id: 'b1', name: 'Batch 1' },
+          { id: 'b2', name: 'Batch 2' }
+        ],
+        studentsByBatch: {
+          'b1': [
+            { name: 'Alice Johnson', email: 'alice@example.com', status: 'Active' },
+            { name: 'Bob Smith', email: 'bob@example.com', status: 'Inactive' },
+            { name: 'Clara Kim', email: 'clara@example.com', status: 'Active' },
+            { name: 'David O.', email: 'david@example.com', status: 'Active' }
+          ],
+          'b2': [
+            { name: 'Eve Stone', email: 'eve@example.com', status: 'Active' }
+          ]
+        },
+        selectedBatch: 'b1',
+        searchQuery: '',
+        currentPage: 0,
+        pageSize: 3,
+        openCreateModal: false,
+        openEditModal: false,
+        newStudent: { name: '', email: '', status: 'Active' },
+        editStudentData: {},
+        editingIndex: null,
+
+        init() {
+          this.selectedBatch = this.batches[0].id;
+        },
+
+        filteredStudents() {
+          const students = this.studentsByBatch[this.selectedBatch] || [];
+          if (!this.searchQuery) return students;
+          const q = this.searchQuery.toLowerCase();
+          return students.filter(s =>
+            s.name.toLowerCase().includes(q) || s.email.toLowerCase().includes(q)
+          );
+        },
+
+        paginatedStudents() {
+          const start = this.currentPage * this.pageSize;
+          return this.filteredStudents().slice(start, start + this.pageSize);
+        },
+
+        totalPages() {
+          return Math.ceil(this.filteredStudents().length / this.pageSize);
+        },
+
+        get hasNextPage() {
+          return (this.currentPage + 1) < this.totalPages();
+        },
+
+        get hasPreviousPage() {
+          return this.currentPage > 0;
+        },
+
+        nextPage() {
+          if (this.hasNextPage) this.currentPage++;
+        },
+
+        prevPage() {
+          if (this.hasPreviousPage) this.currentPage--;
+        },
+
+        onBatchChange() {
+          this.currentPage = 0;
+        },
+
+        onSearch() {
+          this.currentPage = 0;
+        },
+
+        createStudent() {
+          if (!this.studentsByBatch[this.selectedBatch]) this.studentsByBatch[this.selectedBatch] = [];
+          this.studentsByBatch[this.selectedBatch].push({ ...this.newStudent });
+          this.newStudent = { name: '', email: '', status: 'Active' };
+          this.openCreateModal = false;
+        },
+
+        editStudent(student, index) {
+          this.editStudentData = { ...student };
+          this.editingIndex = index;
+          this.openEditModal = true;
+        },
+
+        updateStudent() {
+          this.studentsByBatch[this.selectedBatch][this.editingIndex] = { ...this.editStudentData };
+          this.openEditModal = false;
+        },
+
+        deleteStudent(index) {
+          if (confirm("Delete this student?")) {
+            this.studentsByBatch[this.selectedBatch].splice(index, 1);
+          }
+        },
+
+        async loadSidebarAndNavbar() {
+          await loadComponent("sidebar-placeholder", "../components/sidebar.html");
+          await loadComponent("navbar-placeholder", "../components/nav.html");
+        }
+      };
+    }
+
+    async function loadComponent(id, path) {
+      const res = await fetch(path);
+      const html = await res.text();
+      document.getElementById(id).innerHTML = html;
+    }
+  </script>
+</body>
+</html>

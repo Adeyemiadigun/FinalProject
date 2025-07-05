@@ -1,0 +1,100 @@
+<!-- charts-section.html -->
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+  <!-- Avg. Score per Question Type -->
+  <div class="bg-white p-4 rounded shadow">
+    <h3 class="font-medium mb-2">Average Score per Question Type</h3>
+    <canvas id="avgScoreChart" class="w-full h-64"></canvas>
+  </div>
+
+  <!-- Pass Rate per Batch -->
+  <div class="bg-white p-4 rounded shadow">
+    <h3 class="font-medium mb-2">Pass Rate per Batch</h3>
+    <canvas id="passRateBatchChart" class="w-full h-64"></canvas>
+  </div>
+
+  <!-- Score Trends Over Time -->
+  <div class="bg-white p-4 rounded shadow">
+    <h3 class="font-medium mb-2">Score Trends Over Time</h3>
+    <canvas id="scoreTrendsChart" class="w-full h-64"></canvas>
+  </div>
+
+  <!-- Assessments Created Over Time -->
+  <div class="bg-white p-4 rounded shadow">
+    <h3 class="font-medium mb-2">Assessments Created Over Time</h3>
+    <canvas id="createdOverTimeChart" class="w-full h-64"></canvas>
+  </div>
+</div>
+
+<script>
+  // Average Score per Question Type
+  new Chart(document.getElementById("avgScoreChart"), {
+    type: 'bar',
+    data: {
+      labels: ["MCQ", "Code", "Objective"],
+      datasets: [{
+        label: "Avg. Score (%)",
+        data: [78, 65, 82],
+        backgroundColor: ["#4f46e5", "#10b981", "#f59e0b"]
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: { y: { beginAtZero: true, max: 100 } }
+    }
+  });
+
+  // Pass Rate per Batch
+  new Chart(document.getElementById("passRateBatchChart"), {
+    type: 'bar',
+    data: {
+      labels: ["Batch 1", "Batch 2", "Batch 3"],
+      datasets: [{
+        label: "Pass Rate (%)",
+        data: [80, 60, 72],
+        backgroundColor: "#6366f1"
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: { y: { beginAtZero: true, max: 100 } }
+    }
+  });
+
+  // Score Trends Over Time
+  new Chart(document.getElementById("scoreTrendsChart"), {
+    type: 'line',
+    data: {
+      labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
+      datasets: [{
+        label: "Avg. Score",
+        data: [68, 72, 75, 79],
+        fill: false,
+        borderColor: "#4f46e5",
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: { y: { beginAtZero: true, max: 100 } }
+    }
+  });
+
+  // Assessments Created Over Time
+  new Chart(document.getElementById("createdOverTimeChart"), {
+    type: 'line',
+    data: {
+      labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+      datasets: [{
+        label: "Assessments Created",
+        data: [5, 8, 6, 10, 14, 9],
+        fill: false,
+        borderColor: "#10b981",
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+</script>

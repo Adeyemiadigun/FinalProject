@@ -1,0 +1,41 @@
+<!-- /components/sidebar.html -->
+<aside class="fixed inset-y-0 left-0 w-64 bg-gray-900 text-white z-40 transform md:translate-x-0 transition-transform duration-200">
+  <div class="p-4 text-xl font-semibold border-b border-gray-700">
+    Coding Assessment App
+  </div>
+
+  <nav class="flex flex-col gap-2 p-4 text-sm">
+    <!-- Dashboard -->
+    <a href="/admin/dashboard.html" class="flex items-center gap-2 p-2 rounded bg-gray-800">
+      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h18M3 6h18M3 18h18"/>
+      </svg>
+      Dashboard
+    </a>
+
+    <!-- Assessments -->
+    <a href="/public/admin/view-assessments.html" class="flex items-center gap-2 p-2 rounded hover:bg-gray-800">
+      📝 Assessments
+    </a>
+
+    <!-- Batches -->
+    <a href="/public/admin/batches.html" class="flex items-center gap-2 p-2 rounded hover:bg-gray-800">
+      👥 Batches
+    </a>
+
+    <!-- Students -->
+    <a href="/public/shared/students.html" class="flex items-center gap-2 p-2 rounded hover:bg-gray-800">
+      👨‍🎓 Students
+    </a>
+
+    <!-- Leaderboard -->
+    <a href="/public/shared/leaderboard.html" class="flex items-center gap-2 p-2 rounded hover:bg-gray-800">
+      🏆 Leaderboard
+    </a>
+
+    <!-- Settings -->
+    <a href="/admin/settings.html" class="flex items-center gap-2 p-2 rounded hover:bg-gray-800">
+      ⚙️ Manage
+    </a>
+  </nav>
+</aside>

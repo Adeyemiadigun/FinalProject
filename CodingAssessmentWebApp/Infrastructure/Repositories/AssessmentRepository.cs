@@ -111,8 +111,8 @@ namespace Infrastructure.Repositories
                 .Include(x => x.AssessmentAssignments)
                 .Include(x => x.Submissions)
                 .Where(exp);
-         var res = await query.ToListAsync();
-            return res;
+            return await query.ToListAsync();
+           
         }
 
         public async Task<Assessment?> GetForSubmissionAsync(Guid id)
