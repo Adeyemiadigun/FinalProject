@@ -30,6 +30,7 @@ namespace Host.Configurations
             builder.AddScoped<IGradingService, GradingService>();
             builder.AddScoped<ICurrentUser, CurrentUser>();
             builder.AddScoped<IAuthService, AuthService>();
+            builder.AddScoped<IBatchService, BatchService>();
             builder.AddHttpClient();
             builder.AddHttpContextAccessor();
             builder.AddSingleton<IRefreshTokenStore, InMemoryRefreshTokenStore>();
@@ -46,6 +47,7 @@ namespace Host.Configurations
             builder.AddScoped<IQuestionRepository, QuestionRepository>();
             builder.AddScoped<ISubmissionRepository, SubmissionRepository>();
             builder.AddScoped<IUserRepository, UserRepository>();
+            builder.AddScoped<IBatchRepository, BatchRepository>();
             builder.AddScoped<IUnitOfWork, UnitOfWork>();
 
             // External Services
