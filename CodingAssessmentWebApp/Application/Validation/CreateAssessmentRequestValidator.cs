@@ -13,8 +13,6 @@ namespace Application.Validation
             RuleFor(x => x.DurationInMinutes).GreaterThan(0);
             RuleFor(x => x.StartDate).LessThan(x => x.EndDate);
             RuleFor(x => x.PassingScore).InclusiveBetween(0, 100);
-            RuleForEach(x => x.AssignedStudentIds)
-                .NotEqual(Guid.Empty).WithMessage("Invalid student ID found.");
         }
     }
 }

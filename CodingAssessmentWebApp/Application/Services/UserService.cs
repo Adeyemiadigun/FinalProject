@@ -189,25 +189,34 @@ namespace Application.Services
             };
         }
 
-        public async Task<BaseResponse<UserDto>> GetAllByBatchId(Guid id, PaginationRequest request)
+        public async Task<BaseResponse<PaginationDto<UserDto>>> GetAllByBatchId(Guid id, PaginationRequest request)
         {
-            var batch = await _userRepository.GetAllAsync(x => x.BatchId == id,request);
-            if (batch == null)
+            var users = await _userRepository.GetAllAsync(x => x.BatchId == id,request);
+            if (users == null)
+                throw new ApiException("User not found", 404, "UserNotFound", null);
+
+            var userDto = users.Items.Select(x => new  UserDto()
             {
-                return new BaseResponse<UserDto>()
-                {
-                    Message = "Batch not found",
-                    Status = false
-                };
-            }
-
-            var users = await _userRepository.GetAllAsync(user => user.BatchId == id);
-
-            return new BaseResponse<UserDto>()
+                Id = x.Id,
+                Email = x.Email,
+                Role = x.Role,
+                FullName = x.FullName,
+            });
+            var paginationDto = new PaginationDto<UserDto>
+            {
+                Items = userDto,
+                TotalItems = users.TotalItems,
+                TotalPages = users.TotalPages,
+                CurrentPage = users.CurrentPage,
+                PageSize = users.PageSize,
+                HasNextPage = users.HasNextPage,
+                HasPreviousPage = users.HasPreviousPage
+            };
+            return new BaseResponse<PaginationDto<UserDto>>()
             {
                 Message = "Users retrieved successfully",
                 Status = true,
-                Data = paginatedUsers
+                Data = paginationDto
             };
         }
     }
