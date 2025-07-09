@@ -16,8 +16,15 @@ namespace Application.Services.GradingStrategy.Implementation
         public async Task GradeAsync(AnswerSubmission answerSubmission)
         {
             var stack = await _store.GetLanguageByName(answerSubmission.Question.TechnologyStack.ToString()!);
+
             if (stack is null)
-                throw new ApiException("Language stack not found", 404, "LanguageStackError", null);
+            {
+               var languages = await _judge.GetSupportedLanguagesAsync();
+               await _store.SaveLanguages(languages);
+                stack = await _store.GetLanguageByName(answerSubmission.Question.TechnologyStack.ToString()!);
+                if(stack is null)
+                    throw new ApiException()
+            }
             var totalWeigtht = 0;
             foreach (var test in answerSubmission.Question.Tests)
             {

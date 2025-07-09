@@ -27,11 +27,11 @@ namespace Application.Services
             var userId = _currentUser.GetCurrentUserId();
             if (userId == Guid.Empty)
             {
-                throw new ApiException();
+                throw new ApiException("User ID is empty.", 400, "INVALID_USER", null);
             }
             var selectedOptionCount = saveProgressDto.Answers
                 .SelectMany(a => a.SelectedOptionIds);
-            if(selectedOptionCount.Distinct().Count() != selectedOptionCount.Count())
+            if (selectedOptionCount.Distinct().Count() != selectedOptionCount.Count())
                 throw new ApiException("Duplicate options selected in answers.", 400, "INVALID_INPUT", selectedOptionCount);
             // Validate assessment and student exist
             var studentExists = await _studentRepository.CheckAsync(x => x.Id == userId);
@@ -133,19 +133,19 @@ namespace Application.Services
 
             await _unitOfWork.SaveChangesAsync();
         }
-        public async Task<BaseResponse<LoadProgressDto>> GetProgressAsync( Guid assessmentId)
+        public async Task<BaseResponse<LoadProgressDto>> GetProgressAsync(Guid assessmentId)
         {
             var userId = _currentUser.GetCurrentUserId();
             if (userId == Guid.Empty)
             {
-                throw new ApiException();
+                throw new ApiException("User ID is empty.", 400, "INVALID_USER", null);
             }
             if (userId == Guid.Empty || assessmentId == Guid.Empty)
                 throw new ApiException("Invalid student or assessment.", 400, "INVALID_INPUT", null);
 
             var assessmetCheck = await _assessmentRepository.CheckAsync(x => x.Id == assessmentId);
             var studentCheck = await _studentRepository.CheckAsync(x => x.Id == userId);
-            if(!assessmetCheck || !studentCheck )
+            if (!assessmetCheck || !studentCheck)
                 throw new ApiException("Invalid student or assessment.", 400, "INVALID_INPUT", null);
 
             var progress = await _progressRepository.GetByStudentAndAssessmentAsync(userId, assessmentId); // includes Answers and SelectedOptions
