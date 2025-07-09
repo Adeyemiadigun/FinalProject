@@ -60,6 +60,20 @@ namespace Application.Services
                 EndDate = assessment.EndDate,
                 PassingScore = assessment.PassingScore
             }));
+            var reminderTime = assessment.StartDate.AddMinutes(-30); 
+            var delay = reminderTime - DateTime.UtcNow;
+            if (delay > TimeSpan.Zero)
+            {
+                _backgroundService.Schedule<IEmailService>((emailService => emailService.SendBulkEmailAsync(validStudentIds, "Assessment Reminder", new AssessmentDto() {
+                    Title = assessment.Title,
+                    Description = assessment.Description,
+                    TechnologyStack = assessment.TechnologyStack,
+                    DurationInMinutes = assessment.DurationInMinutes,
+                    StartDate = assessment.StartDate,
+                    EndDate = assessment.EndDate,
+                    PassingScore = assessment.PassingScore
+                })),delay);
+            }
             await _unitOfWork.SaveChangesAsync();
             return new BaseResponse<AssessmentDto>()
             {
@@ -427,6 +441,34 @@ namespace Application.Services
                 Status = true,
                 Message = "Recent assessments retrieved successfully",
                 Data = assessmentDtos
+            };
+        }
+        public async Task<BaseResponse<List<AssessmentPerformanceDto>>> GetInstructorAssessmentScoresAsync()
+        {
+            var currentUserId = _currentUser.GetCurrentUserId();
+            if (currentUserId == Guid.Empty)
+            {
+                throw new ApiException("Current user ID is invalid", (int)HttpStatusCode.BadRequest, "INVALID_USER_ID", null);
+            }
+            var check = await _userRepository.CheckAsync(x => x.Id == currentUserId);
+            if (!check)
+            {
+                throw new ApiException("User not found", (int)HttpStatusCode.NotFound, "USER_NOT_FOUND", null);
+            }
+            var assessments = await _assessmentRepository.GetAllAsync(x => x.InstructorId == currentUserId);
+            var assessmentScores = assessments
+                .Select(x => new AssessmentPerformanceDto
+                {
+                    Id = x.Id,
+                    AssessmentTitle = x.Title,
+                    AverageScore = x.Submissions.Any() ? x.Submissions.Average(s => s.TotalScore) : 0,
+                })
+                .ToList();
+            return new BaseResponse<List<AssessmentPerformanceDto>>
+            {
+                Status = true,
+                Message = "Assessment scores retrieved successfully",
+                Data = assessmentScores
             };
         }
     }

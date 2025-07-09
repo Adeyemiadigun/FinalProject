@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en" x-data="batchDetailsPage()" x-init="init()" x-cloak>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Batch Details | Admin</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-gray-100 text-gray-800">
+  <div id="sidebar-placeholder"></div>
+
+  <div class="md:ml-64 p-6 space-y-6">
+    <div id="navbar-placeholder"></div>
+
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+      <h2 class="text-2xl font-bold">Batch Details: <span x-text="batch.name"></span></h2>
+    </div>
+
+    <!-- Batch Info Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white p-4 rounded shadow">
+        <div class="text-sm text-gray-500">🎯 Pass Rate</div>
+        <div class="text-2xl font-bold" x-text="batch.passRate + '%'"></div>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <div class="text-sm text-gray-500">🧮 Avg Score</div>
+        <div class="text-2xl font-bold" x-text="batch.avgScore + '%'"></div>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <div class="text-sm text-gray-500">📊 Completion Rate</div>
+        <div class="text-2xl font-bold" x-text="batch.completionRate + '%'"></div>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <div class="text-sm text-gray-500">🕒 Avg Completion Time</div>
+        <div class="text-2xl font-bold" x-text="batch.avgTime"></div>
+      </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-white p-4 rounded shadow">
+        <h3 class="font-semibold mb-2">📈 Student Performance Trends</h3>
+        <canvas id="performanceTrendChart"></canvas>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <h3 class="font-semibold mb-2">📝 Submissions per Assessment</h3>
+        <canvas id="submissionChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Student List -->
+    <div class="bg-white p-4 rounded shadow">
+      <div class="flex justify-between items-center mb-2">
+        <h3 class="text-lg font-medium">Students in Batch</h3>
+        <div class="text-sm text-gray-500">
+          Page <span x-text="currentPage + 1"></span> of <span x-text="totalPages"></span>
+        </div>
+      </div>
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-left">
+          <tr>
+            <th class="p-2">Name</th>
+            <th class="p-2">Email</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="student in paginatedStudents()" :key="student.email">
+            <tr class="border-t">
+              <td class="p-2" x-text="student.name"></td>
+              <td class="p-2" x-text="student.email"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+      <div class="flex justify-between mt-4">
+        <button @click="prevPage" :disabled="currentPage === 0"
+          class="px-3 py-1 bg-gray-200 rounded text-sm disabled:opacity-50">Previous</button>
+        <button @click="nextPage" :disabled="currentPage >= totalPages - 1"
+          class="px-3 py-1 bg-gray-200 rounded text-sm disabled:opacity-50">Next</button>
+      </div>
+    </div>
+
+    <!-- Assessment List -->
+    <div class="bg-white p-4 rounded shadow">
+      <h3 class="text-lg font-medium mb-3">Assessments for this Batch</h3>
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-left">
+          <tr>
+            <th class="p-2">Title</th>
+            <th class="p-2">Assigned Date</th>
+            <th class="p-2">Total Students</th>
+            <th class="p-2">Submissions</th>
+            <th class="p-2">Avg Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="a in assessments" :key="a.id">
+            <tr class="border-t">
+              <td class="p-2" x-text="a.title"></td>
+              <td class="p-2" x-text="a.date"></td>
+              <td class="p-2" x-text="a.totalStudents"></td>
+              <td class="p-2" x-text="a.submissions"></td>
+              <td class="p-2" x-text="a.avgScore + '%'"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    async function loadComponent(id, path) {
+      const res = await fetch(path);
+      const html = await res.text();
+      document.getElementById(id).innerHTML = html;
+    }
+    loadComponent("sidebar-placeholder", "../components/sidebar.html");
+    loadComponent("navbar-placeholder", "../components/nav.html");
+
+    function batchDetailsPage() {
+      return {
+        batchId: null,
+        batch: {},
+        students: [],
+        assessments: [],
+        currentPage: 0,
+        itemsPerPage: 5,
+
+        init() {
+          const params = new URLSearchParams(window.location.search);
+          this.batchId = params.get("id");
+          this.loadBatchDetails();
+          this.loadCharts();
+        },
+
+        loadBatchDetails() {
+          this.batch = {
+            id: this.batchId,
+            name: "Batch 2025 A",
+            passRate: 78,
+            avgScore: 74,
+            completionRate: 82,
+            avgTime: "16m 30s"
+          };
+
+          this.students = [
+            { name: "Alice Johnson", email: "alice@example.com" },
+            { name: "Bob Smith", email: "bob@example.com" },
+            { name: "Carlos Diaz", email: "carlos@example.com" },
+            { name: "Diana Rose", email: "diana@example.com" },
+            { name: "Evan Stone", email: "evan@example.com" },
+            { name: "Faith Lee", email: "faith@example.com" },
+            { name: "George Chen", email: "george@example.com" }
+          ];
+
+          this.assessments = [
+            { id: 1, title: "LINQ Basics", date: "2025-07-01", totalStudents: 7, submissions: 5, avgScore: 68 },
+            { id: 2, title: "OOP Concepts", date: "2025-07-03", totalStudents: 7, submissions: 6, avgScore: 74 },
+            { id: 3, title: "Coding Challenge", date: "2025-07-05", totalStudents: 7, submissions: 4, avgScore: 60 }
+          ];
+        },
+
+        loadCharts() {
+          setTimeout(() => {
+            const ctx1 = document.getElementById("performanceTrendChart").getContext("2d");
+            new Chart(ctx1, {
+              type: "line",
+              data: {
+                labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
+                datasets: [{
+                  label: "Avg Score",
+                  data: [65, 70, 75, 78],
+                  borderColor: "#3b82f6",
+                  fill: false,
+                  tension: 0.4
+                }]
+              },
+              options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
+            });
+
+            const ctx2 = document.getElementById("submissionChart").getContext("2d");
+            new Chart(ctx2, {
+              type: "bar",
+              data: {
+                labels: ["LINQ Basics", "OOP Concepts", "Coding Challenge"],
+                datasets: [
+                  {
+                    label: "Total Students",
+                    backgroundColor: "#d1d5db",
+                    data: [7, 7, 7]
+                  },
+                  {
+                    label: "Submissions",
+                    backgroundColor: "#3b82f6",
+                    data: [5, 6, 4]
+                  }
+                ]
+              },
+              options: {
+                responsive: true,
+                scales: { y: { beginAtZero: true, max: 7 } }
+              }
+            });
+          }, 100);
+        },
+
+        paginatedStudents() {
+          const start = this.currentPage * this.itemsPerPage;
+          return this.students.slice(start, start + this.itemsPerPage);
+        },
+
+        get totalPages() {
+          return Math.ceil(this.students.length / this.itemsPerPage);
+        },
+
+        prevPage() {
+          if (this.currentPage > 0) this.currentPage--;
+        },
+
+        nextPage() {
+          if (this.currentPage < this.totalPages - 1) this.currentPage++;
+        }
+      };
+    }
+  </script>
+</body>
+
+</html>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" x-data="instructorAssessmentsPage()" x-init="loadComponent('sidebar-placeholder', '../components/sidebar.html'); loadComponent('navbar-placeholder', '../components/nav.html'); loadAssessments()">
+<html lang="en" x-data="instructorAssessmentsPage()" x-init="init()">
 
 <head>
   <meta charset="UTF-8" />
@@ -7,6 +7,11 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    [x-cloak] {
+      display: none !important;
+    }
+  </style>
 </head>
 
 <body class="bg-gray-100 text-gray-800">
@@ -14,215 +19,265 @@
   <div class="md:ml-64 p-6 space-y-6" x-cloak>
     <div id="navbar-placeholder"></div>
 
-    <!-- Header -->
-    <div class="flex justify-between items-center">
+    <!-- Header + Filters -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <h2 class="text-2xl font-bold">📘 My Assessments</h2>
-      <button @click="showCreateModal = true" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">➕ Create Assessment</button>
+      <div class="flex flex-col md:flex-row gap-4 items-center">
+        <select x-model="filters.batchId" @change="applyFilters" class="px-3 py-2 rounded border bg-white text-sm">
+          <option value="">All Batches</option>
+          <template x-for="batch in batches" :key="batch.id">
+            <option :value="batch.id" x-text="batch.name"></option>
+          </template>
+        </select>
+        <select x-model="filters.status" @change="applyFilters" class="px-3 py-2 rounded border bg-white text-sm">
+          <option value="">All</option>
+          <option value="upcoming">Upcoming</option>
+          <option value="past">Past</option>
+        </select>
+        <button @click="showCreateModal = true" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">➕
+          New Assessment</button>
+      </div>
     </div>
 
     <!-- Assessment List -->
     <div class="bg-white p-6 rounded shadow">
-      <template x-if="assessments.length > 0">
-        <div class="space-y-4">
-          <template x-for="assessment in pagedAssessments" :key="assessment.id">
+      <template x-if="filteredAssessments.length > 0">
+        <div class="space-y-6">
+          <template x-for="assessment in paginatedAssessments()" :key="assessment.id">
             <div class="border rounded p-4">
-              <div class="flex justify-between items-center mb-2">
+              <div class="flex justify-between items-start">
                 <div>
-                  <h3 class="text-lg font-semibold" x-text="assessment.title"></h3>
-                  <p class="text-sm text-gray-600" x-text="assessment.technologyStack"></p>
-                  <p class="text-sm text-gray-500" x-text="`🕒 ${assessment.durationInMinutes} mins | 📅 ${assessment.startDate} - ${assessment.endDate}`"></p>
+                  <h3 class="text-lg font-bold" x-text="assessment.title"></h3>
+                  <p class="text-sm text-gray-500" x-text="assessment.technologyStack"></p>
+                  <p class="text-sm text-gray-400"
+                    x-text="`🕒 ${assessment.durationInMinutes} mins | 📅 ${assessment.startDate} - ${assessment.endDate}`">
+                  </p>
                 </div>
-                <div>
-                  <a :href="`/pages/instructor/questions.html?assessmentId=${assessment.id}`" class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">➕ Add Questions</a>
-                </div>
+                <a :href="`${window.location.origin}/public/assessments/assessment-questions.html?assessmentId=${assessment.id}`"
+                  class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+                  ➕ Add Questions
+                </a>
               </div>
-
-              <!-- Chart -->
-              <div class="mt-2">
-                <h4 class="text-sm font-semibold mb-1">Batch Performance</h4>
-                <canvas :id="`batchChart-${assessment.id}`" class="w-full h-32"></canvas>
-              </div>
-
-              <!-- Students -->
               <div class="mt-4">
-                <h4 class="text-sm font-semibold mb-2">Student Scores</h4>
-                <div class="overflow-x-auto">
-                  <table class="w-full text-sm">
-                    <thead class="bg-gray-100">
-                      <tr>
-                        <th class="p-2 text-left">Student</th>
-                        <th class="p-2 text-left">Email</th>
-                        <th class="p-2 text-left">Batch</th>
-                        <th class="p-2 text-left">Score</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <template x-for="student in assessment.students" :key="student.id">
-                        <tr class="border-t">
-                          <td class="p-2" x-text="student.name"></td>
-                          <td class="p-2" x-text="student.email"></td>
-                          <td class="p-2" x-text="student.batch"></td>
-                          <td class="p-2" x-text="`${student.score}%`"></td>
-                        </tr>
-                      </template>
-                    </tbody>
-                  </table>
+                <h4 class="text-sm font-medium mb-1">Batch Performance</h4>
+                <div class="relative h-40">
+                  <canvas :id="`chart-${assessment.id}`" class="absolute inset-0 w-full h-full"></canvas>
                 </div>
+              </div>
+              <div class="mt-4 overflow-x-auto">
+                <h4 class="text-sm font-medium mb-2">Student Scores</h4>
+                <table class="w-full text-sm">
+                  <thead class="bg-gray-100">
+                    <tr>
+                      <th class="p-2 text-left">Name</th>
+                      <th class="p-2 text-left">Email</th>
+                      <th class="p-2 text-left">Batch</th>
+                      <th class="p-2 text-left">Score</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="student in assessment.students" :key="student.id">
+                      <tr class="border-t">
+                        <td class="p-2" x-text="student.name"></td>
+                        <td class="p-2" x-text="student.email"></td>
+                        <td class="p-2" x-text="student.batch"></td>
+                        <td class="p-2" x-text="`${student.score}%`"></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
               </div>
             </div>
           </template>
-
-          <!-- Pagination -->
-          <div class="flex justify-end mt-4 space-x-2">
-            <button @click="prevPage" :disabled="page === 1" class="px-3 py-1 bg-gray-300 rounded disabled:opacity-50">Prev</button>
-            <span class="px-3 py-1 text-sm" x-text="`Page ${page} of ${totalPages}`"></span>
-            <button @click="nextPage" :disabled="page === totalPages" class="px-3 py-1 bg-gray-300 rounded disabled:opacity-50">Next</button>
+          <div class="flex justify-end space-x-2">
+            <button @click="prevPage" :disabled="page === 1"
+              class="px-3 py-1 bg-gray-200 rounded disabled:opacity-50">Prev</button>
+            <span class="px-3 py-1 text-sm">Page <span x-text="page"></span> of <span
+                x-text="totalPages()"></span></span>
+            <button @click="nextPage" :disabled="page === totalPages()"
+              class="px-3 py-1 bg-gray-200 rounded disabled:opacity-50">Next</button>
           </div>
         </div>
       </template>
-
-      <template x-if="assessments.length === 0">
+      <template x-if="filteredAssessments.length === 0">
         <div class="text-center text-gray-500">No assessments found.</div>
       </template>
     </div>
   </div>
 
   <!-- Create Assessment Modal -->
-  <div x-show="showCreateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.outside="showCreateModal = false">
-    <div class="bg-white w-full max-w-lg p-6 rounded shadow space-y-4">
-      <h3 class="text-lg font-bold">➕ Create New Assessment</h3>
-
-      <div class="space-y-2">
-        <input x-model="newAssessment.title" type="text" class="w-full border px-4 py-2 rounded" placeholder="Title" />
-        <input x-model="newAssessment.technologyStack" type="text" class="w-full border px-4 py-2 rounded" placeholder="Technology Stack" />
-        <input x-model.number="newAssessment.durationInMinutes" type="number" class="w-full border px-4 py-2 rounded" placeholder="Duration (in minutes)" />
-        <textarea x-model="newAssessment.description" rows="2" class="w-full border px-4 py-2 rounded" placeholder="Description (optional)"></textarea>
-
-        <div class="grid grid-cols-2 gap-4">
-          <input x-model="newAssessment.startDate" type="date" class="w-full border px-4 py-2 rounded" />
-          <input x-model="newAssessment.endDate" type="date" class="w-full border px-4 py-2 rounded" />
+  <div x-show="showCreateModal" x-cloak
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div @click.outside="showCreateModal = false" class="bg-white rounded p-6 max-w-lg w-full shadow space-y-4">
+      <h3 class="text-lg font-bold">➕ Create Assessment</h3>
+      <input x-model="newAssessment.title" placeholder="Title" class="w-full px-3 py-2 border rounded" />
+      <input x-model="newAssessment.technologyStack" placeholder="Technology Stack"
+        class="w-full px-3 py-2 border rounded" />
+      <input x-model.number="newAssessment.durationInMinutes" type="number" placeholder="Duration (in minutes)"
+        class="w-full px-3 py-2 border rounded" />
+      <div>
+        <label class="text-sm font-medium block mb-1">Assign Batches:</label>
+        <div class="grid grid-cols-2 gap-2">
+          <template x-for="batch in batches" :key="batch.id">
+            <label class="flex items-center space-x-2 text-sm">
+              <input type="checkbox" :value="batch.id" x-model="newAssessment.batchIds"
+                class="rounded border-gray-300 text-blue-600" />
+              <span x-text="batch.name"></span>
+            </label>
+          </template>
         </div>
       </div>
-
-      <div class="text-right pt-2">
-        <button @click="submitAssessment" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">✅ Submit</button>
+      <div class="grid grid-cols-2 gap-4">
+        <input x-model="newAssessment.startDate" type="date" class="border px-3 py-2 rounded" />
+        <input x-model="newAssessment.endDate" type="date" class="border px-3 py-2 rounded" />
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button @click="showCreateModal = false" class="bg-gray-200 text-sm px-4 py-2 rounded">Cancel</button>
+        <button @click="submitAssessment"
+          class="bg-green-600 text-white text-sm px-4 py-2 rounded hover:bg-green-700">Create</button>
       </div>
     </div>
   </div>
 
-  <!-- AlpineJS Logic -->
   <script>
     function instructorAssessmentsPage() {
       return {
         assessments: [],
+        filteredAssessments: [],
         page: 1,
         perPage: 2,
         showCreateModal: false,
-        newAssessment: {
-          title: '',
-          technologyStack: '',
-          durationInMinutes: 60,
-          description: '',
-          startDate: '',
-          endDate: ''
-        },
+        filters: { batchId: '', status: '' },
+        newAssessment: { title: '', technologyStack: '', durationInMinutes: 60, startDate: '', endDate: '', batchIds: [] },
+        batches: [{ id: 'b1', name: 'Batch Alpha' }, { id: 'b2', name: 'Batch Beta' }],
 
-        get pagedAssessments() {
-          const start = (this.page - 1) * this.perPage;
-          return this.assessments.slice(start, start + this.perPage);
-        },
-        get totalPages() {
-          return Math.ceil(this.assessments.length / this.perPage);
-        },
-        prevPage() {
-          if (this.page > 1) this.page--;
-          this.drawAllCharts();
-        },
-        nextPage() {
-          if (this.page < this.totalPages) this.page++;
-          this.drawAllCharts();
+        init() {
+          this.loadAssessments();
+          loadComponent('sidebar-placeholder', '../components/instructor-sidebar.html');
+          loadComponent('navbar-placeholder', '../components/instructor-nav.html');
         },
 
         loadAssessments() {
           this.assessments = [
             {
               id: 1,
-              title: "OOP Assessment",
+              title: "OOP Basics",
               technologyStack: "C#",
               durationInMinutes: 60,
-              description: "",
-              startDate: "2024-07-01",
-              endDate: "2024-07-03",
+              startDate: "2025-07-10",
+              endDate: "2025-07-12",
+              batchId: 'b1',
               students: [
-                { id: 1, name: "Grace Hill", email: "grace@example.com", batch: "Batch Alpha", score: 85 },
-                { id: 2, name: "John Doe", email: "john@example.com", batch: "Batch Alpha", score: 78 }
+                { id: 1, name: "Grace", email: "grace@example.com", batch: "Batch Alpha", score: 88 },
+                { id: 2, name: "James", email: "james@example.com", batch: "Batch Alpha", score: 75 }
+              ]
+            },
+            {
+              id: 2,
+              title: "JS DOM",
+              technologyStack: "JavaScript",
+              durationInMinutes: 45,
+              startDate: "2025-06-25",
+              endDate: "2025-06-28",
+              batchId: 'b2',
+              students: [
+                { id: 3, name: "Lily", email: "lily@example.com", batch: "Batch Beta", score: 91 }
               ]
             }
           ];
+          this.applyFilters();
+        },
+
+        applyFilters() {
+          const now = new Date().toISOString().split('T')[0];
+          this.filteredAssessments = this.assessments.filter(a => {
+            const batchMatch = !this.filters.batchId || a.batchId === this.filters.batchId;
+            const dateMatch = !this.filters.status ||
+              (this.filters.status === 'upcoming' && a.startDate > now) ||
+              (this.filters.status === 'past' && a.endDate < now);
+            return batchMatch && dateMatch;
+          });
+          this.page = 1;
           this.drawAllCharts();
         },
 
-        drawAllCharts() {
-          this.pagedAssessments.forEach(a => {
-            const ctx = document.getElementById(`batchChart-${a.id}`);
-            if (ctx) {
-              const scoresByBatch = a.students.reduce((acc, s) => {
-                acc[s.batch] = acc[s.batch] || [];
-                acc[s.batch].push(s.score);
-                return acc;
-              }, {});
-              const labels = Object.keys(scoresByBatch);
-              const data = labels.map(batch => {
-                const scores = scoresByBatch[batch];
-                return Math.round(scores.reduce((sum, val) => sum + val, 0) / scores.length);
-              });
+        paginatedAssessments() {
+          const start = (this.page - 1) * this.perPage;
+          return this.filteredAssessments.slice(start, start + this.perPage);
+        },
 
-              new Chart(ctx, {
-                type: "bar",
-                data: {
-                  labels: labels,
-                  datasets: [{
-                    label: "Avg Score (%)",
-                    data: data,
-                    backgroundColor: "#3b82f6"
-                  }]
-                },
-                options: {
-                  responsive: true,
-                  maintainAspectRatio: false
-                }
-              });
-            }
+        totalPages() {
+          return Math.ceil(this.filteredAssessments.length / this.perPage) || 1;
+        },
+
+        prevPage() {
+          if (this.page > 1) {
+            this.page--;
+            this.drawAllCharts();
+          }
+        },
+
+        nextPage() {
+          if (this.page < this.totalPages()) {
+            this.page++;
+            this.drawAllCharts();
+          }
+        },
+
+        drawAllCharts() {
+          this.paginatedAssessments().forEach(a => {
+            const ctx = document.getElementById(`chart-${a.id}`);
+            if (!ctx) return;
+
+            const grouped = {};
+            a.students.forEach(s => {
+              grouped[s.batch] = grouped[s.batch] || [];
+              grouped[s.batch].push(s.score);
+            });
+
+            const labels = Object.keys(grouped);
+            const data = labels.map(batch => {
+              const scores = grouped[batch];
+              return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+            });
+
+            new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: labels,
+                datasets: [{ label: 'Avg Score (%)', data: data, backgroundColor: '#3b82f6' }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, max: 100 } }
+              }
+            });
           });
         },
 
         submitAssessment() {
-          const newId = this.assessments.length + 1;
-          const newItem = {
-            ...this.newAssessment,
-            id: newId,
-            students: []
-          };
-          this.assessments.push(newItem);
+          const idBase = this.assessments.length + 1;
+          this.newAssessment.batchIds.forEach((batchId, i) => {
+            this.assessments.push({
+              ...this.newAssessment,
+              id: idBase + i,
+              batchId: batchId,
+              students: []
+            });
+          });
           this.showCreateModal = false;
-          this.newAssessment = {
-            title: '',
-            technologyStack: '',
-            durationInMinutes: 60,
-            description: '',
-            startDate: '',
-            endDate: ''
-          };
-          this.drawAllCharts();
+          this.newAssessment = { title: '', technologyStack: '', durationInMinutes: 60, startDate: '', endDate: '', batchIds: [] };
+          this.applyFilters();
         }
       };
     }
-    
+
     async function loadComponent(id, path) {
       const res = await fetch(path);
-      const html = await res.text();
-      document.getElementById(id).innerHTML = html;
+      document.getElementById(id).innerHTML = await res.text();
     }
   </script>
 </body>
+
 </html>

@@ -22,6 +22,13 @@
         public List<LowestPerformingStudent> LowestStudents { get; set; }
         public int TotalBatches { get; set; }
     }
+    public class InstructorDashboardOverview
+    {
+        public int TotalAssessments { get; set; }
+        public int TotalStudents { get; set; }
+        public double AverageScore { get; set; }
+        public double PassRate { get; set; }
+    }
 
     public class TopStudentDto
     {

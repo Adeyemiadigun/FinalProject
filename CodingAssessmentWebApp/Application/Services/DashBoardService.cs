@@ -68,13 +68,6 @@ namespace Application.Services
                 TotalBatches = batches.Count(),
                 LowestStudents = lowestStudents
             };
-//            GET / api / v1 / admin / metrics / overview
-//Response:
-//            {
-//                "totalStudents": 248,
-//  "totalAssessments": 34,
-//  "totalBatches": 12,
-//  "averagePassRate": 72
 
             return new BaseResponse<AdminDashBoardOverview>
             {
@@ -152,7 +145,7 @@ namespace Application.Services
 
         
 
-        public async Task<BaseResponse<StudentDashBoardDto>> GetInstructorDashboardAsync()
+        public async Task<BaseResponse<InstructorDashboardOverview>> GetInstructorDashboardAsync()
         {
             var instructorId = _currentUser.GetCurrentUserId();
             if (instructorId == Guid.Empty)
@@ -161,44 +154,34 @@ namespace Application.Services
             var assessments = await _assessmentRepository.GetAllAsync(a => a.InstructorId == instructorId);
             if (assessments?.Any() != true)
                 throw new ApiException("No assessments found for the instructor.", (int)HttpStatusCode.NotFound, "NoAssessmentsFound", null);
-
-            var assessmentIds = assessments.Select(a => a.Id).ToList();
-            var submissions = await _submissionRepository.GetSelectedIds(assessmentIds);
+            var submissionIds = assessments
+                .SelectMany(a => a.Submissions) 
+                .Select(s => s.Id) // Then select the Id from each Submission
+                .ToList();
+            var submissions = assessments.SelectMany(a => a.Submissions)
+                .Where(s => submissionIds.Contains(s.Id))
+                .ToList();
             if (submissions?.Any() != true)
                 throw new ApiException("No submissions found for the assessments.", (int)HttpStatusCode.NotFound, "NoSubmissionsFound", null);
 
             int totalAssessments = assessments.Count();
-            int activeAssessments = assessments.Count(a => a.EndDate >= DateTime.UtcNow);
             int totalStudents = submissions.Select(s => s.StudentId).Distinct().Count();
-
+            var totalSubmissionCount = submissions.Count;
             double averageScore = submissions.Average(s => s.TotalScore);
-            double completionRate = (double)submissions.Select(s => s.AssessmentId).Distinct().Count() / totalAssessments * 100;
+            double passRate = totalSubmissionCount > 0
+               ? (submissions.Count(s => s.TotalScore >= s.Assessment.PassingScore) * 100.0 / totalSubmissionCount)
+               : 0;
 
-            var topStudents = submissions
-                .GroupBy(s => s.StudentId)
-                .Select(g => new TopStudentDto
-                {
-                    StudentId = g.Key,
-                    StudentName = g.First().Student.FullName,
-                    AverageScore = g.Average(s => s.TotalScore)
-                })
-                .OrderByDescending(t => t.AverageScore)
-                .Take(5)
-                .ToList();
-
-            var dashboardDto = new StudentDashBoardDto
+            var dashboardDto = new InstructorDashboardOverview
             {
                 TotalAssessments = totalAssessments,
-                ActiveAssessments = activeAssessments,
-                TotalStudentsInvited = totalStudents,
-
+                TotalStudents = totalStudents,
                 AverageScore = averageScore,
-                CompletionRate = completionRate,
-                TopStudents = topStudents,
+                PassRate = passRate,
             };
         
 
-            return new BaseResponse<StudentDashBoardDto>
+            return new BaseResponse<InstructorDashboardOverview>
             {
                 Message = "Dashboard data retrieved successfully.",
                 Status = true,

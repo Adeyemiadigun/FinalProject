@@ -29,5 +29,14 @@ namespace Host.Controllers
             var response = await _assementService.GetCurrentStudentAssessments(request);
             return response.Status ? Ok(response) : NotFound(response);
         }
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchStudents([FromQuery] string query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return BadRequest(new { message = "Search term is required." });
+
+            var results = await _userService.SearchByNameOrEmailAsync(query);
+            return Ok(new { status = true, data = results });
+        }
     }
 }

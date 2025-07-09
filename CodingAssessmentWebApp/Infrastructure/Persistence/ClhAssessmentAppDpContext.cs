@@ -19,6 +19,11 @@ namespace Infrastructure.Persistence
         public DbSet<TestCaseResult> TestCaseResults=> Set<TestCaseResult>();
         public DbSet<SelectedOption
             > selectedOptions => Set<SelectedOption>();
+        public DbSet<BatchAssessment> BatchAssessments => Set<BatchAssessment>();
+        public DbSet<StudentAssessmentProgress> StudentAssessmentProgresses => Set<StudentAssessmentProgress>();
+        public DbSet<InProgressAnswer> InProgressAnswers => Set<InProgressAnswer>();
+        public DbSet<InProgressSelectedOption> InProgressSelectedOptions => Set<InProgressSelectedOption>();
+        public DbSet<SelectedOption> SelectedOptions => Set<SelectedOption>();
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.HasDefaultSchema("Clh_Project");

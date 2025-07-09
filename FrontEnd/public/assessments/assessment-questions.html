@@ -1,13 +1,15 @@
 <!DOCTYPE html>
-<html lang="en" x-data="questionsPage()" x-init="loadComponent('sidebar-placeholder', '../../components/sidebar.html'); loadComponent('navbar-placeholder', '../../components/nav.html'); fetchQuestions()">
+<html lang="en" x-data="questionsPage()" x-init="init()">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Assessment Questions</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>[x-cloak] { display: none !important; }</style>
 </head>
 
 <body class="bg-gray-100 text-gray-800">
+  <!-- Sidebar & Navbar -->
   <div id="sidebar-placeholder"></div>
   <div class="md:ml-64 p-6 space-y-6" x-cloak>
     <div id="navbar-placeholder"></div>
@@ -34,9 +36,9 @@
         <tbody>
           <template x-for="(q, index) in questions" :key="index">
             <tr class="border-t align-top">
-              <td class="p-2 align-top" x-text="index + 1"></td>
+              <td class="p-2" x-text="index + 1"></td>
               <td class="p-2">
-                <div class="font-semibold mb-1" x-text="q.questionText"></div>
+                <div class="font-semibold" x-text="q.questionText"></div>
                 <template x-if="q.questionType === 'MCQ'">
                   <ul class="list-disc list-inside text-sm text-gray-700">
                     <template x-for="opt in q.options" :key="opt.optionText">
@@ -52,7 +54,7 @@
                     <p><strong>Expected Code:</strong></p>
                     <pre class="bg-gray-100 p-2 rounded mt-1 text-xs overflow-x-auto" x-text="q.answer.answerText"></pre>
                     <h4 class="font-medium mt-2">Test Cases:</h4>
-                    <ul class="list-disc list-inside space-y-1 mt-1">
+                    <ul class="list-disc list-inside space-y-1">
                       <template x-for="t in q.testCases" :key="t.input">
                         <li>
                           <strong>Input:</strong> <span x-text="t.input"></span>,
@@ -76,94 +78,106 @@
       </table>
     </div>
 
-    <!-- Reusable Question Modal -->
-    <template x-if="showCreateModal || showEditModal">
-      <div class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50" @click.outside="closeModals()">
-        <div class="bg-white w-full max-w-2xl p-6 rounded shadow space-y-4 overflow-y-auto max-h-[90vh]">
-          <h3 class="text-lg font-bold mb-2" x-text="showCreateModal ? 'Create New Question' : 'Edit Question'"></h3>
+    <!-- Modal -->
+    <div x-show="showCreateModal || showEditModal"
+         x-transition
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+         @click.outside="closeModals()"
+         style="display: none;">
+      <div class="bg-white w-full max-w-2xl p-6 rounded shadow overflow-y-auto max-h-[90vh]">
+        <h3 class="text-xl font-bold mb-4" x-text="showCreateModal ? 'Create Question' : 'Edit Question'"></h3>
 
+        <div class="mb-4">
+          <label class="font-semibold block">Question Text</label>
+          <textarea x-model="questionForm.questionText" class="w-full border rounded px-4 py-2" rows="3"></textarea>
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 mb-4">
           <div>
-            <label class="font-semibold">Question Text</label>
-            <textarea x-model="questionForm.questionText" class="w-full border rounded px-4 py-2" rows="3"></textarea>
+            <label class="font-semibold block">Marks</label>
+            <input type="number" x-model="questionForm.marks" class="w-full border rounded px-2 py-1" />
           </div>
-
-          <div class="grid grid-cols-3 gap-4">
-            <div>
-              <label class="font-semibold">Marks</label>
-              <input type="number" x-model="questionForm.marks" class="w-full border rounded px-2 py-1">
-            </div>
-            <div>
-              <label class="font-semibold">Order</label>
-              <input type="number" x-model="questionForm.order" class="w-full border rounded px-2 py-1">
-            </div>
-            <div>
-              <label class="font-semibold">Type</label>
-              <select x-model="questionForm.questionType" class="w-full border rounded px-2 py-1" :disabled="showEditModal">
-                <option value="">Select</option>
-                <option value="MCQ">MCQ</option>
-                <option value="Objective">Objective</option>
-                <option value="Coding">Coding</option>
-              </select>
-            </div>
+          <div>
+            <label class="font-semibold block">Order</label>
+            <input type="number" x-model="questionForm.order" class="w-full border rounded px-2 py-1" />
           </div>
+          <div>
+            <label class="font-semibold block">Type</label>
+            <select x-model="questionForm.questionType" class="w-full border rounded px-2 py-1" :disabled="showEditModal">
+              <option value="">Select</option>
+              <option value="MCQ">MCQ</option>
+              <option value="Objective">Objective</option>
+              <option value="Coding">Coding</option>
+            </select>
+          </div>
+        </div>
 
-          <!-- Type-specific fields -->
-          <template x-if="questionForm.questionType === 'MCQ'">
-            <div class="space-y-2">
-              <label class="font-semibold mt-2">Options</label>
-              <template x-for="(opt, idx) in questionForm.options" :key="idx">
-                <div class="flex gap-2 items-center">
-                  <input type="text" x-model="opt.optionText" class="flex-1 border px-2 py-1 rounded" placeholder="Option text">
-                  <label class="inline-flex items-center gap-1">
-                    <input type="checkbox" x-model="opt.isCorrect">
-                    Correct
-                  </label>
-                  <button @click="questionForm.options.splice(idx, 1)" class="text-red-600 text-sm">✕</button>
-                </div>
-              </template>
-              <button @click="questionForm.options.push({ optionText: '', isCorrect: false })" class="text-sm text-blue-600">+ Add Option</button>
-            </div>
-          </template>
+        <!-- MCQ Options -->
+        <template x-if="questionForm.questionType === 'MCQ'">
+          <div class="space-y-2 mb-4">
+            <label class="font-semibold">Options</label>
+            <template x-for="(opt, idx) in questionForm.options" :key="idx">
+              <div class="flex items-center gap-2">
+                <input type="text" x-model="opt.optionText" class="flex-1 border px-2 py-1 rounded" placeholder="Option text" />
+                <label class="inline-flex items-center gap-1">
+                  <input type="checkbox" x-model="opt.isCorrect" /> Correct
+                </label>
+                <button @click="questionForm.options.splice(idx, 1)" class="text-red-600 text-sm">✕</button>
+              </div>
+            </template>
+            <button @click="questionForm.options.push({ optionText: '', isCorrect: false })" class="text-blue-600 text-sm">+ Add Option</button>
+          </div>
+        </template>
 
-          <template x-if="questionForm.questionType === 'Objective'">
+        <!-- Objective Answer -->
+        <template x-if="questionForm.questionType === 'Objective'">
+          <div class="mb-4">
+            <label class="font-semibold block">Expected Answer</label>
+            <input type="text" x-model="questionForm.answer.answerText" class="w-full border rounded px-2 py-1" />
+          </div>
+        </template>
+
+        <!-- Coding Test Cases -->
+        <template x-if="questionForm.questionType === 'Coding'">
+          <div class="space-y-3 mb-4">
             <div>
-              <label class="font-semibold mt-2">Expected Answer</label>
-              <input type="text" x-model="questionForm.answer.answerText" class="w-full border rounded px-2 py-1">
-            </div>
-          </template>
-
-          <template x-if="questionForm.questionType === 'Coding'">
-            <div class="space-y-2 mt-2">
               <label class="font-semibold">Expected Code</label>
               <textarea x-model="questionForm.answer.answerText" class="w-full border rounded px-4 py-2" rows="3"></textarea>
-
+            </div>
+            <div>
               <label class="font-semibold">Test Cases</label>
               <template x-for="(test, i) in questionForm.testCases" :key="i">
                 <div class="grid grid-cols-3 gap-2 items-center mb-2">
-                  <input type="text" x-model="test.input" placeholder="Input" class="border px-2 py-1 rounded">
-                  <input type="text" x-model="test.expectedOutput" placeholder="Output" class="border px-2 py-1 rounded">
-                  <input type="number" x-model="test.weight" placeholder="Weight" class="border px-2 py-1 rounded">
+                  <input type="text" x-model="test.input" placeholder="Input" class="border px-2 py-1 rounded" />
+                  <input type="text" x-model="test.expectedOutput" placeholder="Expected Output" class="border px-2 py-1 rounded" />
+                  <input type="number" x-model="test.weight" placeholder="Weight" class="border px-2 py-1 rounded" />
                   <button @click="questionForm.testCases.splice(i, 1)" class="text-red-600 text-sm">✕</button>
                 </div>
               </template>
-              <button @click="questionForm.testCases.push({ input: '', expectedOutput: '', weight: 1 })" class="text-sm text-blue-600">+ Add Test Case</button>
+              <button @click="questionForm.testCases.push({ input: '', expectedOutput: '', weight: 1 })" class="text-blue-600 text-sm">+ Add Test Case</button>
             </div>
-          </template>
-
-          <!-- Submit -->
-          <div class="text-right pt-4">
-            <button @click="submitQuestion" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">✅ Submit</button>
           </div>
-        </div>
+        </template>
+
+        <!-- Submit & Cancel -->
+<div class="text-right space-x-2">
+  <button @click="closeModals" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">
+    ❌ Cancel
+  </button>
+  <button @click="submitQuestion" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+    ✅ Submit
+  </button>
+</div>
       </div>
-    </template>
+    </div>
   </div>
 
   <!-- Alpine Logic -->
   <script>
     function questionsPage() {
       return {
-        assessmentTitle: 'LINQ Challenge',
+        assessmentId: null,
+        assessmentTitle: '',
         questions: [],
         showCreateModal: false,
         showEditModal: false,
@@ -179,7 +193,25 @@
           answer: { answerText: '' }
         },
 
+        init() {
+          this.getAssessmentIdFromURL();
+          this.loadComponents();
+          this.fetchQuestions();
+        },
+
+        getAssessmentIdFromURL() {
+          const params = new URLSearchParams(window.location.search);
+          this.assessmentId = params.get('assessmentId');
+          this.assessmentTitle = `Assessment #${this.assessmentId ?? 'N/A'}`;
+        },
+
+        async loadComponents() {
+          await loadComponent('sidebar-placeholder', '../../components/sidebar.html');
+          await loadComponent('navbar-placeholder', '../../components/nav.html');
+        },
+
         fetchQuestions() {
+          // Replace this with actual fetch call
           this.questions = [
             {
               questionText: 'What is LINQ?',
@@ -252,4 +284,3 @@
   </script>
 </body>
 </html>
-

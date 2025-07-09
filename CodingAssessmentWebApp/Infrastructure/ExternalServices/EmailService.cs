@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using MimeKit;
 using MailKit.Net.Smtp;
 using Domain.Entitties;
+using Application.Exceptions;
 
 namespace Infrastructure.ExternalServices
 {
@@ -62,9 +63,35 @@ namespace Infrastructure.ExternalServices
             return true;
         }
 
-        public Task<bool> SendEmailAsync(string to, string subject, string body)
+        public async Task SendEmailAsync(User to, string subject, string body)
         {
-            throw new NotImplementedException();
+
+            try
+            {
+                using var smtpClient = new SmtpClient();
+                await smtpClient.ConnectAsync("smtp.gmail.com", 465, MailKit.Security.SecureSocketOptions.SslOnConnect);
+                await smtpClient.AuthenticateAsync(Email, Password);
+                
+                    var emailMessage = new MimeMessage();
+                    emailMessage.From.Add(new MailboxAddress("CLH", Email));
+                    emailMessage.To.Add(new MailboxAddress(to.FullName, to.Email));
+                    emailMessage.Subject = subject;
+                    emailMessage.Body = new TextPart("html")
+                    {
+                        Text = body
+                    };
+                    _logger.LogInformation($"Sending email to {to.Email}...");
+                    await smtpClient.SendAsync(emailMessage);
+                
+                _logger.LogInformation("Bulk email sent successfully.");
+
+                await smtpClient.DisconnectAsync(true); // Fixed: Changed from `smtpClient.Disconnect` to `smtpClient.DisconnectAsync`
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to send bulk email: {ex.Message}", ex);
+                throw new ApiException()
+            }
         }
 
         public async Task<bool> SendResultEmailAsync( Submission submission, User user)

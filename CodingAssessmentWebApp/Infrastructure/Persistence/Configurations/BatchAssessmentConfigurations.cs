@@ -8,7 +8,7 @@ namespace Infrastructure.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<BatchAssessment> builder)
         {
-            builder.ToTable("AssessmentAssignment");
+            builder.ToTable("BatchAssessment");
             builder.HasKey(x => x.Id);
 
             builder.HasOne(x => x.Assessment)

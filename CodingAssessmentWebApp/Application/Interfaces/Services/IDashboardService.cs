@@ -4,7 +4,7 @@ namespace Application.Interfaces.Services
 {
     public interface IDashboardService
     {
-        Task<BaseResponse<StudentDashBoardDto>> GetInstructorDashboardAsync();
+        Task<BaseResponse<InstructorDashboardOverview>> GetInstructorDashboardAsync();
         Task<BaseResponse<AdminDashBoardOverview>> AdminDashBoardOverview();
         Task<BaseResponse<AssessmentMetricsDto>> GetAssessmentMetrics(Guid? instructorId , Guid? batchId);
         Task<BaseResponse<StudentDashBoardDto>> GetStudentDashboardAsync();

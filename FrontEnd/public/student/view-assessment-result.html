@@ -1,101 +1,140 @@
 <!DOCTYPE html>
 <html lang="en" x-data="viewResult()" x-init="init()">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>View Assessment Result</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Alpine.js -->
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="bg-gray-100 text-gray-800">
 
-  <div class="max-w-5xl mx-auto p-6 mt-10 bg-white rounded shadow space-y-8">
+<body class="bg-gray-100 text-gray-800" x-data="{ sidebarOpen: false }" x-init="loadLayout()">
 
-    <!-- Header -->
-    <div>
-      <h1 class="text-2xl font-bold">📄 Assessment Result</h1>
-      <p class="text-sm text-gray-500" x-text="result.title + ' • ' + result.date"></p>
-    </div>
+  <!-- Sidebar -->
+  <div id="sidebar-placeholder"
+    :class="sidebarOpen ? 'fixed inset-y-0 left-0 w-64 z-40 bg-white shadow' : 'hidden md:block fixed inset-y-0 left-0 w-64 z-40 bg-white shadow'">
+  </div>
 
-    <!-- Score Summary -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-      <div class="bg-gray-50 p-4 rounded">
-        <div class="text-sm text-gray-500">Score</div>
-        <div class="text-xl font-bold" x-text="result.score + '%'"></div>
+  <!-- Main Content -->
+  <div class="md:ml-64 min-h-screen flex flex-col">
+    <!-- Navbar -->
+    <div id="navbar-placeholder" class="shadow bg-white"></div>
+
+    <!-- Page Content -->
+    <main class="flex-grow w-full p-6 max-w-6xl mx-auto space-y-10 bg-gray-50">
+      <!-- Header -->
+      <div>
+        <h1 class="text-2xl font-bold">📄 Assessment Result</h1>
+        <p class="text-sm text-gray-500" x-text="result.title + ' • ' + result.date"></p>
       </div>
-      <div class="bg-gray-50 p-4 rounded">
-        <div class="text-sm text-gray-500">Time Taken</div>
-        <div class="text-xl font-bold" x-text="result.timeTaken"></div>
-      </div>
-      <div class="bg-gray-50 p-4 rounded">
-        <div class="text-sm text-gray-500">Correct</div>
-        <div class="text-xl font-bold text-green-600" x-text="result.correct"></div>
-      </div>
-      <div class="bg-gray-50 p-4 rounded">
-        <div class="text-sm text-gray-500">Wrong</div>
-        <div class="text-xl font-bold text-red-600" x-text="result.wrong"></div>
-      </div>
-    </div>
 
-    <!-- Answers Review -->
-    <div>
-      <h2 class="text-lg font-semibold mb-4">📝 Answers Review</h2>
-      <template x-for="(q, index) in result.questions" :key="index">
-        <div class="mb-6 p-4 border rounded shadow-sm bg-gray-50">
-          <div class="mb-2 text-sm text-gray-500">Question <span x-text="index + 1"></span></div>
-          <div class="font-medium text-gray-800 mb-2" x-text="q.text"></div>
-
-          <!-- MCQ / Objective -->
-          <template x-if="q.type !== 'Code'">
-            <div class="space-y-1 text-sm">
-              <p><span class="font-semibold">Your Answer:</span> 
-                <span :class="q.isCorrect ? 'text-green-600' : 'text-red-600'" x-text="q.studentAnswer || '—'"></span>
-              </p>
-              <template x-if="!q.isCorrect">
-                <p><span class="font-semibold">Correct Answer:</span> 
-                  <span class="text-green-600" x-text="q.correctAnswer"></span>
-                </p>
-              </template>
-              <p><span class="font-semibold">Status:</span> 
-                <span :class="q.isCorrect ? 'text-green-600' : 'text-red-600'" x-text="q.isCorrect ? 'Correct' : 'Wrong'"></span>
-              </p>
-            </div>
-          </template>
-
-          <!-- Coding Question -->
-          <template x-if="q.type === 'Code'">
-            <div class="space-y-3 text-sm">
-              <div>
-                <span class="font-semibold">Your Code:</span>
-                <pre class="bg-black text-green-200 text-xs p-3 rounded overflow-auto mt-1"><code x-text="q.studentCode"></code></pre>
-              </div>
-              <div>
-                <span class="font-semibold">Expected Output:</span>
-                <pre class="bg-gray-200 text-xs p-2 rounded overflow-auto" x-text="q.expectedOutput"></pre>
-              </div>
-              <div>
-                <span class="font-semibold">Your Output:</span>
-                <pre class="bg-gray-100 text-xs p-2 rounded overflow-auto" x-text="q.actualOutput"></pre>
-              </div>
-              <p><span class="font-semibold">Verdict:</span> 
-                <span :class="q.isCorrect ? 'text-green-600' : 'text-red-600'" x-text="q.isCorrect ? 'Passed' : 'Failed'"></span>
-              </p>
-            </div>
-          </template>
+      <!-- Score Summary -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+        <div class="bg-white p-4 rounded shadow">
+          <div class="text-sm text-gray-500">Score</div>
+          <div class="text-xl font-bold" x-text="result.score + '%'"></div>
         </div>
-      </template>
-    </div>
+        <div class="bg-white p-4 rounded shadow">
+          <div class="text-sm text-gray-500">Time Taken</div>
+          <div class="text-xl font-bold" x-text="result.timeTaken"></div>
+        </div>
+        <div class="bg-white p-4 rounded shadow">
+          <div class="text-sm text-gray-500">Correct</div>
+          <div class="text-xl font-bold text-green-600" x-text="result.correct"></div>
+        </div>
+        <div class="bg-white p-4 rounded shadow">
+          <div class="text-sm text-gray-500">Wrong</div>
+          <div class="text-xl font-bold text-red-600" x-text="result.wrong"></div>
+        </div>
+      </div>
 
-    <!-- Back Button -->
-    <div>
-      <a href="/student/assessments.html" class="text-indigo-600 hover:underline text-sm">← Back to My Assessments</a>
-    </div>
+      <!-- Answers Review -->
+      <div>
+        <h2 class="text-lg font-semibold mb-4">📝 Answers Review</h2>
+        <template x-for="(q, index) in result.questions" :key="index">
+          <div class="mb-8 p-5 border bg-white rounded shadow-sm">
+            <div class="text-sm text-gray-500 mb-1">Question <span x-text="index + 1"></span></div>
+            <h3 class="text-base font-semibold mb-2 text-gray-800" x-text="q.text"></h3>
+
+            <!-- Objective / MCQ -->
+            <template x-if="q.type !== 'Code'">
+              <div class="space-y-1 text-sm">
+                <p>
+                  <span class="font-semibold">Your Answer:</span>
+                  <span :class="q.isCorrect ? 'text-green-600' : 'text-red-600'" x-text="q.studentAnswer || '—'"></span>
+                </p>
+                <template x-if="!q.isCorrect">
+                  <p>
+                    <span class="font-semibold">Correct Answer:</span>
+                    <span class="text-green-600" x-text="q.correctAnswer"></span>
+                  </p>
+                </template>
+                <p>
+                  <span class="font-semibold">Status:</span>
+                  <span :class="q.isCorrect ? 'text-green-600' : 'text-red-600'"
+                    x-text="q.isCorrect ? 'Correct' : 'Wrong'"></span>
+                </p>
+              </div>
+            </template>
+
+            <!-- Coding -->
+            <template x-if="q.type === 'Code'">
+              <div class="space-y-4 text-sm mt-2">
+                <div>
+                  <span class="font-semibold">Your Code:</span>
+                  <pre
+                    class="bg-black text-green-200 text-xs p-3 rounded overflow-auto mt-1"><code x-text="q.studentCode"></code></pre>
+                </div>
+                <div>
+                  <span class="font-semibold">Test Cases:</span>
+                  <div class="mt-2 space-y-2">
+                    <template x-for="(tc, i) in q.testCases" :key="i">
+                      <div class="border rounded p-2 text-xs bg-gray-100">
+                        <p><span class="font-semibold">Input:</span> <span x-text="tc.input"></span></p>
+                        <p><span class="font-semibold">Expected:</span> <span x-text="tc.expectedOutput"></span></p>
+                        <p><span class="font-semibold">Actual:</span> <span x-text="tc.actualOutput"></span></p>
+                        <p>
+                          <span class="font-semibold">Status:</span>
+                          <span :class="tc.passed ? 'text-green-600' : 'text-red-600'"
+                            x-text="tc.passed ? 'Passed' : 'Failed'"></span>
+                        </p>
+                        <p><span class="font-semibold">Weight Earned:</span> <span x-text="tc.earnedWeight"></span></p>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+                <p><span class="font-semibold">Verdict:</span>
+                  <span :class="q.isCorrect ? 'text-green-600' : 'text-red-600'"
+                    x-text="q.isCorrect ? 'Passed' : 'Failed'"></span>
+                </p>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+
+      <!-- Back -->
+      <div class="text-sm">
+        <a href="/student/assessments.html" class="text-indigo-600 hover:underline">← Back to My Assessments</a>
+      </div>
+    </main>
   </div>
 
   <script>
+    function loadLayout() {
+      fetch('/public/components/sidebar-student.html')
+        .then(res => res.text())
+        .then(html => document.getElementById('sidebar-placeholder').innerHTML = html);
+
+      fetch('/public/components/navbar-student.html')
+        .then(res => res.text())
+        .then(html => document.getElementById('navbar-placeholder').innerHTML = html);
+    }
+
     function viewResult() {
       return {
         result: {
@@ -121,43 +160,51 @@
               isCorrect: false
             },
             {
-              type: "MCQ",
-              text: "Which of these is NOT a JavaScript data type?",
-              studentAnswer: "float",
-              correctAnswer: "float",
-              isCorrect: false
-            },
-            {
-              type: "Objective",
-              text: "How do you declare a constant in JavaScript?",
-              studentAnswer: "const",
-              correctAnswer: "const",
-              isCorrect: true
-            },
-            {
               type: "Code",
               text: "Write a function that returns the sum of two numbers.",
               studentCode: `function sum(a, b) {\n  return a + b;\n}`,
-              expectedOutput: "sum(2, 3) => 5",
-              actualOutput: "sum(2, 3) => 5",
-              isCorrect: true
+              isCorrect: true,
+              testCases: [
+                {
+                  input: "2, 3",
+                  expectedOutput: "5",
+                  actualOutput: "5",
+                  passed: true,
+                  earnedWeight: 1.0
+                },
+                {
+                  input: "0, 0",
+                  expectedOutput: "0",
+                  actualOutput: "0",
+                  passed: true,
+                  earnedWeight: 1.0
+                }
+              ]
             },
             {
               type: "Code",
               text: "Write a function that reverses a string.",
               studentCode: `function reverse(str) {\n  return str;\n}`,
-              expectedOutput: "reverse('abc') => 'cba'",
-              actualOutput: "reverse('abc') => 'abc'",
-              isCorrect: false
+              isCorrect: false,
+              testCases: [
+                {
+                  input: "'abc'",
+                  expectedOutput: "'cba'",
+                  actualOutput: "'abc'",
+                  passed: false,
+                  earnedWeight: 0
+                }
+              ]
             }
           ]
         },
         init() {
-          // Optional: fetch based on ID from query string
+          // Optional: fetch result by assessmentId and student token
         }
-      }
+      };
     }
   </script>
 
 </body>
+
 </html>

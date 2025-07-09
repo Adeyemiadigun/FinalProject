@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en" x-data="studentProfile()" x-init="init()">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Student Profile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+
+<body class="bg-gray-100 text-gray-800" x-data="{ sidebarOpen: false }" x-init="loadLayout()">
+
+  <!-- Sidebar -->
+  <div id="sidebar-placeholder"
+    :class="sidebarOpen ? 'fixed inset-y-0 left-0 w-64 z-40' : 'hidden md:block fixed inset-y-0 left-0 w-64 z-40'">
+  </div>
+
+  <!-- Main Content -->
+  <div class="md:ml-64 min-h-screen flex flex-col">
+    <!-- Navbar -->
+    <div id="navbar-placeholder"></div>
+
+    <!-- Content -->
+    <main class="p-8 max-w-6xl mx-auto space-y-8">
+      <!-- Profile Header -->
+      <div class="flex items-center space-x-6">
+        <img src="https://api.dicebear.com/6.x/initials/svg?seed=Student" alt="Avatar"
+          class="w-24 h-24 rounded-full border shadow">
+        <div>
+          <h1 class="text-2xl font-bold" x-text="student.name"></h1>
+          <p class="text-sm text-gray-500" x-text="student.email"></p>
+          <p class="text-sm text-gray-500 mt-1">Batch: <span x-text="student.batch"></span></p>
+          <p class="text-sm text-gray-500">Joined: <span x-text="student.joinedAt"></span></p>
+        </div>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+        <div class="bg-white p-4 rounded shadow">
+          <div class="text-sm text-gray-500">Avg. Score</div>
+          <div class="text-xl font-bold text-green-600" x-text="summary.avgScore + '%'"></div>
+        </div>
+        <div class="bg-white p-4 rounded shadow">
+          <div class="text-sm text-gray-500">Completed</div>
+          <div class="text-xl font-bold" x-text="summary.completedAssessments"></div>
+        </div>
+        <div class="bg-white p-4 rounded shadow">
+          <div class="text-sm text-gray-500">Pass Rate</div>
+          <div class="text-xl font-bold text-indigo-600" x-text="summary.passRate + '%'"></div>
+        </div>
+        <div class="bg-white p-4 rounded shadow">
+          <div class="text-sm text-gray-500">Rank</div>
+          <div class="text-xl font-bold text-orange-500" x-text="summary.rank"></div>
+        </div>
+      </div>
+
+      <!-- Assessment History -->
+      <div class="bg-white p-6 rounded shadow">
+        <h2 class="text-lg font-semibold mb-4">📚 Assessment History</h2>
+        <table class="w-full text-sm text-left">
+          <thead class="bg-gray-50 text-gray-600">
+            <tr>
+              <th class="px-4 py-2">Title</th>
+              <th class="px-4 py-2">Date</th>
+              <th class="px-4 py-2">Score</th>
+              <th class="px-4 py-2">Status</th>
+              <th class="px-4 py-2 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="(a, i) in history" :key="i">
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-2" x-text="a.title"></td>
+                <td class="px-4 py-2" x-text="a.date"></td>
+                <td class="px-4 py-2 text-green-600" x-text="a.score + '%'"></td>
+                <td class="px-4 py-2">
+                  <span :class="a.passed ? 'text-green-600' : 'text-red-500'"
+                    x-text="a.passed ? 'Passed' : 'Failed'"></span>
+                </td>
+                <td class="px-4 py-2 text-right">
+                  <a :href="`/student/view-result.html?id=${a.id}`" class="text-indigo-600 hover:underline">View</a>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function loadLayout() {
+      fetch("/public/components/sidebar-student.html")
+        .then(res => res.text()).then(html => document.getElementById("sidebar-placeholder").innerHTML = html);
+      fetch("/public/components/navbar-student.html")
+        .then(res => res.text()).then(html => document.getElementById("navbar-placeholder").innerHTML = html);
+    }
+
+    function studentProfile() {
+      return {
+        student: {
+          name: "Adeyemi Mubarak",
+          email: "mubarak@example.com",
+          batch: "Batch A",
+          joinedAt: "July 1, 2024"
+        },
+        summary: {
+          avgScore: 86,
+          completedAssessments: 12,
+          passRate: 83,
+          rank: 5
+        },
+        history: [
+          { id: 1, title: "JavaScript Basics", date: "July 1, 2025", score: 92, passed: true },
+          { id: 2, title: "OOP in C#", date: "July 5, 2025", score: 88, passed: true },
+          { id: 3, title: "Algorithms Test", date: "July 6, 2025", score: 65, passed: false },
+          { id: 4, title: "Entity Framework Quiz", date: "July 8, 2025", score: 91, passed: true },
+        ],
+
+        init() {
+          // Later: Replace with API call to fetch student data by ID
+        }
+      }
+    }
+  </script>
+</body>
+
+</html>

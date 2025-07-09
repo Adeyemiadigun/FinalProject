@@ -38,4 +38,11 @@
         public string AverageCompletionTime { get; set; } // e.g. "00:16:20"
     }
 
+    public class BatchStudentCountDto
+    {
+        public Guid BatchId { get; set; }
+        public string BatchName { get; set; }
+        public int StudentCount { get; set; }
+    }
+
 }

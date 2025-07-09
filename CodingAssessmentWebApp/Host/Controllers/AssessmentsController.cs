@@ -1,5 +1,6 @@
 ﻿using Application.Dtos;
 using Application.Interfaces.Services;
+using Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
@@ -76,11 +77,18 @@ public class AssessmentsController(IAssessmentService assessmentService, IQuesti
         var response = await _submissionService.GetStudentSubmissionAsync(assessmentId, studentId);
         return response.Status ? Ok(response) : NotFound(response);
     }
-    [HttpGet("resents")]
+    [HttpGet("recents")]
     public async Task<IActionResult> GetRecentAssessments()
     {
         var response = await assessmentService.GetRecentAssessment();
         return response.Status ? Ok(response) : NotFound(response);
     }
+    [HttpGet("assessment-scores")]
+    public async Task<IActionResult> GetInstructorAssessmentScores()
+    {
+        var result = await assessmentService.GetInstructorAssessmentScoresAsync();
+        return Ok(result);
+    }
+
 }
 

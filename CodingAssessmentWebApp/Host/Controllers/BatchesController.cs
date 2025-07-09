@@ -13,10 +13,11 @@ namespace Host.Controllers
         private readonly IUserService _userService;
         private readonly IAssessmentService _assessmentService;
 
-        public BatchController(IBatchService batchService, IUserService userService)
+        public BatchController(IBatchService batchService, IUserService userService, IAssessmentService assessmentService)
         {
             _batchService = batchService;
             _userService = userService;
+            _assessmentService = assessmentService;
         }
 
         [HttpPost]
@@ -76,8 +77,6 @@ namespace Host.Controllers
         public async Task<IActionResult> GetAssessmentById(Guid id, [FromQuery] PaginationRequest request)
         {
             var result = await _assessmentService.GetAssessmentsByBatchId(id, request);
-
-            
 
             return Ok(result);
         }

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en" x-data="attemptAssessment()" x-init="init()">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Attempt Assessment</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <!-- Monaco Editor -->
+  <script>
+    window.require = { paths: { vs: 'https://unpkg.com/monaco-editor@0.34.1/min/vs' } };
+  </script>
+  <script src="https://unpkg.com/monaco-editor@0.34.1/min/vs/loader.js"></script>
+</head>
+
+<body class="bg-gray-100 text-gray-800" x-data="{ sidebarOpen: false }" x-init="loadLayout()">
+
+  <!-- Sidebar -->
+  <div id="sidebar-placeholder"
+    :class="sidebarOpen ? 'fixed inset-y-0 left-0 w-64 z-40' : 'hidden md:block fixed inset-y-0 left-0 w-64 z-40'">
+  </div>
+
+  <!-- Main Content -->
+  <div class="md:ml-64 min-h-screen flex flex-col">
+    <!-- Navbar -->
+    <div id="navbar-placeholder"></div>
+
+    <!-- Main Page Content -->
+    <main class="flex-grow w-full p-6 max-w-5xl mx-auto space-y-6" x-show="loaded">
+
+      <div class="flex justify-between items-center">
+        <h1 class="text-2xl font-bold">📝 Attempting: <span x-text="assessment.title"></span></h1>
+        <span class="text-sm text-gray-500" x-text="'Time Left: ' + timerDisplay"></span>
+      </div>
+
+      <!-- Question Navigation -->
+      <div class="flex gap-2 flex-wrap">
+        <template x-for="(q, index) in assessment.questions" :key="q.id">
+          <button @click="switchTo(index)"
+            :class="{'bg-blue-600 text-white': current === index, 'bg-white border': current !== index}"
+            class="px-3 py-1 rounded text-sm">
+            Q{{ index + 1 }}
+          </button>
+        </template>
+      </div>
+
+      <!-- Question Panel -->
+      <div class="bg-white p-6 rounded shadow">
+        <template x-if="currentQuestion">
+          <div>
+            <h2 class="font-semibold text-lg mb-2" x-text="'Q' + (current + 1) + ': ' + currentQuestion.title"></h2>
+
+            <!-- MCQ -->
+            <template x-if="currentQuestion.type === 'MCQ'">
+              <div class="space-y-2">
+                <template x-for="opt in currentQuestion.options" :key="opt.id">
+                  <label class="block">
+                    <input type="checkbox" :value="opt.id" @change="toggleMCQAnswer(currentQuestion.id, opt.id)"
+                      :checked="answers[currentQuestion.id]?.includes(opt.id)" class="mr-2">
+                    <span x-text="opt.text"></span>
+                  </label>
+                </template>
+              </div>
+            </template>
+
+            <!-- Objective -->
+            <template x-if="currentQuestion.type === 'Objective'">
+              <input type="text" x-model="answers[currentQuestion.id]" class="w-full mt-2 px-3 py-2 border rounded"
+                placeholder="Enter your answer" />
+            </template>
+
+            <!-- Coding -->
+            <template x-if="currentQuestion.type === 'Coding'">
+              <div id="editor" class="border mt-2 rounded h-[400px] overflow-hidden"></div>
+            </template>
+          </div>
+        </template>
+      </div>
+
+      <!-- Navigation Buttons -->
+      <div class="flex justify-between">
+        <button @click="prev" :disabled="current === 0"
+          class="bg-gray-200 px-4 py-2 rounded disabled:opacity-50">Previous</button>
+        <button @click="next" :disabled="current === assessment.questions.length - 1"
+          class="bg-gray-200 px-4 py-2 rounded disabled:opacity-50">Next</button>
+      </div>
+
+      <!-- Submit -->
+      <div class="text-right">
+        <button @click="submit" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">Submit
+          Assessment</button>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+      import {refreshToken} from "/public/assets/js/Auth/refreshTokenLogic.js";
+    function loadLayout() {
+      fetch("/public/components/sidebar-student.html")
+        .then(res => res.text())
+        .then(html => document.getElementById("sidebar-placeholder").innerHTML = html);
+      fetch("/public/components/navbar-student.html")
+        .then(res => res.text())
+        .then(html => document.getElementById("navbar-placeholder").innerHTML = html);
+    }
+
+    function getToken() {
+      return localStorage.getItem("token");
+    }
+
+    function attemptAssessment() {
+      return {
+        assessment: { title: "", questions: [] },
+        progress: {},
+        answers: {},
+        editor: null,
+        current: 0,
+        timer: 1200,
+        intervalId: null,
+        loaded: false,
+
+        get currentQuestion() {
+          return this.assessment.questions[this.current];
+        },
+
+        get timerDisplay() {
+          const m = Math.floor(this.timer / 60);
+          const s = this.timer % 60;
+          return `${m}m ${s < 10 ? "0" + s : s}s`;
+        },
+
+        async init() {
+          const id = new URLSearchParams(window.location.search).get("id");
+          const token = getToken();
+          if (!id || !token) return alert("Invalid access");
+
+          try {
+            const res = await fetch(`/api/student/assessment-progress?id=${id}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (!res.ok) {
+              if (res.status === 401) {
+                await refreshToken();
+                return this.init(); // Retry after refreshing token
+              }
+              throw new Error("Failed to load assessment or progress");
+            }
+            const data = await res.json();
+
+            this.assessment = data.assessment;
+            this.progress = data.progress;
+            this.timer = data.progress?.elapsedSeconds || 1200;
+
+            this.answers = {};
+            for (const q of this.assessment.questions) {
+              const ans = data.progress.answers.find(a => a.questionId === q.id);
+              if (q.type === "MCQ") this.answers[q.id] = ans ? ans.selectedOptionIds : [];
+              else this.answers[q.id] = ans ? ans.answerText : "";
+            }
+
+            this.loaded = true;
+            this.initTimer();
+            this.initMonaco();
+          } catch (err) {
+            console.error(err);
+            alert("Failed to load assessment or progress");
+          }
+        },
+
+        switchTo(index) {
+          this.current = index;
+          this.updateEditorContent();
+        },
+
+        next() {
+          if (this.current < this.assessment.questions.length - 1) {
+            this.current++;
+            this.updateEditorContent();
+          }
+        },
+
+        prev() {
+          if (this.current > 0) {
+            this.current--;
+            this.updateEditorContent();
+          }
+        },
+
+        toggleMCQAnswer(qid, optionId) {
+          const selected = this.answers[qid] || [];
+          if (selected.includes(optionId)) {
+            this.answers[qid] = selected.filter(id => id !== optionId);
+          } else {
+            this.answers[qid].push(optionId);
+          }
+        },
+
+        submit() {
+          console.log("Final answers:", this.answers);
+          clearInterval(this.intervalId);
+          alert("Assessment submitted.");
+        },
+
+        initTimer() {
+          this.intervalId = setInterval(() => {
+            if (this.timer > 0) {
+              this.timer--;
+            } else {
+              clearInterval(this.intervalId);
+              this.submit();
+            }
+          }, 1000);
+        },
+
+        initMonaco() {
+          const self = this;
+          require(["vs/editor/editor.main"], function () {
+            self.editor = monaco.editor.create(document.getElementById("editor"), {
+              value: "",
+              language: "javascript",
+              theme: "vs-dark",
+              automaticLayout: true
+            });
+
+            self.editor.onDidChangeModelContent(() => {
+              const q = self.currentQuestion;
+              if (q?.type === "Coding") {
+                self.answers[q.id] = self.editor.getValue();
+              }
+            });
+
+            self.updateEditorContent();
+          });
+        },
+
+        updateEditorContent() {
+          const q = this.currentQuestion;
+          if (q?.type === "Coding" && this.editor) {
+            const value = this.answers[q.id] || "";
+            if (this.editor.getValue() !== value) {
+              this.editor.setValue(value);
+            }
+          }
+        }
+      };
+    }
+  </script>
+</body>
+
+</html>

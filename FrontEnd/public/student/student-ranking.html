@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" x-data="studentRanking()" x-init="init()">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Student Rankings</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+
+<body class="bg-gray-100 text-gray-800" x-data="{ sidebarOpen: false }" x-init="loadLayout()">
+
+  <!-- Sidebar -->
+  <div id="sidebar-placeholder"
+    :class="sidebarOpen ? 'fixed inset-y-0 left-0 w-64 z-40' : 'hidden md:block fixed inset-y-0 left-0 w-64 z-40'">
+  </div>
+
+  <!-- Main Content -->
+  <div class="md:ml-64 min-h-screen flex flex-col">
+    <!-- Navbar -->
+    <div id="navbar-placeholder"></div>
+
+    <!-- Content -->
+    <main class="p-8 max-w-7xl mx-auto space-y-8">
+      <!-- Page Header -->
+      <div class="flex justify-between items-center">
+        <h1 class="text-3xl font-bold">🏆 Student Rankings</h1>
+        <select x-model="viewMode" class="border px-3 py-2 rounded text-sm shadow">
+          <option value="my-batch">My Batch</option>
+          <option value="all">All Batches</option>
+        </select>
+      </div>
+
+      <!-- Rankings Table -->
+      <div class="bg-white rounded shadow p-6 overflow-auto">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="bg-gray-100 text-gray-600">
+              <th class="px-4 py-3">#</th>
+              <th class="px-4 py-3">Student Name</th>
+              <th class="px-4 py-3">Batch</th>
+              <th class="px-4 py-3">Total Score</th>
+              <th class="px-4 py-3">Assessments Completed</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="(student, index) in paginatedRankings" :key="student.id">
+              <tr :class="student.isCurrentUser ? 'bg-blue-50 font-semibold' : 'hover:bg-gray-50'">
+                <td class="px-4 py-2" x-text="(currentPage - 1) * pageSize + index + 1"></td>
+                <td class="px-4 py-2" x-text="student.name"></td>
+                <td class="px-4 py-2" x-text="student.batch"></td>
+                <td class="px-4 py-2 text-green-700" x-text="student.score + '%'"></td>
+                <td class="px-4 py-2" x-text="student.completed"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div class="flex justify-between items-center mt-6">
+          <div class="text-sm text-gray-600">
+            Showing <span x-text="(currentPage - 1) * pageSize + 1"></span>
+            to <span x-text="Math.min(currentPage * pageSize, filteredRankings.length)"></span>
+            of <span x-text="filteredRankings.length"></span> students
+          </div>
+
+          <div class="flex gap-2">
+            <button @click="prevPage" :disabled="currentPage === 1"
+              class="px-4 py-2 bg-gray-200 rounded disabled:opacity-50">Previous</button>
+            <button @click="nextPage" :disabled="currentPage * pageSize >= filteredRankings.length"
+              class="px-4 py-2 bg-gray-200 rounded disabled:opacity-50">Next</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function loadLayout() {
+      fetch("/public/components/sidebar-student.html")
+        .then(res => res.text())
+        .then(html => document.getElementById("sidebar-placeholder").innerHTML = html);
+
+      fetch("/public/components/navbar-student.html")
+        .then(res => res.text())
+        .then(html => document.getElementById("navbar-placeholder").innerHTML = html);
+    }
+
+    function studentRanking() {
+      return {
+        viewMode: 'my-batch',
+        currentStudentId: 'user-123', // Should be from auth token
+        currentBatchId: 'batch-1',
+        rankings: [],
+        currentPage: 1,
+        pageSize: 10,
+
+        get filteredRankings() {
+          return this.rankings
+            .filter(s => this.viewMode === 'all' || s.batchId === this.currentBatchId)
+            .sort((a, b) => b.score - a.score);
+        },
+
+        get paginatedRankings() {
+          const start = (this.currentPage - 1) * this.pageSize;
+          return this.filteredRankings.slice(start, start + this.pageSize);
+        },
+
+        nextPage() {
+          if (this.currentPage * this.pageSize < this.filteredRankings.length) {
+            this.currentPage++;
+          }
+        },
+
+        prevPage() {
+          if (this.currentPage > 1) {
+            this.currentPage--;
+          }
+        },
+
+        init() {
+          // Example Data (Replace with API fetch)
+          this.rankings = [
+            { id: 'user-123', name: 'You', score: 92, completed: 5, batchId: 'batch-1', batch: 'Batch A', isCurrentUser: true },
+            { id: 'u2', name: 'Bob', score: 88, completed: 4, batchId: 'batch-2', batch: 'Batch B' },
+            { id: 'u3', name: 'Alice', score: 95, completed: 6, batchId: 'batch-1', batch: 'Batch A' },
+            { id: 'u4', name: 'Diana', score: 85, completed: 5, batchId: 'batch-1', batch: 'Batch A' },
+            { id: 'u5', name: 'Tom', score: 78, completed: 3, batchId: 'batch-2', batch: 'Batch B' },
+            { id: 'u6', name: 'Lena', score: 83, completed: 4, batchId: 'batch-1', batch: 'Batch A' },
+            { id: 'u7', name: 'Sam', score: 91, completed: 5, batchId: 'batch-2', batch: 'Batch B' },
+            { id: 'u8', name: 'Jude', score: 74, completed: 2, batchId: 'batch-1', batch: 'Batch A' },
+            { id: 'u9', name: 'Tina', score: 81, completed: 4, batchId: 'batch-1', batch: 'Batch A' },
+            { id: 'u10', name: 'Leo', score: 69, completed: 2, batchId: 'batch-2', batch: 'Batch B' },
+            { id: 'u11', name: 'Grace', score: 88, completed: 4, batchId: 'batch-1', batch: 'Batch A' },
+            { id: 'u12', name: 'Ken', score: 79, completed: 3, batchId: 'batch-1', batch: 'Batch A' }
+          ];
+        }
+      }
+    }
+  </script>
+</body>
+
+</html>

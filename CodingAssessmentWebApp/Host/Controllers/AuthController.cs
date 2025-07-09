@@ -1,7 +1,5 @@
 ﻿using Application.Dtos;
-using Application.Interfaces.Services;
 using Application.Interfaces.Services.AuthService;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Host.Controllers

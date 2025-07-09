@@ -373,5 +373,25 @@ namespace Application.Services
                 Data = result
             };
         }
+        public async Task<BaseResponse<List<BatchStudentCountDto>>> GetBatchStudentCountsAsync()
+        {
+            var batches = await batchRepository.GetAllBatchesAsync();
+            if (batches == null || !batches.Any())
+            {
+                throw new ApiException("No batches found.", 404, "NoBatchesFound", null);
+            }
+            var batchStudentCounts = batches.Select(batch => new BatchStudentCountDto
+            {
+                BatchId = batch.Id,
+                BatchName = $"{batch.Name} {batch.BatchNumber}",
+                StudentCount = batch.Students.Count
+            }).ToList();
+            return new BaseResponse<List<BatchStudentCountDto>>
+            {
+                Status = true,
+                Message = "Batch student counts retrieved successfully.",
+                Data = batchStudentCounts
+            };
+        }
     }
 }

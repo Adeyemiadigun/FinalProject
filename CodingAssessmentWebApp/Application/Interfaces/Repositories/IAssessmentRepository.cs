@@ -14,5 +14,6 @@ namespace Application.Interfaces.Repositories
         Task<PaginationDto<Assessment>> GetAllAsync(Guid userId,PaginationRequest request);
         Task<ICollection<Assessment>> GetAllAsync(Expression<Func<Assessment, bool>> exp);
         Task<ICollection<Assessment>> GetSelectedIds(ICollection<Guid> ids);
+        Task<Assessment?> GetWithQuestionsAndOptionsAsync(Guid id);
     }
 }

@@ -15,6 +15,10 @@ namespace Infrastructure.ExternalServices
         {
             BackgroundJob.Enqueue<T>(methodCall);
         }
-
+        
+        public void Schedule<T>(Expression<Action<T>> methodCall, TimeSpan delay)
+        {
+            BackgroundJob.Schedule<T>(methodCall, delay);
+        }
     }
 }

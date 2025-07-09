@@ -15,5 +15,6 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<BatchAnalyticsMetricsDto>> GetBatchAnalyticsMetrics(Guid? batchId);
         Task<BaseResponse<BatchPerformanceTrendDto>> GetBatchPerformanceTrend(Guid? batchId);
         Task<BaseResponse<List<BatchSummaryDto>>> GetBatchSummariesAsync();
+        Task<BaseResponse<List<BatchStudentCountDto>>> GetBatchStudentCountsAsync();
     }
 }

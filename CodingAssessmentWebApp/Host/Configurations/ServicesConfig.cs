@@ -13,6 +13,7 @@ using Application.Services.AuthService;
 using Application.Validation;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using Infrastructure.Persistence;
 
 namespace Host.Configurations
 {
@@ -31,6 +32,8 @@ namespace Host.Configurations
             builder.AddScoped<ICurrentUser, CurrentUser>();
             builder.AddScoped<IAuthService, AuthService>();
             builder.AddScoped<IBatchService, BatchService>();
+            builder.AddScoped<IReminderService, ReminderService>();
+            builder.AddScoped<IStudentProgressService, StudentProgressService>();
             builder.AddHttpClient();
             builder.AddHttpContextAccessor();
             builder.AddSingleton<IRefreshTokenStore, InMemoryRefreshTokenStore>();
@@ -49,6 +52,7 @@ namespace Host.Configurations
             builder.AddScoped<IUserRepository, UserRepository>();
             builder.AddScoped<IBatchRepository, BatchRepository>();
             builder.AddScoped<IUnitOfWork, UnitOfWork>();
+            builder.AddScoped<IStudentProgressRepository, StudentProgressRepository>();
 
             // External Services
             builder.AddScoped<IEmailService, EmailService>();
@@ -58,6 +62,13 @@ namespace Host.Configurations
             builder.AddSingleton<IJudge0LanguageStore, Judge0LanguageStore>();
             builder.AddScoped<IAIProviderGateway, AIStrategyGateway>();
             builder.AddScoped<IPayloadBuider, PayloadBuilder>();
+
+            //Cors Policy
+
+            builder.AddCors(o => o.AddPolicy("CLH_App", builder =>
+            {
+                builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+            }));
             return builder;
         }
     }

@@ -4,23 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Batches | Admin</title>
-
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>[x-cloak] { display: none !important; }</style>
 </head>
-
 <body class="bg-gray-100 text-gray-800">
-
-  <!-- Sidebar -->
   <div id="sidebar-placeholder"></div>
-
-  <!-- Main Content -->
   <div class="md:ml-64 p-6 space-y-6 relative">
     <div id="navbar-placeholder"></div>
-
-    <!-- Header + Filter -->
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-2xl font-bold">Batches</h2>
       <div class="flex gap-4">
@@ -34,19 +26,18 @@
       </div>
     </div>
 
-    <!-- Metrics -->
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
       <div class="bg-white p-4 rounded shadow">
         <div class="text-sm text-gray-500">🎯 Pass Rate</div>
-        <div class="text-lg font-semibold" x-text="filteredStats.passRate + '%'"></div>
+        <div class="text-lg font-semibold" x-text="filteredStats.passRate + '%' "></div>
       </div>
       <div class="bg-white p-4 rounded shadow">
         <div class="text-sm text-gray-500">🧮 Average Score</div>
-        <div class="text-lg font-semibold" x-text="filteredStats.avgScore + '%'"></div>
+        <div class="text-lg font-semibold" x-text="filteredStats.avgScore + '%' "></div>
       </div>
       <div class="bg-white p-4 rounded shadow">
         <div class="text-sm text-gray-500">📊 Completion Rate</div>
-        <div class="text-lg font-semibold" x-text="filteredStats.completionRate + '%'"></div>
+        <div class="text-lg font-semibold" x-text="filteredStats.completionRate + '%' "></div>
       </div>
       <div class="bg-white p-4 rounded shadow">
         <div class="text-sm text-gray-500">🕒 Avg. Assessment Time</div>
@@ -54,19 +45,17 @@
       </div>
     </div>
 
-    <!-- Charts -->
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
       <div class="bg-white p-4 rounded shadow">
         <h3 class="font-medium mb-2">📈 Performance Trend</h3>
         <canvas id="trendChart"></canvas>
       </div>
       <div class="bg-white p-4 rounded shadow">
-        <h3 class="font-medium mb-2">🧪 Difficulty Index</h3>
+        <h3 class="font-medium mb-2">🧪 Question Difficulty Distribution</h3>
         <canvas id="difficultyChart"></canvas>
       </div>
     </div>
 
-    <!-- Batch Table -->
     <div class="bg-white p-4 rounded shadow">
       <h3 class="font-medium text-lg mb-2">📋 Batch List</h3>
       <div class="overflow-x-auto">
@@ -85,7 +74,7 @@
                 <td class="p-2" x-text="batch.name"></td>
                 <td class="p-2 text-center" x-text="batch.students"></td>
                 <td class="p-2 text-center" x-text="batch.assessments"></td>
-                <td class="p-2 text-center" x-text="batch.passRate + '%'"></td>
+                <td class="p-2 text-center" x-text="batch.passRate + '%' "></td>
               </tr>
             </template>
           </tbody>
@@ -93,7 +82,6 @@
       </div>
     </div>
 
-    <!-- Create Batch Modal -->
     <div x-cloak x-show="showCreateModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
       <div @click.outside="showCreateModal = false" class="bg-white w-full max-w-md rounded-lg p-6 space-y-6 shadow-xl">
         <h2 class="text-xl font-semibold">Create New Batch</h2>
@@ -115,54 +103,39 @@
     </div>
   </div>
 
-  <!-- Alpine.js Component -->
   <script>
     function batchPage() {
       return {
         selectedBatch: 'all',
         showCreateModal: false,
         newBatch: { name: '', number: '' },
+        trendChart: null,
+        difficultyChart: null,
         batches: [
           { id: 1, name: 'Batch 1', students: 20, assessments: 4, passRate: 75 },
           { id: 2, name: 'Batch 2', students: 28, assessments: 3, passRate: 68 },
           { id: 3, name: 'Batch 3', students: 25, assessments: 5, passRate: 82 },
         ],
         stats: {
-          'Batch 1': { passRate: 75, avgScore: 72, completionRate: 84, avgTime: '14m' },
-          'Batch 2': { passRate: 68, avgScore: 70, completionRate: 78, avgTime: '16m' },
-          'Batch 3': { passRate: 82, avgScore: 76, completionRate: 90, avgTime: '15m' },
-          'all':     { passRate: 75, avgScore: 73, completionRate: 84, avgTime: '15m' }
+          'Batch 1': { passRate: 75, avgScore: 72, completionRate: 84, avgTime: '14m', difficulty: { Easy: 35, Medium: 45, Hard: 20 } },
+          'Batch 2': { passRate: 68, avgScore: 70, completionRate: 78, avgTime: '16m', difficulty: { Easy: 40, Medium: 40, Hard: 20 } },
+          'Batch 3': { passRate: 82, avgScore: 76, completionRate: 90, avgTime: '15m', difficulty: { Easy: 30, Medium: 50, Hard: 20 } },
+          'all':     { passRate: 75, avgScore: 73, completionRate: 84, avgTime: '15m', difficulty: { Easy: 35, Medium: 45, Hard: 20 } }
         },
         get filteredStats() {
           return this.stats[this.selectedBatch] || this.stats['all'];
         },
         get filteredBatches() {
-          return this.selectedBatch === 'all'
-            ? this.batches
-            : this.batches.filter(b => b.name === this.selectedBatch);
+          return this.selectedBatch === 'all' ? this.batches : this.batches.filter(b => b.name === this.selectedBatch);
         },
         createBatch() {
           if (!this.newBatch.name || !this.newBatch.number) {
             alert('Please fill in all fields');
             return;
           }
-
           const newId = this.batches.length + 1;
-          this.batches.push({
-            id: newId,
-            name: this.newBatch.name,
-            students: 0,
-            assessments: 0,
-            passRate: 0
-          });
-
-          this.stats[this.newBatch.name] = {
-            passRate: 0,
-            avgScore: 0,
-            completionRate: 0,
-            avgTime: '0m'
-          };
-
+          this.batches.push({ id: newId, name: this.newBatch.name, students: 0, assessments: 0, passRate: 0 });
+          this.stats[this.newBatch.name] = { passRate: 0, avgScore: 0, completionRate: 0, avgTime: '0m', difficulty: { Easy: 0, Medium: 0, Hard: 0 } };
           this.newBatch = { name: '', number: '' };
           this.showCreateModal = false;
         },
@@ -170,29 +143,31 @@
           loadComponent('sidebar-placeholder', '../components/sidebar.html');
           loadComponent('navbar-placeholder', '../components/nav.html');
           this.drawCharts();
+          Alpine.effect(() => {
+            if (this.difficultyChart) {
+              const diff = this.filteredStats.difficulty;
+              this.difficultyChart.data.datasets[0].data = [diff.Easy, diff.Medium, diff.Hard];
+              this.difficultyChart.update();
+            }
+          });
         },
         drawCharts() {
-          new Chart(document.getElementById("trendChart"), {
+          this.trendChart = new Chart(document.getElementById("trendChart"), {
             type: "line",
             data: {
               labels: ["W1", "W2", "W3", "W4"],
-              datasets: [{
-                label: "Avg Score",
-                data: [70, 75, 74, 78],
-                fill: false,
-                borderColor: "#3b82f6",
-                tension: 0.4
-              }]
+              datasets: [{ label: "Avg Score", data: [70, 75, 74, 78], fill: false, borderColor: "#3b82f6", tension: 0.4 }]
             },
             options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
           });
 
-          new Chart(document.getElementById("difficultyChart"), {
+          const diff = this.filteredStats.difficulty;
+          this.difficultyChart = new Chart(document.getElementById("difficultyChart"), {
             type: "pie",
             data: {
               labels: ["Easy", "Medium", "Hard"],
               datasets: [{
-                data: [40, 45, 15],
+                data: [diff.Easy, diff.Medium, diff.Hard],
                 backgroundColor: ["#10b981", "#f59e0b", "#ef4444"]
               }]
             },
@@ -201,7 +176,6 @@
         }
       };
     }
-
     async function loadComponent(id, path) {
       const res = await fetch(path);
       document.getElementById(id).innerHTML = await res.text();
@@ -209,3 +183,4 @@
   </script>
 </body>
 </html>
+

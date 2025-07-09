@@ -1,4 +1,5 @@
 ﻿using Application.Interfaces.Services;
+using Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
 
@@ -12,6 +13,19 @@ namespace Host.Controllers
         public async Task<IActionResult> GetOverview()
         {
             var result = await _dashBoardService.AdminDashBoardOverview();
+            return Ok(result);
+        }
+        [HttpGet("instructor/metrics/overview")]
+        public async Task<IActionResult> AdminDashBoardOverview()
+        {
+            var result = await _dashBoardService.GetInstructorDashboardAsync();
+            return Ok(result);
+        }
+
+        [HttpGet("batch-distribution")]
+        public async Task<IActionResult> GetBatchDistribution()
+        {
+            var result = await _batchService.GetBatchStudentCountsAsync();
             return Ok(result);
         }
         [HttpGet("admin/batches/analytics")]
@@ -41,7 +55,6 @@ namespace Host.Controllers
             return Ok(result);
         }
         [HttpGet("admin/analytics/score-by-question-type")]
-
         public async Task<IActionResult> GetScoreByQuestionType([FromQuery] Guid? batchId = null, [FromQuery] Guid? instructorId = null)
         {
             var result = await _dashBoardService.GetQuestionTypeMetrics(batchId, instructorId);
@@ -60,7 +73,7 @@ namespace Host.Controllers
             var result = await _dashBoardService.GetAssessmentsCreatedTrendAsync(instructorId, batchId);
             return Ok(result);
         }
-        [HttpGet("admin/batches/analytics")]
+        [HttpGet("admin/batch/analytics")]
         public async Task<IActionResult> GetBatchAnalyticsMetrics([FromQuery] Guid? batchId)
         {
             var result = await _batchService.GetBatchAnalyticsMetrics(batchId);

@@ -11,5 +11,6 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<PaginationDto<UserDto>>> GetAllByBatchId(Guid id, PaginationRequest request);
         Task<BaseResponse<UserDto>> UpdateUser(UpdateUserRequsteModel model);
         Task<BaseResponse<UserDto>> DeleteAsync(Guid id);
+        Task<List<UserDto>> SearchByNameOrEmailAsync(string query);
     }
 }

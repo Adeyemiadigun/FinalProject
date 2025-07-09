@@ -219,5 +219,22 @@ namespace Application.Services
                 Data = paginationDto
             };
         }
+
+        public async Task<List<UserDto>> SearchByNameOrEmailAsync(string query)
+        {
+            var normalizedQuery = query.Trim().ToLower();
+
+            var users = await _userRepository.GetAllAsync(
+                s => s.FullName.ToLower().Contains(normalizedQuery) ||
+                     s.Email.ToLower().Contains(normalizedQuery)
+            );
+
+            return users.Select(s => new UserDto
+            {
+                Id = s.Id,
+                FullName = s.FullName,
+                Email = s.Email,
+            }).ToList();
+        }
     }
 }

@@ -14,7 +14,6 @@ namespace Domain.Entitties
         public Guid InstructorId { get; set; }
         public User Instructor { get; set; }
         public ICollection<BatchAssessment> BatchAssessment { get; set; } = [];
-
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public double PassingScore { get; set; } 
         public ICollection<Question> Questions { get; set; } = [];

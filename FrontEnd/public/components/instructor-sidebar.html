@@ -1,13 +1,38 @@
 <!-- /components/sidebar/instructor-sidebar.html -->
-<div class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg z-40">
-  <div class="p-4 text-xl font-bold border-b">Instructor Panel</div>
-  <nav class="mt-4 px-4 space-y-2">
-    <a href="/pages/dashboard/instructor.html" class="block px-3 py-2 rounded hover:bg-gray-100">🏠 Dashboard</a>
-    <a href="/pages/assessments/list.html" class="block px-3 py-2 rounded hover:bg-gray-100">📝 Assessments</a>
-    <a href="/pages/batches/list.html" class="block px-3 py-2 rounded hover:bg-gray-100">📦 My Batches</a>
-    <a href="/pages/students/list.html" class="block px-3 py-2 rounded hover:bg-gray-100">👨‍🎓 Students</a>
-    <a href="/pages/messages/instructor.html" class="block px-3 py-2 rounded hover:bg-gray-100">📬 Messages</a>
-    <a href="/pages/notifications/instructor.html" class="block px-3 py-2 rounded hover:bg-gray-100">🔔 Notifications</a>
-    <a href="/logout.html" class="block px-3 py-2 rounded hover:bg-red-100 text-red-600">🚪 Logout</a>
+<aside
+  class="fixed inset-y-0 left-0 w-64 bg-gray-900 text-white z-40 transform md:translate-x-0 transition-transform duration-200">
+  <div class="p-4 text-xl font-semibold border-b border-gray-700">
+    Instructor Panel
+  </div>
+
+  <nav class="flex flex-col gap-2 p-4 text-sm">
+    <!-- Dashboard -->
+    <a href="/pages/dashboard/instructor.html" class="flex items-center gap-2 p-2 rounded bg-gray-800">
+      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h18M3 6h18M3 18h18" />
+      </svg>
+      Dashboard
+    </a>
+
+    <!-- Assessments -->
+    <a href="/pages/assessments/list.html" class="flex items-center gap-2 p-2 rounded hover:bg-gray-800">
+      📝 Assessments
+    </a>
+
+    <!-- Students -->
+    <a href="/pages/students/list.html" class="flex items-center gap-2 p-2 rounded hover:bg-gray-800">
+      👨‍🎓 Students
+    </a>
+
+    <!-- Leaderboard -->
+    <a href="/public/shared/leaderboard.html" class="flex items-center gap-2 p-2 rounded hover:bg-gray-800">
+      🏆 Leaderboard
+    </a>
+
+    <!-- Logout -->
+    <a href="/logout.html"
+      class="flex items-center gap-2 p-2 rounded hover:bg-red-600 text-red-400 hover:text-white mt-4">
+      🚪 Logout
+    </a>
   </nav>
-</div>
+</aside>

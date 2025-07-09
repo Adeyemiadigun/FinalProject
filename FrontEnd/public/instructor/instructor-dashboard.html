@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" x-data="instructorDashboard()" x-init="loadComponent('sidebar-placeholder', '../components/instructor-sidebar.html'); loadComponent('navbar-placeholder', '../components/instructor-nav.html'); loadData()">
+<html lang="en" x-data="instructorDashboard()" x-init="initDashboard()">
 
 <head>
   <meta charset="UTF-8" />
@@ -10,7 +10,6 @@
 </head>
 
 <body class="bg-gray-100 text-gray-800">
-  <!-- Sidebar & Navbar -->
   <div id="sidebar-placeholder"></div>
   <div class="md:ml-64 p-6 space-y-6" x-cloak>
     <div id="navbar-placeholder"></div>
@@ -20,18 +19,18 @@
       <h2 class="text-2xl font-bold">Instructor Dashboard</h2>
     </div>
 
-    <!-- Overview Cards -->
+    <!-- Metrics Cards -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
       <div class="bg-white p-4 rounded shadow">
-        <div class="text-sm text-gray-500">📘 Total Assessments</div>
+        <div class="text-sm text-gray-500">📘 My Assessments</div>
         <div class="text-xl font-semibold" x-text="summary.totalAssessments"></div>
       </div>
       <div class="bg-white p-4 rounded shadow">
-        <div class="text-sm text-gray-500">👥 Total Students</div>
+        <div class="text-sm text-gray-500">👥 My Students</div>
         <div class="text-xl font-semibold" x-text="summary.totalStudents"></div>
       </div>
       <div class="bg-white p-4 rounded shadow">
-        <div class="text-sm text-gray-500">🎯 Avg Score</div>
+        <div class="text-sm text-gray-500">🎯 Average Score</div>
         <div class="text-xl font-semibold" x-text="summary.avgScore + '%'"></div>
       </div>
       <div class="bg-white p-4 rounded shadow">
@@ -43,35 +42,12 @@
     <!-- Charts -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="bg-white p-4 rounded shadow">
-        <h4 class="font-medium mb-2">Assessment Scores</h4>
+        <h4 class="font-medium mb-2">My Assessment Scores</h4>
         <canvas id="assessmentScoreChart"></canvas>
       </div>
       <div class="bg-white p-4 rounded shadow">
-        <h4 class="font-medium mb-2">Student Count by Batch</h4>
+        <h4 class="font-medium mb-2">Student Distribution by Batch</h4>
         <canvas id="studentBatchChart"></canvas>
-      </div>
-    </div>
-
-    <!-- Your Batches -->
-    <div class="bg-white p-6 rounded shadow">
-      <h3 class="text-lg font-semibold mb-4">📦 Your Batches</h3>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <template x-for="batch in batches" :key="batch.id">
-          <div class="border p-4 rounded shadow-sm hover:bg-gray-50">
-            <h4 class="font-semibold text-lg" x-text="batch.name"></h4>
-            <p class="text-sm text-gray-600">Students: <span x-text="batch.studentCount"></span></p>
-            <p class="text-sm text-gray-600">Avg Score: <span x-text="batch.avgScore + '%'"></span></p>
-          </div>
-        </template>
-      </div>
-    </div>
-
-    <!-- Quick Actions -->
-    <div class="bg-white p-6 rounded shadow">
-      <h3 class="text-lg font-semibold mb-4">⚡ Quick Actions</h3>
-      <div class="space-x-2">
-        <button class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">➕ Assign New Assessment</button>
-        <button class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">📩 Send Reminder</button>
       </div>
     </div>
 
@@ -88,7 +64,7 @@
       </ul>
     </div>
 
-    <!-- Students at Risk -->
+    <!-- Students At Risk -->
     <div class="bg-white p-6 rounded shadow">
       <h3 class="text-lg font-semibold mb-4">⚠️ Students At Risk</h3>
       <ul class="space-y-2">
@@ -113,84 +89,32 @@
         </template>
       </ul>
     </div>
-
-    <!-- Top Performing Students -->
-    <div class="bg-white p-6 rounded shadow">
-      <h3 class="text-lg font-semibold mb-4">🏆 Top Performing Students</h3>
-      <ul class="space-y-2">
-        <template x-for="t in topPerformers" :key="t.id">
-          <li class="flex justify-between items-center border-b pb-2">
-            <span x-text="t.name"></span>
-            <span class="text-sm text-green-600" x-text="'Score: ' + t.avgScore + '%'"></span>
-          </li>
-        </template>
-      </ul>
-    </div>
-
-    <!-- Notifications -->
-    <div class="bg-white p-6 rounded shadow">
-      <h3 class="text-lg font-semibold mb-4">🔔 Notifications</h3>
-      <ul class="space-y-2">
-        <template x-for="n in notifications" :key="n.id">
-          <li class="text-sm border-b pb-2" x-text="n.message"></li>
-        </template>
-      </ul>
-    </div>
-
-    <!-- Message Center -->
-    <div class="bg-white p-6 rounded shadow">
-      <h3 class="text-lg font-semibold mb-4">💬 Message Center</h3>
-      <ul class="space-y-2">
-        <template x-for="m in messages" :key="m.id">
-          <li class="text-sm border-b pb-2">
-            <strong x-text="m.sender"></strong>: <span x-text="m.text"></span>
-          </li>
-        </template>
-      </ul>
-    </div>
   </div>
 
-  <!-- Alpine Logic -->
+  <!-- Alpine JS Logic -->
   <script>
     function instructorDashboard() {
       return {
-        summary: {
-          totalAssessments: 12,
-          totalStudents: 58,
-          avgScore: 72,
-          passRate: 80
-        },
-        batches: [
-          { id: 1, name: 'Batch Alpha', studentCount: 20, avgScore: 75 },
-          { id: 2, name: 'Batch Beta', studentCount: 18, avgScore: 68 },
-          { id: 3, name: 'Batch Gamma', studentCount: 20, avgScore: 74 }
-        ],
-        upcomingAssessments: [
-          { id: 1, title: "Advanced C#", dueDate: "2025-07-05" },
-          { id: 2, title: "EF Core Quiz", dueDate: "2025-07-10" }
-        ],
-        atRiskStudents: [
-          { id: 1, name: "James O.", avgScore: 40 },
-          { id: 2, name: "Angela M.", avgScore: 35 }
-        ],
-        recentSubmissions: [
-          { id: 1, studentName: "Sarah J.", title: "LINQ Challenge", date: "2025-06-29" },
-          { id: 2, studentName: "David A.", title: "OOP Basics", date: "2025-06-28" }
-        ],
-        topPerformers: [
-          { id: 1, name: "Chuka N.", avgScore: 92 },
-          { id: 2, name: "Favour T.", avgScore: 89 }
-        ],
-        notifications: [
-          { id: 1, message: "New batch created: Batch Delta" },
-          { id: 2, message: "Assessment: EF Core Quiz scheduled" }
-        ],
-        messages: [
-          { id: 1, sender: "Admin", text: "Reminder: Update your students' batch mapping." },
-          { id: 2, sender: "Support", text: "System maintenance scheduled for Sunday." }
-        ],
+        summary: { totalAssessments: 0, totalStudents: 0, avgScore: 0, passRate: 0 },
+        batches: [],
+        upcomingAssessments: [],
+        atRiskStudents: [],
+        recentSubmissions: [],
 
-        loadData() {
+        async initDashboard() {
+          const token = localStorage.getItem("token");
+          const headers = { "Authorization": `Bearer ${token}` };
+
+          const res = await Promise.all([
+            fetch('/api/v1/instructor/dashboard/summary', { headers }).then(r => r.json()),
+            fetch('/api/v1/instructor/dashboard/batch-distribution', { headers }).then(r => r.json()),
+            fetch('/api/v1/instructor/dashboard/upcoming-assessments', { headers }).then(r => r.json()),
+            fetch('/api/v1/instructor/dashboard/at-risk-students', { headers }).then(r => r.json()),
+            fetch('/api/v1/instructor/dashboard/recent-submissions', { headers }).then(r => r.json()),
+          ]);
+
+          [this.summary, this.batches, this.upcomingAssessments, this.atRiskStudents, this.recentSubmissions] = res;
+
           this.drawCharts();
         },
 
@@ -200,8 +124,8 @@
             data: {
               labels: ['OOP Basics', 'LINQ Challenge', 'Entity Framework'],
               datasets: [{
-                label: 'Average Score (%)',
-                data: [74, 69, 78],
+                label: 'Avg Score (%)',
+                data: [74, 69, 78], // Optionally replace with dynamic data later
                 backgroundColor: '#3b82f6'
               }]
             }
@@ -228,6 +152,5 @@
     }
   </script>
 </body>
+
 </html>
-
-

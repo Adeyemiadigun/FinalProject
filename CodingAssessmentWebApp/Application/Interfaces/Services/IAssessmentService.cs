@@ -17,6 +17,6 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<List<AssessmentPerformanceDto>>> GetTopAssessments();
         Task<BaseResponse<List<AssessmentPerformanceDto>>> GetLowestAssessments();
         Task<BaseResponse<List<AssessmentDto>>> GetRecentAssessment();
-            
+        Task<BaseResponse<List<AssessmentPerformanceDto>>> GetInstructorAssessmentScoresAsync();
     }
 }

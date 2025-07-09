@@ -3,6 +3,7 @@ using Hangfire.PostgreSql;
 using Host.Configurations;
 using Host.Middlewares;
 using Infrastructure.Configurations;
+using Infrastructure.ExternalServices;
 using Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Versioning;
@@ -53,10 +54,7 @@ builder.Services.AddHangfire(config =>
         .UseRecommendedSerializerSettings()
         .UsePostgreSqlStorage(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
-builder.Services.AddCors(o => o.AddPolicy("CLH_App", builder =>
-{
-    builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
-}));
+
 // Register the AI settings configuration
 builder.Services.Configure<AISettings>(
    builder.Configuration.GetSection("AISettings"));
@@ -97,7 +95,9 @@ builder.Services.AddSwaggerGen(c =>
 
 
 var app = builder.Build();
-
+app.UseHangfireServer();
+app.UseHangfireDashboard();
+HangfireJobScheduler.RegisterRecurringJobs();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

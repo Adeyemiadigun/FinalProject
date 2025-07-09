@@ -10,9 +10,7 @@ namespace Application.Interfaces.ExternalServices
 {
     public interface IEmailService
     {
-        Task<bool> SendEmailAsync(string to, string subject, string body);
-
-        // Fix for CS0246 and CS0080: Make the interface generic to allow the use of T with constraints
+        Task SendEmailAsync(User to, string subject, string body);
         Task<bool> SendResultEmailAsync(Submission submission, User user);
 
         Task<bool> SendBulkEmailAsync(ICollection<User> to, string subject, AssessmentDto assessment);

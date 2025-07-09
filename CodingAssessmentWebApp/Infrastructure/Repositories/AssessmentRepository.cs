@@ -1,16 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq.Expressions;
 using Application.Dtos;
 using Application.Interfaces.Repositories;
-using Application.Services;
 using Domain.Entitties;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Org.BouncyCastle.Asn1.Ocsp;
 
 namespace Infrastructure.Repositories
 {
@@ -26,6 +19,14 @@ namespace Infrastructure.Repositories
                 .Include(x => x.Submissions)
                 .FirstOrDefaultAsync(x => x.Id == id);
         } 
+        public async Task<Assessment?> GetWithQuestionsAndOptionsAsync(Guid id)
+        {
+            return await _context.Assessments
+                .Include(x => x.Questions)
+                .ThenInclude(x => x.Options)
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+        }
         public Task<Assessment?> GetAsync(string name)
         {
             return _context.Set<Assessment>()
