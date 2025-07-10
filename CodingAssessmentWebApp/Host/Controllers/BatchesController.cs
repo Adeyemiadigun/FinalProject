@@ -40,7 +40,7 @@ namespace Host.Controllers
             var result = await _batchService.GetAllBatchesAsync(pagination);
             return Ok(result);
         }
-        [HttpGet]
+        [HttpGet("all")]
         public async Task<IActionResult> GetAllBatches()
         {
             var result = await _batchService.GetAllBatchesAsync();

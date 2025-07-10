@@ -6,9 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Host.Controllers
 {
-    [ApiVersion("1.0")]
-    [Route("api/v{api:Version}[controller]")]
     [ApiController]
+    [Route("api/v{version:apiVersion}/[controller]")]
+    [ApiVersion("1.0")]
     public class AssessmentProgressController : ControllerBase
     {
         private readonly IStudentProgressService _progressService; 

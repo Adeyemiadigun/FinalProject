@@ -1,4 +1,4 @@
-export let refreshToken = async ()=>{
+let refreshToken = async ()=>{
   let refreshToken = localStorage.getItem('refreshToken');
   if (!refreshToken) {
     return null;
@@ -34,3 +34,5 @@ export let refreshToken = async ()=>{
   });
   return localStorage.getItem('accessToken');
 }
+
+window.refreshToken = refreshToken;

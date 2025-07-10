@@ -22,24 +22,25 @@ builder.Services.AddOpenApi();
 builder.Services.AddServices();
 builder.Services.AddDbContext<ClhAssessmentAppDpContext>(config => config.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 //Api versioning
-builder.Services.AddApiVersioning(options =>
-{
-    options.AssumeDefaultVersionWhenUnspecified = true;
-    options.DefaultApiVersion = new ApiVersion(1, 0);
-    options.ReportApiVersions = true;
 
-    // Optional: allow clients to specify the version via a query param or header
-    options.ApiVersionReader = ApiVersionReader.Combine(
-        new QueryStringApiVersionReader("api-version"),
-        new HeaderApiVersionReader("X-Version"),
-        new UrlSegmentApiVersionReader()
-    );
-});
-builder.Services.AddVersionedApiExplorer(options =>
-{
-    options.GroupNameFormat = "'v'VVV"; // Use v1, v1.0, etc.
-    options.SubstituteApiVersionInUrl = true; // 🔥 This is the fix you need
-});
+    builder.Services.AddApiVersioning(options =>
+    {
+        options.AssumeDefaultVersionWhenUnspecified = true;
+        options.DefaultApiVersion = new ApiVersion(1, 0);
+        options.ReportApiVersions = true;
+
+        // Optional: allow clients to specify the version via a query param or header
+        options.ApiVersionReader = ApiVersionReader.Combine(
+            new QueryStringApiVersionReader("api-version"),
+            new HeaderApiVersionReader("X-Version"),
+            new UrlSegmentApiVersionReader()
+        );
+    });
+    builder.Services.AddVersionedApiExplorer(options =>
+    {
+        options.GroupNameFormat = "'v'VVV"; // Use v1, v1.0, etc.
+        options.SubstituteApiVersionInUrl = true; // 🔥 This is the fix you need
+    });
 if (!builder.Environment.IsEnvironment("DesignTime"))
 {
     builder.Services.AddHttpContextAccessor();

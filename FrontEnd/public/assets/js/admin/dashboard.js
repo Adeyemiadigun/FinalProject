@@ -1,84 +1,111 @@
+function adminDashboard() {
+  return {
+    statCards: [],
+    topStudents: [],
+    lowestStudents: [],
 
-  function adminDashboard() {
-    
-    return {
-      statCards: [
-        { label: 'Total Students', value: 248, bg: 'bg-blue-600', icon: '<path d=\"M17 20h5v-2a4 4 0 00-5-4H7a4 4 0 00-5 4v2h5\"/>' },
-        { label: 'Total Assessments', value: 34, bg: 'bg-indigo-600', icon: '<path d=\"M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01\"/>' },
-        { label: 'Active Assessments', value: 18, bg: 'bg-yellow-500', icon: '<path d=\"M5 13l4 4L19 7\"/>' },
-        { label: 'Total Batches', value: 12, bg: 'bg-green-600', icon: '<path d=\"M3 7h18M3 12h18M3 17h18\"/>' },
-        { label: 'Average Score', value: '72%', bg: 'bg-emerald-600', icon: '<path d=\"M9 12l2 2l4 -4\"/>' },
-        { label: 'Completion Rate', value: '89%', bg: 'bg-purple-600', icon: '<path d=\"M3 3v18h18\"/>' }
-      ],
-      topStudents: [
-        { id: 1, name: 'Grace Hill', averageScore: 95 },
-        { id: 2, name: 'John Doe', averageScore: 91 },
-        { id: 3, name: 'Alice King', averageScore: 89 }
-      ],
-      lowestStudents: [
-{ name: 'Henry Ford', email: 'henry@example.com', averageScore: 42 },
-{ name: 'Eliot Page', email: 'eliot@example.com', averageScore: 47 },
-{ name: 'Maya Lin', email: 'maya@example.com', averageScore: 49 }
-],
-      initDashboard() {
-        loadComponent('sidebar-placeholder', '../components/sidebar.html');
-        loadComponent('navbar-placeholder', '../components/nav.html');
-        this.renderCharts();
-      },
+    async initDashboard() {
+      const token = localStorage.getItem("token");
+      const headers = { headers: { Authorization: `Bearer ${token}` } };
 
-      renderCharts() {
-        new Chart(document.getElementById('topAssessmentChart'), {
-          type: 'bar',
-          data: {
-            labels: ['Java Basics', 'Data Structures', 'HTML Quiz'],
-            datasets: [{
-              label: 'Average % Score',
-              data: [92, 88, 85],
-              backgroundColor: '#3b82f6'
-            }]
+      try {
+        
+        loadComponent("sidebar-placeholder", "../components/sidebar.html");
+        loadComponent("navbar-placeholder", "../components/nav.html");
+        const [metricsRes, topRes, lowRes, batchRes] = await Promise.all([
+          fetch("/api/v1/admin/metrics/overview", headers),
+          fetch("/api/v1/admin/analytics/assessments/top-performing", headers),
+          fetch(
+            "/api/v1/admin/analytics/assessments/lowest-performing",
+            headers
+          ),
+          fetch("/api/v1/admin/analytics/students-per-batch", headers),
+        ]);
+
+        if (
+          [metricsRes, topRes, lowRes, batchRes].some(
+            (res) => res.status === 401
+          )
+        ) {
+          await window.refreshToken(); 
+          return this.initDashboard();
+        }
+
+        const metrics = await metricsRes.json();
+        const top = await topRes.json();
+        const low = await lowRes.json();
+        const batchData = await batchRes.json();
+
+        this.statCards = [
+          {
+            label: "Assessments",
+            value: metrics.data.totalAssessments,
+            bg: "bg-blue-500",
+            icon: '<path d="M5 13l4 4L19 7" />',
           },
-          options: {
-            responsive: true,
-            scales: { y: { beginAtZero: true, max: 100 } }
-          }
-        });
-
-        new Chart(document.getElementById('lowAssessmentChart'), {
-          type: 'bar',
-          data: {
-            labels: ['NodeJS', 'Python Intro', 'Git Basics'],
-            datasets: [{
-              label: 'Average % Score',
-              data: [48, 52, 58],
-              backgroundColor: '#ef4444'
-            }]
+          {
+            label: "Active",
+            value: metrics.data.activeAssessments,
+            bg: "bg-green-500",
+            icon: '<path d="M12 4v16m8-8H4" />',
           },
-          options: {
-            responsive: true,
-            scales: { y: { beginAtZero: true, max: 100 } }
-          }
-        });
-
-        new Chart(document.getElementById('batchChart'), {
-          type: 'bar',
-          data: {
-            labels: ['Batch 1', 'Batch 2', 'Batch 3'],
-            datasets: [{
-              label: 'Student Count',
-              data: [25, 32, 18],
-              backgroundColor: '#10b981'
-            }]
+          {
+            label: "Students",
+            value: metrics.data.totalStudents,
+            bg: "bg-yellow-500",
+            icon: '<path d="M3 10h18M3 6h18M3 14h18M3 18h18" />',
           },
-          options: {
-            responsive: true,
-            scales: { y: { beginAtZero: true } }
-          }
-        });
+          {
+            label: "Avg Score",
+            value: `${metrics.data.averageScore}%`,
+            bg: "bg-purple-500",
+            icon: '<path d="M5 13l4 4L19 7" />',
+          },
+          {
+            label: "Completion",
+            value: `${metrics.data.completionRate}%`,
+            bg: "bg-indigo-500",
+            icon: '<path d="M12 4v16m8-8H4" />',
+          },
+          {
+            label: "Batches",
+            value: metrics.data.totalBatches,
+            bg: "bg-pink-500",
+            icon: '<path d="M3 10h18M3 6h18" />',
+          },
+        ];
+
+        this.topStudents = metrics.data.topStudents;
+        this.lowestStudents = metrics.data.lowestStudents;
+        this.drawChart("topAssessmentChart", top.data);
+        this.drawChart("lowAssessmentChart", low.data);
+        this.drawChart("batchChart", batchData.data);
+      } catch (err) {
+        console.error(err);
+        alert("Dashboard failed to load. Please try again later.");
       }
-    }
-  }
+    },
 
-  async function loadComponent(id, path) {
-    const res = await fetch(path);
-    document.getElementById(id).innerHTML = await res.text();
-  }
+    drawChart(id, data) {
+      const ctx = document.getElementById(id).getContext("2d");
+      new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: data.map((d) => d.assessmentTitle || d.batchName),
+          datasets: [
+            {
+              label: "Average Score",
+              data: data.map((d) => d.averageScore ?? d.studentCount),
+              backgroundColor: "#3b82f6",
+            },
+          ],
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } },
+      });
+    },
+  };
+}
+async function loadComponent(id, path) {
+  const res = await fetch(path);
+  document.getElementById(id).innerHTML = await res.text();
+}

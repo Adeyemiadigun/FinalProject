@@ -5,8 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Host.Controllers
 {
-    [Route("api/v{version:apiVersion}/[controller]")]
     [ApiController]
+    [Route("api/v{version:apiVersion}/[controller]")]
+    [ApiVersion("1.0")]
     public class DashboardController(IDashboardService _dashBoardService, IBatchService _batchService, IAssessmentService assessmentService) : ControllerBase
     {
         [HttpGet("admin/metrics/overview")]

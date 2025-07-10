@@ -44,6 +44,12 @@ namespace Host.Controllers
             var results = await _userService.SearchInstructorByNameOrEmailAsync(query,status);
             return Ok(new { status = true, data = results });
         }
+        [HttpGet("/assessment/recents")]
+        public async Task<IActionResult> GetInstructorRecentAssessments()
+        {
+            var response = await _assessmentService.GetRecentAssessment();
+            return response.Status ? Ok(response) : NotFound(response);
+        }
     }
 
 }
