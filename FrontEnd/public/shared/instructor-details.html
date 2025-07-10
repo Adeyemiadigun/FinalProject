@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" x-data="instructorDetailsPage()" x-init="init()">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Instructor Details</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] {
+      display: none !important;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100 text-gray-800" x-cloak>
+  <div id="sidebar-placeholder"></div>
+  <div class="md:ml-64 p-6 space-y-6">
+    <div id="navbar-placeholder"></div>
+
+    <div class="flex justify-between items-center">
+      <h2 class="text-2xl font-bold">Instructor Details</h2>
+    </div>
+
+    <!-- Profile Info -->
+    <div class="bg-white p-6 rounded shadow grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <h3 class="text-lg font-semibold mb-2">👨‍🏫 Profile</h3>
+        <p><strong>Name:</strong> <span x-text="instructor.fullName"></span></p>
+        <p><strong>Email:</strong> <span x-text="instructor.email"></span></p>
+        <p><strong>Status:</strong>
+          <span :class="instructor.status === 'Active' ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'"
+            x-text="instructor.status"></span>
+        </p>
+        <p><strong>Joined:</strong> <span x-text="instructor.joinDate"></span></p>
+      </div>
+      <div class="space-y-2">
+        <h3 class="text-lg font-semibold mb-2">⚙️ Actions</h3>
+        <button class="px-3 py-2 text-sm text-white bg-red-600 rounded hover:bg-red-700"
+          x-show="instructor.status === 'Active'">Deactivate</button>
+        <button class="px-3 py-2 text-sm text-white bg-green-600 rounded hover:bg-green-700"
+          x-show="instructor.status === 'Inactive'">Reactivate</button>
+      </div>
+    </div>
+
+    <!-- Performance Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="bg-white p-4 rounded shadow">
+        <div class="text-sm text-gray-500">📘 Total Assessments</div>
+        <div class="text-xl font-semibold" x-text="metrics.totalAssessments"></div>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <div class="text-sm text-gray-500">👥 Total Students</div>
+        <div class="text-xl font-semibold" x-text="metrics.totalStudents"></div>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <div class="text-sm text-gray-500">📊 Avg Score</div>
+        <div class="text-xl font-semibold" x-text="metrics.avgScore + '%'"></div>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <div class="text-sm text-gray-500">✅ Pass Rate</div>
+        <div class="text-xl font-semibold" x-text="metrics.passRate + '%'"></div>
+      </div>
+    </div>
+
+    <!-- Batches List -->
+    <div class="bg-white p-6 rounded shadow">
+      <h3 class="text-lg font-semibold mb-4">📦 Batches Managed</h3>
+      <ul class="list-disc pl-6 space-y-1">
+        <template x-for="batch in instructor.batches" :key="batch.id">
+          <li><span x-text="batch.name"></span> (<span x-text="batch.studentCount"></span> students)</li>
+        </template>
+      </ul>
+    </div>
+
+    <!-- Assessments List -->
+    <div class="bg-white p-6 rounded shadow">
+      <h3 class="text-lg font-semibold mb-4">📝 Assessments Created</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="text-left p-2">Title</th>
+              <th class="text-left p-2">Type</th>
+              <th class="text-left p-2">Duration</th>
+              <th class="text-left p-2">Start</th>
+              <th class="text-left p-2">End</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="a in instructor.assessments" :key="a.id">
+              <tr class="border-t">
+                <td class="p-2" x-text="a.title"></td>
+                <td class="p-2" x-text="a.type"></td>
+                <td class="p-2" x-text="`${a.duration} mins`"></td>
+                <td class="p-2" x-text="a.startDate"></td>
+                <td class="p-2" x-text="a.endDate"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alpine Script -->
+  <script>
+    function instructorDetailsPage() {
+      return {
+        instructor: {
+          fullName: "",
+          email: "",
+          status: "",
+          joinDate: "",
+          batches: [],
+          assessments: []
+        },
+        metrics: {
+          totalAssessments: 0,
+          totalStudents: 0,
+          avgScore: 0,
+          passRate: 0
+        },
+        async init() {
+          await loadComponent("sidebar-placeholder", "/public/components/sidebar.html");
+          await loadComponent("navbar-placeholder", "/public/components/nav.html");
+
+          const urlParams = new URLSearchParams(window.location.search);
+          const id = urlParams.get("id");
+          const token = localStorage.getItem("token");
+
+          const [profileRes, metricRes] = await Promise.all([
+            fetch(`/api/admin/instructors/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+            fetch(`/api/admin/instructors/${id}/metrics`, { headers: { Authorization: `Bearer ${token}` } })
+          ]);
+
+          const profileData = await profileRes.json();
+          const metricData = await metricRes.json();
+
+          this.instructor = profileData.data;
+          this.metrics = metricData.data;
+        }
+      };
+    }
+
+    async function loadComponent(id, path) {
+      const res = await fetch(path);
+      const html = await res.text();
+      document.getElementById(id).innerHTML = html;
+    }
+  </script>
+</body>
+
+</html>

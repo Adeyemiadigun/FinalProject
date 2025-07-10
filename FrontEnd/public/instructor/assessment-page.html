@@ -12,10 +12,20 @@
       display: none !important;
     }
   </style>
+
+  <!-- LoadComponent Helper -->
+  <script>
+    async function loadComponent(id, url) {
+      const response = await fetch(url);
+      const html = await response.text();
+      document.getElementById(id).innerHTML = html;
+    }
+  </script>
 </head>
 
 <body class="bg-gray-100 text-gray-800">
   <div id="sidebar-placeholder"></div>
+
   <div class="md:ml-64 p-6 space-y-6" x-cloak>
     <div id="navbar-placeholder"></div>
 
@@ -92,8 +102,8 @@
           <div class="flex justify-end space-x-2">
             <button @click="fetchPage(pagination.currentPage - 1)" :disabled="!pagination.hasPreviousPage"
               class="px-3 py-1 bg-gray-200 rounded disabled:opacity-50">Prev</button>
-            <span class="px-3 py-1 text-sm">Page <span x-text="pagination.currentPage"></span> of <span
-                x-text="pagination.totalPages"></span></span>
+            <span class="px-3 py-1 text-sm">Page <span x-text="pagination.currentPage"></span> of
+              <span x-text="pagination.totalPages"></span></span>
             <button @click="fetchPage(pagination.currentPage + 1)" :disabled="!pagination.hasNextPage"
               class="px-3 py-1 bg-gray-200 rounded disabled:opacity-50">Next</button>
           </div>
@@ -105,20 +115,28 @@
     </div>
   </div>
 
-  <!-- Modal and scripts unchanged -->
-  <!-- ... Keep your existing modal and create assessment logic ... -->
-
+  <!-- Alpine Component -->
   <script>
     function instructorAssessmentsPage() {
       return {
         assessments: [],
-        pagination: { currentPage: 1, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
+        batches: [],
+        pagination: { currentPage: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false },
         filters: { batchId: '', status: '' },
+        showCreateModal: false,
 
         async init() {
-          await loadComponent('sidebar-placeholder', '../components/instructor-sidebar.html');
-          await loadComponent('navbar-placeholder', '../components/instructor-nav.html');
-          await this.fetchPage(1);
+          const token = localStorage.getItem("token");
+
+          await loadComponent('sidebar-placeholder', 'components/instructor-sidebar.html');
+          await loadComponent('navbar-placeholder', 'components/instructor-nav.html');
+          // Load batches
+          const batchRes = await fetch('/api/v1/instructor/batches', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          this.batches = await batchRes.json();
+
+          await this.fetchPage(this.page);
         },
 
         async fetchPage(page) {
