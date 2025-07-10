@@ -12,7 +12,7 @@ namespace Host.Controllers
     public class InstructorController(IAssessmentService _assessmentService, IUserService _userService) : ControllerBase
     {
         [HttpPost]
-        public async Task<IActionResult> RegisterInstructor([FromBody] RegisterUserRequestModel model)
+        public async Task<IActionResult> RegisterInstructor([FromBody] RegisterIstructorRequestModel model)
         {
             var response = await _userService.RegisterInstructor(model);
             return response.Status ? Created("response", response) : BadRequest(response);
@@ -23,6 +23,26 @@ namespace Host.Controllers
         {
             var response = await _assessmentService.GetAllAssessmentsByInstructorIdAsync(request, instructorId);
             return response.Status ? Ok(response) : NotFound(response);
+        }
+        [HttpGet("assessments")]
+        public async Task<IActionResult> GetInstructorAssessments([FromQuery] Guid? batchId,[FromQuery] string? status,[FromQuery] PaginationRequest request)
+        {
+            var result = await _assessmentService.GetAssessmentsByInstructorAsync(batchId, status, request);
+            return Ok(new BaseResponse<PaginationDto<InstructorAssessmentDto>>
+            {
+                Status = true,
+                Message = "Instructor assessments retrieved successfully.",
+                Data = result
+            });
+        }
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchStudents([FromQuery] string query,[FromQuery] string status)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return BadRequest(new { message = "Search term is required." });
+
+            var results = await _userService.SearchInstructorByNameOrEmailAsync(query,status);
+            return Ok(new { status = true, data = results });
         }
     }
 

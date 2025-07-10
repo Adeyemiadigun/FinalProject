@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" x-data="instructorsPage()" x-init="init()">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Instructors | Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+
+<body class="bg-gray-100 text-gray-800" x-data="{ sidebarOpen: false }" x-init="loadLayout()">
+
+  <!-- Sidebar -->
+  <div id="sidebar-placeholder"
+    :class="sidebarOpen ? 'fixed inset-y-0 left-0 w-64 z-40' : 'hidden md:block fixed inset-y-0 left-0 w-64 z-40'">
+  </div>
+
+  <!-- Main Content -->
+  <div class="md:ml-64 flex flex-col min-h-screen">
+    <!-- Navbar -->
+    <div id="navbar-placeholder"></div>
+
+    <!-- Page Content -->
+    <main class="p-6 flex-grow w-full space-y-6">
+      <!-- Header -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <h1 class="text-3xl font-bold">👨‍🏫 Instructors</h1>
+        <button @click="openCreateModal" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+          + Add Instructor
+        </button>
+      </div>
+
+      <!-- Search and Filter -->
+      <div class="flex flex-col md:flex-row gap-4">
+        <input type="text" placeholder="Search by name or email" x-model="search"
+          class="px-4 py-2 border rounded w-full md:w-1/3" />
+        <select x-model="statusFilter" class="px-4 py-2 border rounded w-full md:w-1/5">
+          <option value="">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+
+      <!-- Table -->
+      <div class="overflow-x-auto bg-white shadow rounded">
+        <table class="min-w-full text-left text-sm">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="px-6 py-3 font-medium">Name</th>
+              <th class="px-6 py-3 font-medium">Email</th>
+              <th class="px-6 py-3 font-medium">Phone</th>
+              <th class="px-6 py-3 font-medium">Status</th>
+              <th class="px-6 py-3 font-medium">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="instructor in paginatedInstructors" :key="instructor.id">
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-6 py-3" x-text="instructor.name"></td>
+                <td class="px-6 py-3" x-text="instructor.email"></td>
+                <td class="px-6 py-3" x-text="instructor.phone"></td>
+                <td class="px-6 py-3">
+                  <span
+                    :class="instructor.status === 'active' ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'"
+                    x-text="instructor.status"></span>
+                </td>
+                <td class="px-6 py-3 space-x-2">
+                  <button class="text-blue-600 hover:underline" @click="viewInstructor(instructor)">View</button>
+                  <button class="text-yellow-600 hover:underline" @click="editInstructor(instructor)">Edit</button>
+                  <button class="text-red-600 hover:underline" @click="toggleStatus(instructor)">Deactivate</button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="flex justify-between items-center mt-6">
+        <button @click="prevPage" :disabled="page === 1"
+          class="px-4 py-2 bg-gray-200 rounded disabled:opacity-50">Previous</button>
+        <span class="text-sm text-gray-600">Page <span x-text="page"></span> of <span x-text="totalPages"></span></span>
+        <button @click="nextPage" :disabled="page === totalPages"
+          class="px-4 py-2 bg-gray-200 rounded disabled:opacity-50">Next</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- Alpine Logic -->
+  <script>
+    function loadLayout() {
+      fetch("/public/components/sidebar.html")
+        .then(res => res.text()).then(html => document.getElementById("sidebar-placeholder").innerHTML = html);
+      fetch("/public/components/nav.html")
+        .then(res => res.text()).then(html => document.getElementById("navbar-placeholder").innerHTML = html);
+    }
+
+    function instructorsPage() {
+      return {
+        instructors: [],
+        search: '',
+        statusFilter: '',
+        page: 1,
+        perPage: 10,
+
+        init() {
+          fetch('/api/admin/instructors', {
+            headers: { Authorization: 'Bearer ' + localStorage.getItem('token') }
+          })
+            .then(res => res.json())
+            .then(data => this.instructors = data);
+        },
+
+        get filteredInstructors() {
+          return this.instructors.filter(i =>
+            (!this.search || i.name.toLowerCase().includes(this.search.toLowerCase()) || i.email.toLowerCase().includes(this.search.toLowerCase())) &&
+            (!this.statusFilter || i.status === this.statusFilter)
+          );
+        },
+
+        get paginatedInstructors() {
+          const start = (this.page - 1) * this.perPage;
+          return this.filteredInstructors.slice(start, start + this.perPage);
+        },
+
+        get totalPages() {
+          return Math.ceil(this.filteredInstructors.length / this.perPage);
+        },
+
+        nextPage() {
+          if (this.page < this.totalPages) this.page++;
+        },
+
+        prevPage() {
+          if (this.page > 1) this.page--;
+        },
+
+        viewInstructor(instructor) {
+          window.location.href = `/admin/instructor-details.html?id=${instructor.id}`;
+        },
+
+        editInstructor(instructor) {
+          alert("Edit modal not implemented yet.");
+        },
+
+        toggleStatus(instructor) {
+          alert(`Toggling status for ${instructor.name}`);
+        },
+
+        openCreateModal() {
+          alert("Create instructor modal not implemented yet.");
+        }
+      };
+    }
+  </script>
+
+</body>
+
+</html>

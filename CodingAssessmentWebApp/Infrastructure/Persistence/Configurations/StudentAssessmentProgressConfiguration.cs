@@ -12,7 +12,12 @@ namespace Infrastructure.Persistence.Configurations
 
             builder.Property(p => p.StudentId)
                 .IsRequired();
-
+            builder.Property(p => p.StartedAt)
+                .IsRequired();
+                builder.Property(builder => builder.ElapsedTime)
+                .IsRequired();
+            builder.Property(p => p.LastSavedAt)
+                .IsRequired();
             builder.Property(p => p.AssessmentId)
                 .IsRequired();
 

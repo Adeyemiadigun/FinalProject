@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" x-data="leaderboardPage()" x-init="init()">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,6 +11,7 @@
   <!-- Alpine.js -->
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
+
 <body class="bg-gray-100 text-gray-800" x-data="sidebarController()" x-init="initSidebar()">
 
   <!-- Sidebar + Navbar placeholders -->
@@ -18,7 +20,7 @@
     <div id="navbar-placeholder" class="sticky top-0 z-30 bg-white shadow"></div>
 
     <!-- Page Content -->
-    <main class="max-w-7xl mx-auto px-4 py-6 space-y-8" x-data="leaderboardPage()" x-init="init()">
+    <main class="max-w-7xl mx-auto px-4 py-6 space-y-8">
 
       <!-- Header -->
       <div class="flex justify-between items-center">
@@ -30,10 +32,11 @@
         <!-- Batch Filter -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Filter by Batch</label>
-          <select class="border border-gray-300 rounded px-3 py-2 text-sm" x-model="selectedBatch" @change="filterByBatch()">
+          <select class="border border-gray-300 rounded px-3 py-2 text-sm" x-model="selectedBatch"
+            @change="filterByBatch()">
             <option value="">All Batches</option>
             <template x-for="batch in batches" :key="batch.id">
-              <option :value="batch.name" x-text="batch.name"></option>
+              <option :value="batch.id" x-text="batch.name"></option>
             </template>
           </select>
         </div>
@@ -53,21 +56,34 @@
             </tr>
           </thead>
           <tbody>
-            <template x-for="(student, index) in filteredLeaderboard" :key="student.id">
+            <template x-for="(student, index) in leaderboard" :key="student.id">
               <tr class="border-t hover:bg-gray-50">
-                <td class="p-2 font-medium" x-text="index + 1"></td>
+                <td class="p-2 font-medium" x-text="(pagination.pageNumber - 1) * pagination.pageSize + index + 1"></td>
                 <td class="p-2" x-text="student.name"></td>
                 <td class="p-2" x-text="student.batch"></td>
-                <td class="p-2" x-text="student.avgScore + '%'"></td>
-                <td class="p-2" x-text="student.highestScore + '%'"></td>
+                <td class="p-2" x-text="student.avgScore + '%' "></td>
+                <td class="p-2" x-text="student.highestScore + '%' "></td>
                 <td class="p-2" x-text="student.completedAssessments"></td>
               </tr>
             </template>
-
-            <tr x-show="filteredLeaderboard.length === 0">
+            <tr x-show="leaderboard.length === 0">
               <td class="p-2 text-center text-gray-500" colspan="6">No students found for selected batch</td>
             </tr>
           </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="6" class="pt-4 text-center">
+                <div class="inline-flex gap-2 items-center">
+                  <button @click="prevPage" :disabled="pagination.pageNumber === 1"
+                    class="px-3 py-1 bg-gray-200 text-sm rounded disabled:opacity-50">Prev</button>
+                  <span class="text-sm">Page <span x-text="pagination.pageNumber"></span> of <span
+                      x-text="pagination.totalPages"></span></span>
+                  <button @click="nextPage" :disabled="pagination.pageNumber === pagination.totalPages"
+                    class="px-3 py-1 bg-gray-200 text-sm rounded disabled:opacity-50">Next</button>
+                </div>
+              </td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </main>
@@ -100,38 +116,62 @@
     function leaderboardPage() {
       return {
         selectedBatch: '',
-        batches: [
-          { id: 1, name: 'Batch 1' },
-          { id: 2, name: 'Batch 2' },
-          { id: 3, name: 'Batch 3' },
-        ],
-        leaderboard: [
-          { id: 1, name: 'Grace Hill', batch: 'Batch 1', avgScore: 92, highestScore: 98, completedAssessments: 5 },
-          { id: 2, name: 'James Okoro', batch: 'Batch 2', avgScore: 89, highestScore: 95, completedAssessments: 6 },
-          { id: 3, name: 'Fatima Bello', batch: 'Batch 1', avgScore: 85, highestScore: 90, completedAssessments: 4 },
-          { id: 4, name: 'Chioma Uzo', batch: 'Batch 3', avgScore: 82, highestScore: 88, completedAssessments: 5 },
-          { id: 5, name: 'Ahmed Musa', batch: 'Batch 2', avgScore: 80, highestScore: 85, completedAssessments: 3 },
-        ],
-        filteredLeaderboard: [],
-        init() {
-          this.filteredLeaderboard = this.getSortedLeaderboard();
+        batches: [],
+        leaderboard: [],
+        pagination: {
+          pageNumber: 1,
+          pageSize: 10,
+          totalPages: 1,
+          totalItems: 0
         },
+
+        async init() {
+          await this.loadBatches();
+          await this.loadLeaderboard();
+        },
+
+        async loadBatches() {
+          const res = await fetch('/api/v1/batches');
+          this.batches = await res.json();
+        },
+
+        async loadLeaderboard() {
+          const query = new URLSearchParams({
+            batchId: this.selectedBatch || '',
+            pageNumber: this.pagination.pageNumber,
+            pageSize: this.pagination.pageSize
+          });
+
+          const res = await fetch(`/api/v1/admin/leaderboard?${query}`);
+          const data = await res.json();
+
+          this.leaderboard = data.items;
+          this.pagination.totalPages = data.totalPages;
+          this.pagination.totalItems = data.totalItems;
+        },
+
         filterByBatch() {
-          const all = this.leaderboard;
-          if (this.selectedBatch === '') {
-            this.filteredLeaderboard = this.getSortedLeaderboard(all);
-          } else {
-            const filtered = all.filter(x => x.batch === this.selectedBatch);
-            this.filteredLeaderboard = this.getSortedLeaderboard(filtered);
+          this.pagination.pageNumber = 1;
+          this.loadLeaderboard();
+        },
+
+        prevPage() {
+          if (this.pagination.pageNumber > 1) {
+            this.pagination.pageNumber--;
+            this.loadLeaderboard();
           }
         },
-        getSortedLeaderboard(data = null) {
-          const base = data ?? this.leaderboard;
-          return base.slice().sort((a, b) => b.avgScore - a.avgScore);
+
+        nextPage() {
+          if (this.pagination.pageNumber < this.pagination.totalPages) {
+            this.pagination.pageNumber++;
+            this.loadLeaderboard();
+          }
         }
       }
     }
   </script>
 
 </body>
+
 </html>

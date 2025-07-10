@@ -16,9 +16,10 @@ namespace Infrastructure.Persistence.Configurations
             builder.HasKey(o => o.Id);
             builder.Property(o => o.OptionId);
             builder.Property(o => o.InProgressAnswerId);
+
             builder.HasOne(o => o.InProgressAnswer)
                 .WithMany(o => o.SelectedOptions)
-                .HasForeignKey(o => o.InProgressAnswer.Id));
+                .HasForeignKey(o => o.InProgressAnswerId);
         }
     }
 

@@ -1,13 +1,6 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq.Expressions;
 using Application.Dtos;
 using Domain.Entities;
-using Domain.Entitties;
 
 namespace Application.Interfaces.Repositories
 {
@@ -23,5 +16,6 @@ namespace Application.Interfaces.Repositories
         Task<Batch> UpdateBatchAsync(Batch batch);
         Task DeleteBatchAsync(Guid id);
         Task UpdateAsync(Batch batch);
+        Task<Batch?> GetBatchIdWithRelationship(Guid id);
     }
 }

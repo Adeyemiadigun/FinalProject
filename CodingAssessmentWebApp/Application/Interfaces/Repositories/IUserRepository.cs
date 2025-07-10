@@ -11,5 +11,6 @@ namespace Application.Interfaces.Repositories
         Task<ICollection<User>> GetAllAsync();
         Task<ICollection<User>> GetAllAsync(Expression<Func<User, bool>> exp);
         Task<PaginationDto<User>> GetAllAsync(Expression<Func<User, bool>> exp, PaginationRequest request);
+        Task<PaginationDto<User>> GetAllWithRelationshipAsync(Expression<Func<User, bool>> exp, PaginationRequest request)
     }
 }

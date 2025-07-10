@@ -3,7 +3,9 @@ using Application.Dtos;
 using Application.Exceptions;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
+using Domain.Entities;
 using Domain.Entitties;
+using Domain.Enum;
 
 namespace Application.Services
 {
@@ -72,7 +74,7 @@ namespace Application.Services
             };
         }
 
-        public async Task<BaseResponse<UserDto>> RegisterInstructor(RegisterUserRequestModel model)
+        public async Task<BaseResponse<UserDto>> RegisterInstructor(RegisterIstructorRequestModel model)
         {
             var user = await _userRepository.CheckAsync(x => x.Email == model.Email);
             if (user)
@@ -83,8 +85,8 @@ namespace Application.Services
                 FullName = model.FullName,
                 Email = model.Email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password),
-                Role = Domain.Enum.Role.Instructor,
-                IsActive = false,
+                Role = Role.Instructor,
+                IsActive = true,
             };
             await _userRepository.CreateAsync(newUser);
             await _unitOfWork.SaveChangesAsync();
@@ -119,8 +121,8 @@ namespace Application.Services
                     FullName = user.FullName,
                     Email = user.Email,
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.Password),
-                    Role = Domain.Enum.Role.Student,
-                    IsActive = false,
+                    Role = Role.Student,
+                    IsActive = true,
                 };
                 users.Add(newUser);
             }
@@ -220,21 +222,214 @@ namespace Application.Services
             };
         }
 
-        public async Task<List<UserDto>> SearchByNameOrEmailAsync(string query)
+        public async Task<BaseResponse<List<UserDto>>> SearchByNameOrEmailAsync(string query, string? status = null)
         {
             var normalizedQuery = query.Trim().ToLower();
 
-            var users = await _userRepository.GetAllAsync(
-                s => s.FullName.ToLower().Contains(normalizedQuery) ||
-                     s.Email.ToLower().Contains(normalizedQuery)
+            var users = await _userRepository.GetAllAsync(s =>
+                (s.Role == Role.Student) &&
+                (string.IsNullOrEmpty(normalizedQuery) ||
+                 s.FullName.ToLower().Contains(normalizedQuery) ||
+                 s.Email.ToLower().Contains(normalizedQuery)) &&
+                (status == null || (status == "active" && s.IsActive) || (status == "inactive" && !s.IsActive))
             );
 
-            return users.Select(s => new UserDto
+            var userDtos = users.Select(s => new UserDto
             {
                 Id = s.Id,
                 FullName = s.FullName,
                 Email = s.Email,
             }).ToList();
+
+            return new BaseResponse<List<UserDto>>()
+            {
+                Message = "Users retrieved successfully",
+                Status = true,
+                Data = userDtos
+            };
         }
+        public async Task<BaseResponse<List<UserDto>>> SearchInstructorByNameOrEmailAsync(string query, string? status = null)
+        {
+            var normalizedQuery = query?.Trim().ToLower() ?? string.Empty;
+
+            var users = await _userRepository.GetAllAsync(s =>
+                (s.Role == Role.Instructor) &&
+                (string.IsNullOrEmpty(normalizedQuery) ||
+                 s.FullName.ToLower().Contains(normalizedQuery) ||
+                 s.Email.ToLower().Contains(normalizedQuery)) &&
+                (status == null || (status == "active" && s.IsActive) || (status == "inactive" && !s.IsActive))
+            );
+
+            var userDtos = users.Select(s => new UserDto
+            {
+                Id = s.Id,
+                FullName = s.FullName,
+                Email = s.Email,
+            }).ToList();
+
+            return new BaseResponse<List<UserDto>>()
+            {
+                Message = "Users retrieved successfully",
+                Status = true,
+                Data = userDtos
+            };
+        }
+
+        public async Task<BaseResponse<PaginationDto<LeaderboardDto>>> GetLeaderboardAsync(Guid? batchId, PaginationRequest request)
+        {
+            var students = await _userRepository.GetAllWithRelationshipAsync(
+                s => !batchId.HasValue || s.BatchId == batchId, request
+            );
+
+            if (students.Items == null || !students.Items.Any())
+            {
+                var emptyPagination = new PaginationDto<LeaderboardDto>
+                {
+                    Items = new List<LeaderboardDto>(),
+                    TotalItems = 0,
+                    TotalPages = 0,
+                    CurrentPage = 0,
+                    PageSize = request.PageSize,
+                    HasNextPage = false,
+                    HasPreviousPage = false
+                };
+
+                return new BaseResponse<PaginationDto<LeaderboardDto>>
+                {
+                    Message = "No students found",
+                    Status = true,
+                    Data = emptyPagination
+                };
+            }
+
+            var leaderboard = students.Items
+                .Where(s => s.Submissions.Any())
+                .Select(s => new LeaderboardDto
+                {
+                    Id = s.Id,
+                    Name = s.FullName,
+                    Batch = s.Batch.Name,
+                    AvgScore = Math.Round(s.Submissions.Average(sub => sub.TotalScore), 2),
+                    HighestScore = s.Submissions.Max(sub => sub.TotalScore),
+                    CompletedAssessments = s.Submissions.Count
+                })
+                .OrderByDescending(l => l.AvgScore)
+                .ToList();
+
+            var paginatedResponse = new PaginationDto<LeaderboardDto>
+            {
+                TotalItems = students.TotalItems,
+                TotalPages = students.TotalPages,
+                CurrentPage = students.CurrentPage,
+                HasNextPage = students.HasNextPage,
+                HasPreviousPage = students.HasPreviousPage,
+                PageSize = students.PageSize,
+                Items = leaderboard
+            };
+
+            return new BaseResponse<PaginationDto<LeaderboardDto>>
+            {
+                Message = "Leaderboard retrieved successfully",
+                Status = true,
+                Data = paginatedResponse
+            };
+        }
+        public async Task<BaseResponse<StudentDetail>> GetStudentDetail(Guid id)
+        {
+            if (Guid.Empty == id)
+                throw new ApiException("Invalid student ID provided", 400, "InvalidId", null);
+
+
+            var student = await _userRepository.GetAsync(id)
+                          ?? throw new ApiException("Student not found", 404, "StudentNotFound", null);
+
+            return new BaseResponse<StudentDetail>
+            {
+                Message = "Student details retrieved successfully",
+                Status = true,
+                Data = new StudentDetail
+                {
+                    Id = student.Id,
+                    FullName = student.FullName,
+                    Email = student.Email,
+                    BatchName = student.Batch?.Name,
+                    Status = student.IsActive
+                }
+            };
+        }
+        public async Task<BaseResponse<StudentAnalytics>> GetStudentAnalytics(Guid id)
+        {
+            if (Guid.Empty == id)
+                throw new ApiException("Invalid student ID provided", 400, "InvalidId", null);
+
+            var student = await _userRepository.GetAsync(x => x.Id == id)
+                                  ?? throw new ApiException("Student analytics not found", 404, "AnalyticsNotFound", null);
+            var studentAnalytics = new StudentAnalytics()
+            {
+                TotalAssessments = student.Assessments.Count,
+                Attempted = student.Submissions.Count(),
+                AvgScore = student.Submissions.Any() ? Math.Round(student.Submissions.Average(s => s.TotalScore), 2) : 0,
+                PassRate = student.Submissions.Count(s => s.Assessment.PassingScore <= s.TotalScore) / (double)student.Assessments.Count * 100
+            };
+            return new BaseResponse<StudentAnalytics>
+            {
+                Message = "Student analytics retrieved successfully",
+                Status = true,
+                Data =studentAnalytics
+            };
+        }
+        public async Task<BaseResponse<UserDto>> UpdateStudentBatch(Guid studentId, Guid newBatchId)
+        {
+            if (Guid.Empty == studentId || Guid.Empty == newBatchId)
+                throw new ApiException("Invalid student or batch ID provided", 400, "InvalidId", null);
+            var student = await _userRepository.GetAsync(studentId)
+                          ?? throw new ApiException("Student not found", 404, "StudentNotFound", null);
+            var newBatch = await _batchRepository.GetBatchByIdAsync(newBatchId)
+                          ?? throw new ApiException("New batch not found", 404, "BatchNotFound", null);
+            student.BatchId = newBatch.Id;
+            _userRepository.Update(student);
+            await _unitOfWork.SaveChangesAsync();
+            return new BaseResponse<UserDto>
+            {
+                Message = "Student batch reassigned successfully",
+                Status = true,
+                Data = new UserDto
+                {
+                    Id = student.Id,
+                    Email = student.Email,
+                    Role = student.Role,
+                    FullName = student.FullName,
+                }
+            };
+        }
+        public async Task<BaseResponse<UserDto>> UpdateStudentStatusAsync(Guid studentId, string newStatus)
+        {
+            if (Guid.Empty == studentId)
+                throw new ApiException("Invalid student ID provided", 400, "InvalidId", null);
+
+            var student = await _userRepository.GetAsync(studentId)
+                          ?? throw new ApiException("Student not found", 404, "StudentNotFound", null);
+
+            if (newStatus.ToLower() != "ictive" && newStatus.ToLower() != "inactive")
+                throw new ApiException("Invalid status value", 400, "InvalidStatus", null);
+
+            student.IsActive = newStatus.ToLower() == "active"; 
+            _userRepository.Update(student);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new BaseResponse<UserDto>
+            {
+                Message = "Student status updated successfully",
+                Status = true,
+                Data = new UserDto
+                {
+                    Id = student.Id,
+                    Email = student.Email,
+                    Role = student.Role,
+                    FullName = student.FullName,
+                }
+            };
+        }
+
     }
 }

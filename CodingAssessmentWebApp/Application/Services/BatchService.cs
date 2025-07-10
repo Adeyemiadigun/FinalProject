@@ -279,7 +279,51 @@ namespace Application.Services
                 }
             };
         }
+        public async Task<BaseResponse<BatchDetails>> GetBatchDetails(Guid batchId)
+        {
+            var batch = await batchRepository.GetBatchIdWithRelationship(batchId);
+            if (batch is null)
+            {
+                throw new ApiException("Batch not found.", 404, "BatchNotFound", null);
+            }
+            var averageScore = batch.Students
+                .Where(s => s.Submissions.Any())
+                .Select(s => s.Submissions.Average(sub => sub.TotalScore))
+                .DefaultIfEmpty(0)
+                .Average();
+            var passRate = batch.Students.Where(s => s.Submissions.Any())
+                .Count(s => s.Submissions.Any(sub => sub.TotalScore >= sub.Assessment.PassingScore))
+                / (double)batch.Students.Count * 100;
+            var completionRate = batch.Students
+                .Where(s => s.Submissions.Any())
+                .Count(s => s.Submissions.Any(sub => sub.SubmittedAt != default(DateTime)))
+                / (double)batch.Students.Count * 100;
 
+            var avgTimeInSeconds = batch.Students.SelectMany(x => x.Submissions)
+                .Where(s => s.SubmittedAt != default && s.Assessment.StartDate != default)
+                .Average(s => (s.SubmittedAt - s.Assessment.StartDate).TotalSeconds);
+
+            var avgTimeFormatted = TimeSpan.FromSeconds(avgTimeInSeconds).ToString(@"hh\:mm\:ss");
+            var averageCompletionTime = avgTimeFormatted;
+            var batchDetails = new BatchDetails
+            {
+                Id = batch.Id,
+                Name = batch.Name + batch.BatchNumber,
+                AverageScore = Math.Round(averageScore, 2),
+                PassRate = Math.Round(passRate, 2),
+                CompletionRate = Math.Round(completionRate, 2),
+                AverageCompletionTime = averageCompletionTime,
+                TotalStudents = batch.Students.Count,
+                TotalAssessments = batch.AssessmentAssignments.Count
+            };
+
+            return new BaseResponse<BatchDetails>
+            {
+                Status = true,
+                Message = "Batch details retrieved successfully.",
+                Data = batchDetails
+            };
+        }
         public async Task<BaseResponse<BatchPerformanceTrendDto>> GetBatchPerformanceTrend(Guid? batchId)
         {
             // 1. Build predicate to apply filtering at DB-level

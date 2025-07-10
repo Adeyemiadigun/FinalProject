@@ -39,7 +39,7 @@ namespace Host.Controllers
         {
             var result = await _batchService.GetAllBatchesAsync(pagination);
             return Ok(result);
-        } 
+        }
         [HttpGet]
         public async Task<IActionResult> GetAllBatches()
         {
@@ -80,12 +80,24 @@ namespace Host.Controllers
 
             return Ok(result);
         }
-        [HttpGet("/summary")]
+        [HttpGet("summary")]
         public async Task<IActionResult> GetBatchSummaries()
         {
             var result = await _batchService.GetBatchSummariesAsync();
             return Ok(result);
         }
+        [HttpGet("{id}/details")]
+        public async Task<IActionResult> GetBatchDetails(Guid id)
+        {
+            var result = await _batchService.GetBatchDetails(id);
+            return Ok(result);
 
+        }
+        [HttpGet("{batchId}/performance-trend")]
+        public async Task<IActionResult> GetBatchPerformanceTrend([FromQuery] Guid batchId)
+        {
+            var result = await _batchService.GetBatchPerformanceTrend(batchId);
+            return Ok(result);
+        }
     }
 }

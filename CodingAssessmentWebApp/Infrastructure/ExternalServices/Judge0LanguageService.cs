@@ -16,6 +16,7 @@ namespace Infrastructure.ExternalServices
         private readonly IConfiguration configuration;
         public Judge0LanguageService(IConfiguration config) 
         {
+            configuration = config;
             Key = configuration["Judge0APiKey:key"]!;
             _httpClient = new HttpClient();
             _httpClient.DefaultRequestHeaders.Add("x-rapidapi-host", "judge0-ce.p.rapidapi.com");

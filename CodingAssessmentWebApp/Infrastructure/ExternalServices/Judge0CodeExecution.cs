@@ -1,20 +1,24 @@
 ﻿using Application.Dtos;
 using Application.Interfaces.ExternalServices;
 using Domain.Entitties;
+using Microsoft.Extensions.Configuration;
+using static Org.BouncyCastle.Math.EC.ECCurve;
 
 namespace Infrastructure.ExternalServices
 {
     public class Judge0CodeExecution : ICodeExcution
     {
         private readonly HttpClient _httpClient;
-
-        public Judge0CodeExecution()
+        private readonly string Key;
+        private readonly IConfiguration configuration;
+        public Judge0CodeExecution(IConfiguration config)
         {
             _httpClient = new HttpClient();
-
-            // Add RapidAPI headers here
+            configuration = config;
+            Key = configuration["Judge0APiKey:key"]!;
+            _httpClient = new HttpClient();
             _httpClient.DefaultRequestHeaders.Add("x-rapidapi-host", "judge0-ce.p.rapidapi.com");
-            _httpClient.DefaultRequestHeaders.Add("x-rapidapi-key", "YOUR_API_KEY_HERE"); // <-- Replace this with your real API key
+            _httpClient.DefaultRequestHeaders.Add("x-rapidapi-key", Key);
         }
 
         public async Task<Judge0Result> ExecuteCodeAsync(Judge0CodeExecutionRequest answer)

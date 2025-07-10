@@ -20,13 +20,14 @@ namespace Infrastructure.Persistence.Configurations
 
             builder.Property(a => a.AnswerText)
                 .HasMaxLength(5000); // adjust as needed
+            builder.Property(a => a.StudentAssessmentProgressId)
+                .IsRequired();
 
             builder.HasOne(x => x.StudentAssessmentProgress)
                  .WithMany(X => X.Answers)
-                 .HasForeignKey(x => x.StudentAssessmentProgress.Id);
+                 .HasForeignKey(x => x.StudentAssessmentProgressId);
 
-            builder.Property(a => a.StudentAssessmentProgressId)
-                .IsRequired();
+            
 
             builder.ToTable("InProgressAnswers");
         }

@@ -90,7 +90,7 @@ namespace Infrastructure.ExternalServices
             catch (Exception ex)
             {
                 _logger.LogError($"Failed to send bulk email: {ex.Message}", ex);
-                throw new ApiException()
+                throw new ApiException("Error")
             }
         }
 

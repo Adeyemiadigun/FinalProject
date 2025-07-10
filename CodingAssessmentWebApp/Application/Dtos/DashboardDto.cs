@@ -1,4 +1,6 @@
-﻿namespace Application.Dtos
+﻿using System.Numerics;
+
+namespace Application.Dtos
 {
     public class StudentDashBoardDto
     {
@@ -57,6 +59,18 @@
         public double AverageScore { get; set; }
         public double PassRate { get; set; }
     }
+    public class BatchDetails
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; }
+        public double AverageScore { get; set; }
+        public double PassRate { get; set; }
+        public double CompletionRate { get; set; }
+        public string AverageCompletionTime { get; set; }
+        public int TotalStudents { get; set; }
+        public int TotalAssessments { get; set; }
+    }
+    
     public class AssessmentPerformanceDto
     {
         public Guid Id { get; set; }

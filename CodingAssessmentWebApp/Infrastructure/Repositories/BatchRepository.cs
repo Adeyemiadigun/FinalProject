@@ -52,7 +52,18 @@ namespace Infrastructure.Repositories
                 .FirstOrDefaultAsync(x => x.Id == id);
                
             return batch; 
-        }  public async Task<Batch> GetByIdWithRelationshipAsync(Guid id)
+        }
+        public async Task<Batch?> GetBatchIdWithRelationship(Guid id)
+        {
+            var batch = await _context.Set<Batch>()
+                .Include(x => x.Students)
+                .ThenInclude(x => x.Submissions)
+                .ThenInclude(x => x.Assessment)
+                .FirstOrDefaultAsync(x => x.Id == id);
+
+            return batch;
+        }
+        public async Task<Batch> GetByIdWithRelationshipAsync(Guid id)
         {
             var batch = await _context.Set<Batch>()
                 .Include(x => x.Students)

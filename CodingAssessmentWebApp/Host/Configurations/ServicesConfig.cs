@@ -45,6 +45,7 @@ namespace Host.Configurations
             builder.AddScoped<IGradingStrategyFactory, GradingStrategyFactory>();
             builder.AddScoped<IGradingStrategy, McqGradingStrategy>();
             builder.AddScoped<IGradingStrategy, ObjectiveGradingStrategy>();
+            builder.AddScoped<IGradingStrategy, CodeChallengeGradingStrategy>();
             // Repositories
             builder.AddScoped<IAssessmentRepository, AssessmentRepository>();
             builder.AddScoped<IQuestionRepository, QuestionRepository>();

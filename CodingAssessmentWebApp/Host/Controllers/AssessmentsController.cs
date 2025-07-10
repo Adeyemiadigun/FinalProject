@@ -83,6 +83,12 @@ public class AssessmentsController(IAssessmentService assessmentService, IQuesti
         var response = await assessmentService.GetRecentAssessment();
         return response.Status ? Ok(response) : NotFound(response);
     }
+    [HttpGet("recents")]
+    public async Task<IActionResult> GetInstructorRecentAssessments()
+    {
+        var response = await assessmentService.GetRecentAssessment();
+        return response.Status ? Ok(response) : NotFound(response);
+    }
     [HttpGet("assessment-scores")]
     public async Task<IActionResult> GetInstructorAssessmentScores()
     {

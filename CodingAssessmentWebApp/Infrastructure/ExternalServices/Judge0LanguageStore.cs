@@ -4,7 +4,7 @@ using Application.Interfaces.ExternalServices;
 
 namespace Infrastructure.ExternalServices
 {
-    public class Judge0LanguageStore(IJudge0LanguageService languageService) : IJudge0LanguageStore
+    public class Judge0LanguageStore : IJudge0LanguageStore
     {
         private readonly ConcurrentDictionary<string, Judge0LanguageDto> _store = new();
         public async Task<Judge0LanguageDto> GetLanguageByName(string languageName)

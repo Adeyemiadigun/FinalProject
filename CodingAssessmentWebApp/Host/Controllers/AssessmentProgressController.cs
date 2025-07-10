@@ -24,12 +24,10 @@ namespace Host.Controllers
             return Ok(new { message = "Progress saved." });
         }
         [HttpGet("load")]
-        public async Task<IActionResult> LoadProgress([FromQuery] Guid studentId, [FromQuery] Guid assessmentId)
+        public async Task<IActionResult> LoadProgress([FromQuery] Guid assessmentId)
         {
-            if (studentId == Guid.Empty || assessmentId == Guid.Empty)
-                return BadRequest(new { Message = "Invalid student or assessment ID" });
 
-            var result = await _progressService.GetProgressAsync(studentId, assessmentId);
+            var result = await _progressService.GetProgressAsync(assessmentId);
             if (!result.Status)
                 return NotFound(result);
 

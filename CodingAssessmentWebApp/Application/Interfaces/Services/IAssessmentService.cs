@@ -18,5 +18,8 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<List<AssessmentPerformanceDto>>> GetLowestAssessments();
         Task<BaseResponse<List<AssessmentDto>>> GetRecentAssessment();
         Task<BaseResponse<List<AssessmentPerformanceDto>>> GetInstructorAssessmentScoresAsync();
+        Task<PaginationDto<InstructorAssessmentDto>> GetAssessmentsByInstructorAsync(Guid? batchId, string? status, PaginationRequest request);
+        Task<BaseResponse<PaginationDto<BatchAssessmentsOverview>>> GetAssessmentsByBatchIdDetails(Guid id, PaginationRequest request);
+        Task<BaseResponse<PaginationDto<StudentAssessmentDetail>>> GetStudentAssessmentDetails(Guid id,PaginationRequest request);
     }
 }

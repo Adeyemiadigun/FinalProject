@@ -5,7 +5,6 @@ using Application.Interfaces.Services.GradingStrategyInterfaces.Interfaces;
 using Domain.Entities;
 using Domain.Entitties;
 using Domain.Enum;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Application.Services.GradingStrategy.Implementation
 {
@@ -23,7 +22,7 @@ namespace Application.Services.GradingStrategy.Implementation
                await _store.SaveLanguages(languages);
                 stack = await _store.GetLanguageByName(answerSubmission.Question.TechnologyStack.ToString()!);
                 if(stack is null)
-                    throw new ApiException()
+                    throw new ApiException("Code execution failed", 500, "ExecutionError", null);
             }
             var totalWeigtht = 0;
             foreach (var test in answerSubmission.Question.Tests)
