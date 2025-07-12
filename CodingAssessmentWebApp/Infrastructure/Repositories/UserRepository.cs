@@ -16,6 +16,17 @@ namespace Infrastructure.Repositories
         {
             return await _context.Set<User>()
                 .Include(x => x.Batch)
+                .ThenInclude(x => x.AssessmentAssignments)
+                .FirstOrDefaultAsync(x => x.Id == id);
+        }
+        public async Task<User?> GetUserAsync(Guid id)
+        {
+            return await _context.Set<User>()
+                .Include(x => x.Batch)
+                .ThenInclude(x => x.AssessmentAssignments)
+                .Include(x => x.Assessments)
+                .Include(x => x.Submissions)
+                .Include(x => x.AssessmentAssignments)
                 .FirstOrDefaultAsync(x => x.Id == id);
         }
         public async Task<User?> GetAsync(Expression<Func<User, bool>> exp)
@@ -25,6 +36,13 @@ namespace Infrastructure.Repositories
                 .Include(x => x.Submissions)
                 .Include(x => x.AssessmentAssignments)
                 .FirstOrDefaultAsync(exp);
+        }
+        public async Task<User?> GetForInstructorAsync(Guid id)
+        {
+            return await _context.Users
+               .Include(x => x.Assessments)
+               .ThenInclude(x => x.Submissions)
+               .FirstOrDefaultAsync(x => x.Id == id);
         }
         public async Task<ICollection<User>> GetAllAsync()
         {
@@ -38,6 +56,9 @@ namespace Infrastructure.Repositories
         public async Task<ICollection<User>> GetAllAsync(Expression<Func<User, bool>> exp)
         {
             var res = _context.Set<User>()
+                 .Include(x => x.Assessments)
+                .Include(x => x.Submissions)
+                .Include(x => x.AssessmentAssignments)
                .Where(exp);
             return await res.ToListAsync();           
 

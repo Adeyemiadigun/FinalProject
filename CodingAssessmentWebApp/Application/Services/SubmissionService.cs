@@ -9,7 +9,7 @@ using Domain.Enum;
 
 namespace Application.Services
 {
-    public class SubmissionService(IAssessmentRepository _assessmentRepository, ICurrentUser _currentUser, ISubmissionRepository _submissionRepository, IUnitOfWork _unitOfWork, IQuestionRepository _questionRepository, IUserRepository _userRepository, IBackgroundService _backgroundService) : ISubmissionService
+    public class SubmissionService(IAssessmentRepository _assessmentRepository, ICurrentUser _currentUser, ISubmissionRepository _submissionRepository, IUnitOfWork _unitOfWork, IQuestionRepository _questionRepository, IUserRepository _userRepository, IBackgroundService _backgroundService,ILeaderboardStore _leaderboardStore) : ISubmissionService
     {
         public async Task<BaseResponse<SubmissionDto>> SubmitAssessment(Guid assessmentId, AnswerSubmissionDto submission)
         {
@@ -119,7 +119,7 @@ namespace Application.Services
 
             await _submissionRepository.CreateAsync(submissionEntity);
             await _unitOfWork.SaveChangesAsync();
-
+            _leaderboardStore.Invalidate();
             _backgroundService.Enqueue<IGradingService>(g =>
                 g.GradeSubmissionAndNotifyAsync(submissionEntity.Id, studentId));
 
@@ -198,14 +198,22 @@ namespace Application.Services
                             IsCorrect = o.IsCorrect
                         }).ToList()
                         : new(),
-
-                    //TestCases = a.Question.QuestionType == QuestionType.Coding
-                    //    ? a.Question.TestCases.Select(t => new TestCaseDto
-                    //    {
-                    //        Input = t.Input,
-                    //        ExpectedOutput = t.ExpectedOutput
-                    //    }).ToList()
-                    //    : new()
+                    SelectedOptions = a.SelectedOptions.Select(o => new OptionDto
+                    {
+                        OptionText = o.Option.OptionText,
+                        IsCorrect = o.Option.IsCorrect
+                    }).ToList(),
+                    TestCases = a.Question.QuestionType == QuestionType.Coding
+                        ? a.TestCaseResults.Select(t => new TestCaseResultDto
+                        {
+                            Id = t.Id,
+                            Input = t.Input,
+                            ExpectedOutput = t.ExpectedOutput,
+                            ActualOutput = t.ActualOutput,
+                            Passed = t.Passed,
+                            EarnedWeight = t.EarnedWeight
+                        }).ToList()
+                        : new()
                 }).ToList()
             };
 

@@ -9,7 +9,7 @@ namespace Application.Interfaces.Repositories
         Task<Question> GetAsync(Guid id);
         Task<Question> GetWithOptionsAsync(Guid id);
         Task<ICollection<Question>> GetSelectedIds(ICollection<Guid> ids);
-        Task<PaginationDto<Question>> GetAllAsync(Guid assessmentId, PaginationRequest request);
+        Task<List<Question>> GetAllAsync(Guid assessmentId);
         Task<PaginationDto<Question>> GetAllAsync(Guid assessmentId, QuestionType questionType, PaginationRequest request);
         Task Delete(Question question);
 

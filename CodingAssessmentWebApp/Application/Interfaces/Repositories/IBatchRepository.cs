@@ -10,6 +10,7 @@ namespace Application.Interfaces.Repositories
         Task<Batch> GetByIdWithRelationshipAsync(Guid id);
         Task<ICollection<Batch>> GetAllAsync(Expression<Func<Batch,bool>> exp);
         Task<IEnumerable<Batch>> GetAllBatchesAsync();
+        Task<PaginationDto<Batch>> GetAllBatchesAsync(PaginationRequest request);
         Task<PaginationDto<Batch>> GetPagedAsync(PaginationRequest request);
 
         Task<ICollection<Batch>> GetSelectedIds(ICollection<Guid> ids);

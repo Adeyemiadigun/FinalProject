@@ -1,16 +1,48 @@
-﻿using System.Numerics;
+﻿using System;
+using System.Numerics;
 
 namespace Application.Dtos
 {
+    public class StudentDashboardSummaryDto
+    {
+        public int TotalAssessments { get; set; }
+        public double AverageScore { get; set; }
+        public double HighestScore { get; set; }
+        public double CompletionRate { get; set; }
+    }
     public class StudentDashBoardDto
     {
         public int TotalAssessments { get; set; }
         public int ActiveAssessments { get; set; }
-        public int TotalStudentsInvited { get; set; }
+        public int CompletedAssessments { get; set; }
         public double AverageScore { get; set; }
         public double CompletionRate { get; set; }
-        public List<TopStudentDto> TopStudents { get; set; }
-        public List<WeakAreaDto> WeakAreas { get; set; }
+
+    }
+    public class StudentAssessmentDto
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; }
+        public string Type { get; set; }
+        public DateTime EndDate { get; set; }
+        public int Duration { get; set; }
+        public string Status { get; set; } // Ongoing, Upcoming, Completed
+        public DateTime StartedDate { get; set; } // for ongoing only
+        public int Score { get; set; } // for history
+    }
+
+    public class StudentScoreTrendDto
+    {
+        public List<string> Labels { get; set; }
+        public List<double> Scores { get; set; }
+    }
+
+    public class StudentRankingDto
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; }
+        public int Rank { get; set; }
+        public double Score { get; set; }
     }
     public class AdminDashBoardOverview
     {

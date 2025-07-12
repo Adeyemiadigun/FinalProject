@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Linq.Expressions;
+using System.Net;
 using Application.Dtos;
 using Application.Exceptions;
 using Application.Interfaces.ExternalServices;
@@ -10,7 +11,7 @@ using Domain.Enum;
 
 namespace Application.Services
 {
-    public class AssessmentService(IUnitOfWork _unitOfWork, IAssessmentRepository _assessmentRepository, IUserRepository _userRepository, IBackgroundService _backgroundService, ICurrentUser _currentUser,IBatchRepository _batchRepository, IBatchRepository batchRepository,IBatchService batchService) : IAssessmentService
+    public class AssessmentService(IUnitOfWork _unitOfWork, IAssessmentRepository _assessmentRepository, IUserRepository _userRepository, IBackgroundService _backgroundService, ICurrentUser _currentUser,IBatchRepository _batchRepository,IBatchService batchService, ILeaderboardStore _leaderboardStore) : IAssessmentService
     {
                  //case 400: // Bad Request
                  //   case 401: // Unauthorized
@@ -123,10 +124,11 @@ namespace Application.Services
             foreach(var batch in batches)
             {
 
-                await batchService.AssignAssessmentToBatchAsync(batch.Id, assessment.Id);
+                await batchService.AssignAssessmentToBatchAsync(batch.Id, assessment);
             }
 
             await _unitOfWork.SaveChangesAsync();
+            _leaderboardStore.Invalidate();
 
             return new BaseResponse<AssessmentDto>()
             {
@@ -187,15 +189,58 @@ namespace Application.Services
                 Data = paginationDto
             };
         }
-        public async Task<BaseResponse<PaginationDto<AssessmentDto>>> GetCurrentStudentAssessments(PaginationRequest request)
+       public async Task<BaseResponse<PaginationDto<AssessmentDto>>> GetCurrentStudentAssessments(
+    PaginationRequest request, string status)
         {
             var userId = _currentUser.GetCurrentUserId();
             if (userId == Guid.Empty)
-            {
                 throw new ApiException("User ID is required", (int)HttpStatusCode.BadRequest, "USER_ID_REQUIRED", null);
-            }
-            return await GetAllStudentAssessments(request, userId);
+
+            DateTime now = DateTime.UtcNow;
+
+            // Build the complete filter with status included directly
+            Expression<Func<Assessment, bool>> filter = x =>
+                x.AssessmentAssignments.Any(a => a.StudentId == userId) &&
+                (
+                    string.IsNullOrWhiteSpace(status) ||
+                    (status.ToLower() == "upcoming" && x.StartDate > now) ||
+                    (status.ToLower() == "inprogress" && x.StartDate <= now && x.EndDate >= now) ||
+                    (status.ToLower() == "completed" && x.EndDate < now)
+                );
+
+            var assessments = await _assessmentRepository.GetAllAsync(filter, request);
+
+            var paginationDto = new PaginationDto<AssessmentDto>
+            {
+                Items = assessments.Items.Select(x => new AssessmentDto
+                {
+                    Id = x.Id,
+                    Title = x.Title,
+                    Description = x.Description,
+                    TechnologyStack = x.TechnologyStack,
+                    DurationInMinutes = x.DurationInMinutes,
+                    StartDate = x.StartDate,
+                    EndDate = x.EndDate,
+                    PassingScore = x.PassingScore,
+                    Submitted = x.Submissions.Any()
+                }).ToList(),
+                TotalItems = assessments.TotalItems,
+                CurrentPage = assessments.CurrentPage,
+                PageSize = assessments.PageSize,
+                TotalPages = assessments.TotalPages,
+                HasNextPage = assessments.HasNextPage,
+                HasPreviousPage = assessments.HasPreviousPage
+            };
+
+            return new BaseResponse<PaginationDto<AssessmentDto>>
+            {
+                Status = true,
+                Message = "Assessments retrieved successfully",
+                Data = paginationDto
+            };
         }
+
+   
 
         public async Task<BaseResponse<PaginationDto<AssessmentDto>>> GetAssessmentsByStudentId(Guid studentId, PaginationRequest request)
         {
@@ -476,6 +521,7 @@ namespace Application.Services
                 Description = x.Description,
                 TechnologyStack = x.TechnologyStack,
                 DurationInMinutes = x.DurationInMinutes,
+                InstructorName = x.Instructor?.FullName ?? "Unknown Instructor",
                 StartDate = x.StartDate,
                 EndDate = x.EndDate,
                 CreatedAt = x.CreatedAt,
@@ -559,7 +605,7 @@ namespace Application.Services
                 Data = assessmentScores
             };
         }
-        public async Task<PaginationDto<InstructorAssessmentDto>> GetAssessmentsByInstructorAsync(Guid? batchId, string? status, PaginationRequest request)
+        public async Task<BaseResponse<PaginationDto<InstructorAssessmentDto>>> GetAssessmentsByInstructorAsync(Guid? batchId, string? status, PaginationRequest request)
         {
             var userId = _currentUser.GetCurrentUserId();
             var now = DateTime.UtcNow;
@@ -599,7 +645,7 @@ namespace Application.Services
                     }).ToList()
             }).ToList();
 
-            return new PaginationDto<InstructorAssessmentDto>()
+            var pagination = new PaginationDto<InstructorAssessmentDto>()
             {
                 TotalItems = assessments.TotalItems,
                 TotalPages = assessments.TotalPages,
@@ -610,8 +656,14 @@ namespace Application.Services
                 Items = items
 
             };
+            return new BaseResponse<PaginationDto<InstructorAssessmentDto>>()
+            {
+                Message = "",
+                Data = pagination,
+                Status = true
+            };
         }
-        public async Task<BaseResponse<PaginationDto<StudentAssessmentDetail>> >GetStudentAssessmentDetails(Guid id,PaginationRequest request)
+        public async Task<BaseResponse<PaginationDto<StudentAssessmentDetail>>> GetStudentAssessmentDetails(Guid id, PaginationRequest request)
         {
             if (Guid.Empty == id)
             {
@@ -649,6 +701,43 @@ namespace Application.Services
                 Data = paginatedResult
             };
         }
+        public async Task<BaseResponse<PaginationDto<InstructorAssessmentPerformanceDetailDto>>> GetInstructorAssessmentDetail(Guid instructorId, PaginationRequest request)
+        {
+            if (instructorId == Guid.Empty)
+            {
+                throw new ApiException("Instructor ID is required", (int)HttpStatusCode.BadRequest, "INSTRUCTOR_ID_REQUIRED", null);
+            }
+
+            var assessment = await _assessmentRepository.GetAllAsync(x => x.InstructorId == instructorId, request);
+            var instructorAssessmentDetail = assessment.Items.Select(x => new InstructorAssessmentPerformanceDetailDto()
+            {
+                Id = x.Id,
+                Title = x.Title,
+                StudentCount = x.AssessmentAssignments.Count,
+                AvgScore = x.Submissions.Any() ? Math.Round(x.Submissions.Average(s => s.TotalScore), 2) : 0,
+                CreatedAt = x.CreatedAt
+            }).ToList();
+
+            var paginatedResponse = new PaginationDto<InstructorAssessmentPerformanceDetailDto>()
+            {
+                TotalItems = assessment.TotalItems,
+                TotalPages = assessment.TotalPages,
+                CurrentPage = assessment.CurrentPage,
+                PageSize = assessment.PageSize,
+                HasNextPage = assessment.HasNextPage,
+                HasPreviousPage = assessment.HasPreviousPage,
+                Items = instructorAssessmentDetail
+            };
+
+            return new BaseResponse<PaginationDto<InstructorAssessmentPerformanceDetailDto>>()
+            {
+                Message = "Instructor assessment details retrieved successfully",
+                Status = true,
+                Data = paginatedResponse
+            };
+        }
+
+
     }
 
 }

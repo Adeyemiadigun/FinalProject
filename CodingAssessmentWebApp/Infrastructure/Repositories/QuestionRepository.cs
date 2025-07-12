@@ -9,29 +9,15 @@ namespace Infrastructure.Repositories
 {
     public class QuestionRepository(ClhAssessmentAppDpContext context) : BaseRepository<Question>(context), IQuestionRepository
     {
-        public async Task<PaginationDto<Question>> GetAllAsync(Guid assessmentId, PaginationRequest request)
+        public async Task<List<Question>> GetAllAsync(Guid assessmentId)
         {
-            var query = _context.Set<Question>()
+            return await _context.Set<Question>()
                 .Include(x => x.Answer)
                 .Include(x => x.Options)
                 .Include(x => x.Tests)
                 .Include(x => x.AnswerSubmissions)
-                .Where(x => x.AssessmentId == assessmentId)
-                .OrderBy(x => x.Order);
-            var totalRecord = query.Count();
-            var totalPages = (int)Math.Ceiling((double)totalRecord / request.PageSize);
-            var result = await query.Skip((request.CurrentPage - 1) * request.PageSize).Take(request.PageSize)
-               .ToListAsync();
-            return new PaginationDto<Question>
-            {
-                TotalPages = totalPages,
-                TotalItems = totalRecord,
-                Items = result,
-                HasNextPage = totalPages / request.CurrentPage == 1 ? false : true,
-                HasPreviousPage = request.CurrentPage - 1 == 0 ? false : true,
-                PageSize = request.PageSize,
-                CurrentPage = request.CurrentPage
-            };
+                .Where(x => x.AssessmentId == assessmentId).ToListAsync();
+           
         }
 
         public async Task<PaginationDto<Question>> GetAllAsync(Guid assessmentId, QuestionType questionType, PaginationRequest request)

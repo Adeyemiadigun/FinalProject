@@ -12,19 +12,71 @@ namespace Application.Services
 {
     public class BatchService(IBatchRepository batchRepository, IUnitOfWork unitOfwork, IAssessmentRepository assessmentRepository, IBackgroundService _backgroundService) : IBatchService
     {
-        public async Task<BaseResponse<string>> AssignAssessmentToBatchAsync(Guid batchId, Guid assessmentId)
+        public async Task<BaseResponse<string>> AssignAssessmentToBatchAsync(Guid batchId, Assessment assessment)
         {
             // Validate input parameters  
-            if (batchId == Guid.Empty || assessmentId == Guid.Empty)
+            if (batchId == Guid.Empty)
             {
-                throw new ApiException("Invalid batch or assessment ID.", 400, "InvalidInput", null);
+                throw new ApiException("Invalid batch.", 400, "InvalidInput", null);
             }
-            var assessment = await assessmentRepository.GetAsync(assessmentId);
-            if (assessment == null)
+            // Retrieve the batch entity  
+            var batch = await batchRepository.GetBatchByIdAsync(batchId);
+            if (batch == null)
             {
-                throw new ApiException("Assessment not found.", 404, "AssessmentNotFound", null);
+                throw new ApiException("Batch not found.", 404, "BatchNotFound", null);
             }
+            if (batch.AssessmentAssignments.Any())
+                throw new ApiException("Batch already has an assessment assigned.", 400, "BatchAlreadyHasAssessment", null);
+            if (batch == null)
+            {
+                throw new ApiException("Batch not found.", 404, "BatchNotFound", null);
+            }
+            var batchAssessment = new BatchAssessment()
+            {
+                BatchId = batchId,
+                AssessmentId = assessment.Id
+            };
+            var studentAssessments = batch.Students.Select(x => new AssessmentAssignment()
+            {
+                StudentId = x.Id,
+                Student = x,
+                AssessmentId = assessment.Id,
+                Assessment = assessment
+            }
+            );
+            var validStudent = batch.Students;
+            _backgroundService.Enqueue<IEmailService>(emailService => emailService.SendBulkEmailAsync(validStudent, "New Assessment", new AssessmentDto()
+            {
+                Title = assessment.Title,
+                Description = assessment.Description,
+                TechnologyStack = assessment.TechnologyStack,
+                DurationInMinutes = assessment.DurationInMinutes,
+                StartDate = assessment.StartDate,
+                EndDate = assessment.EndDate,
+                PassingScore = assessment.PassingScore
+            }));
+            // Update the batch in the repository  
+            await batchRepository.UpdateAsync(batch);
+            await unitOfwork.SaveChangesAsync();
 
+            // Return success response  
+            return new BaseResponse<string>
+            {
+                Status = true,
+                Message = "Assessment assigned to batch successfully.",
+                Data = "Success"
+            };
+        } 
+        public async Task<BaseResponse<string>> AssignAssessmentToBatchAsync(Guid batchId, Guid assessmentId)
+        {
+            if (assessmentId == Guid.Empty)
+                throw new ApiException("Assessmentid cant be empty", 400, "Empty_Assessment_Id_");
+            var assessment = await assessmentRepository.GetAsync(assessmentId);
+            // Validate input parameters  
+            if (batchId == Guid.Empty)
+            {
+                throw new ApiException("Invalid batch.", 400, "InvalidInput", null);
+            }
             // Retrieve the batch entity  
             var batch = await batchRepository.GetBatchByIdAsync(batchId);
             if (batch == null)
@@ -74,15 +126,15 @@ namespace Application.Services
             };
         }
 
-        public async Task<BaseResponse<List<BatchAnalytics>>> BatchAnalytics()
+        public async Task<BaseResponse<PaginationDto<BatchAnalytics>>> BatchAnalytics(PaginationRequest request)
         {
-            var batches = await batchRepository.GetAllBatchesAsync();
-            if (batches is null || !batches.Any())
+            var batches = await batchRepository.GetAllBatchesAsync(request);
+            if (batches is null || !batches.Items.Any())
             {
                 throw new ApiException("No batches found.", 404, "NoBatchesFound", null);
             }
 
-            var batchAnalytics = batches.Select(x => new BatchAnalytics()
+            var batchAnalytics = batches.Items.Select(x => new BatchAnalytics()
             {
                 Id = x.Id,
                 Name = x.Name + x.BatchNumber,
@@ -98,9 +150,20 @@ namespace Application.Services
                              / (double)x.Students.Count * 100
             }).ToList();
 
-            return new BaseResponse<List<BatchAnalytics>>()
+            var paginationDto = new PaginationDto<BatchAnalytics>
             {
-                Data = batchAnalytics,
+                Items = batchAnalytics,
+                TotalItems = batches.TotalItems,
+                TotalPages = batches.TotalPages,
+                CurrentPage = batches.CurrentPage,
+                PageSize = request.PageSize,
+                HasNextPage = batches.HasNextPage,
+                HasPreviousPage = batches.HasPreviousPage
+            };
+
+            return new BaseResponse<PaginationDto<BatchAnalytics>>()
+            {
+                Data = paginationDto,
                 Status = true,
                 Message = "Batch Analytics"
             };

@@ -41,14 +41,38 @@ namespace Infrastructure.Repositories
            return await _context.Set<Batch>()
                .Include(x => x.Students)
                .ThenInclude(x => x.Submissions).ToListAsync();
-              
-            
+        }
+        public async Task<PaginationDto<Batch>> GetAllBatchesAsync(PaginationRequest request)
+        {
+            var query = _context.Set<Batch>()
+                .Include(x => x.Students)
+                .ThenInclude(x => x.Submissions);
+
+
+            var totalRecord = query.Count();
+            var totalPages = totalRecord / request.PageSize;
+            var result = await query.Skip((request.CurrentPage - 1) * request.PageSize).Take(request.PageSize)
+               .ToListAsync();
+            return new PaginationDto<Batch>
+            {
+                TotalPages = totalPages,
+                TotalItems = totalRecord,
+                Items = result,
+                HasNextPage = totalPages / request.CurrentPage == 1 ? false : true,
+                HasPreviousPage = request.CurrentPage - 1 == 0 ? false : true,
+                PageSize = request.PageSize,
+                CurrentPage = request.CurrentPage
+
+            };
+
+
         }
 
         public async Task<Batch> GetBatchByIdAsync(Guid id)
         {
             var batch = await _context.Set<Batch>()
                 .Include(x => x.Students)
+                .Include(x => x.AssessmentAssignments)
                 .FirstOrDefaultAsync(x => x.Id == id);
                
             return batch; 

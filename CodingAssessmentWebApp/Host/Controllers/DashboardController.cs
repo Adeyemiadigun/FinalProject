@@ -1,4 +1,5 @@
-﻿using Application.Interfaces.Services;
+﻿using Application.Dtos;
+using Application.Interfaces.Services;
 using Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -30,9 +31,9 @@ namespace Host.Controllers
             return Ok(result);
         }
         [HttpGet("admin/batches/analytics")]
-        public async Task<IActionResult> GetBatchAnakytics()
+        public async Task<IActionResult> GetBatchAnakytics([FromQuery] PaginationRequest request)
         {
-            var result = await _batchService.BatchAnalytics();
+            var result = await _batchService.BatchAnalytics(request);
             return Ok(result);
         }
         //Endpoint: GET /api/v1/admin/analytics/assessments/top-performing

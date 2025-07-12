@@ -256,29 +256,16 @@ namespace Application.Services
             var completedAssessmentsCount = submissions.Count(x => x.AnswerSubmissions.Count == x.Assessment.Questions.Count);
             var completionRate = (double)completedAssessmentsCount / assessmentCount * 100;
 
-            var recentAssessments = assessment.Select(x => new AssessmentDto
-            {
-                Id = x.Id,
-                Title = x.Title,
-                Description = x.Description,
-                TechnologyStack = x.TechnologyStack,
-                DurationInMinutes = x.DurationInMinutes,
-                StartDate = x.StartDate,
-                EndDate = x.EndDate,
-                PassingScore = x.PassingScore
-            }).OrderByDescending(x => x.EndDate).Take(5).ToList();
-
             return new BaseResponse<StudentDashBoardDto>
             {
                 Message = "Student dashboard data retrieved successfully.",
                 Status = true,
                 Data = new StudentDashBoardDto
                 {
-                    //AverageScore = averageScore,
-                    //CompletedAssessmentsCount = completedAssessmentsCount,
-                    //TotalAssessmentsCount = assessmentCount,
-                    //CompletionRate = completionRate,
-                    //RecentAssessments = recentAssessments
+                    AverageScore = averageScore,
+                    CompletedAssessments = completedAssessmentsCount,
+                    TotalAssessments = assessmentCount,
+                    CompletionRate = completionRate,
                 }
             };
         }

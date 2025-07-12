@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" x-data="instructorDetailsPage()" x-init="init()">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Instructor Details</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+
+<body class="bg-gray-100 text-gray-800">
+  <div id="sidebar-placeholder"></div>
+  <div class="md:ml-64 p-6 space-y-6">
+    <div id="navbar-placeholder"></div>
+
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+      <h2 class="text-2xl font-bold">Instructor Details</h2>
+      <a href="/admin/instructors.html" class="text-blue-600 hover:underline text-sm">← Back to Instructors</a>
+    </div>
+
+    <!-- Profile Card -->
+    <div class="bg-white p-6 rounded shadow grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <h3 class="text-lg font-semibold mb-2">👤 Profile</h3>
+        <p><strong>Name:</strong> <span x-text="instructor.fullName"></span></p>
+        <p><strong>Email:</strong> <span x-text="instructor.email"></span></p>
+        <p>
+          <strong>Status:</strong>
+          <span :class="instructor.status ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+            class="text-xs font-medium px-2 py-1 rounded" x-text="instructor.status ? 'Active' : 'Inactive'">
+          </span>
+        </p>
+        <p><strong>Joined:</strong> <span x-text="formatDate(instructor.joinedDate)"></span></p>
+      </div>
+      <div>
+        <h3 class="text-lg font-semibold mb-2">📊 Stats</h3>
+        <p><strong>Assessments:</strong> <span x-text="instructor.totalAssessment"></span></p>
+        <p><strong>Average Score:</strong> <span x-text="instructor.averageScore + '%' "></span></p>
+      </div>
+    </div>
+
+    <!-- Assessment List -->
+    <div class="bg-white p-6 rounded shadow mt-6">
+      <h3 class="text-lg font-semibold mb-4">📝 Assessments Created</h3>
+      <template x-if="assessments.length">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="text-left p-2">Title</th>
+                <th class="text-left p-2">Students</th>
+                <th class="text-left p-2">Avg Score</th>
+                <th class="text-left p-2">Created</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="a in assessments" :key="a.id">
+                <tr class="border-t hover:bg-gray-50">
+                  <td class="p-2" x-text="a.title"></td>
+                  <td class="p-2" x-text="a.studentCount"></td>
+                  <td class="p-2" x-text="a.avgScore + '%' "></td>
+                  <td class="p-2" x-text="formatDate(a.createdAt)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+      <template x-if="!assessments.length">
+        <div class="text-center text-gray-500">No assessments found.</div>
+      </template>
+    </div>
+  </div>
+
+  <script src="/public/assets/js/admin/instructor-detail.js"></script>
+   
+  </script>
+</body>
+</html>

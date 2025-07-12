@@ -1,13 +1,16 @@
-﻿using Hangfire;
+﻿using System.Text;
+using Hangfire;
 using Hangfire.PostgreSql;
 using Host.Configurations;
 using Host.Middlewares;
 using Infrastructure.Configurations;
 using Infrastructure.ExternalServices;
 using Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 
@@ -92,7 +95,27 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
+builder.Services.AddAuthentication(config =>
+{
+    config.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    config.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+}
+).AddJwtBearer(config =>
+{
+    config.SaveToken = true;
+    config.Authority = "https://your-auth-server.com";
+    config.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ClockSkew = TimeSpan.Zero,
+        ValidIssuer = builder.Configuration.GetSection("JwtSettings")["issuer"],
+        ValidAudience = builder.Configuration.GetSection("JwtSettings")["audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration.GetSection("JwtSettings")["key"])),
 
+    };
+});
 
 
 var app = builder.Build();

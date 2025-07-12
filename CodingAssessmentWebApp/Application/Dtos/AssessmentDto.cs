@@ -9,11 +9,13 @@ namespace Application.Dtos
         public string Title { get; set; }
         public string Description { get; set; }
         public string TechnologyStack { get; set; }
+        public string InstructorName { get; set; }
         public int DurationInMinutes { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public double PassingScore { get; set; }
+        public bool Submitted { get; set; }
     }
     public class StudentAssessmentDetail
     {
@@ -89,5 +91,12 @@ namespace Application.Dtos
         public string BatchName { get; set; }
         public double AverageScore { get; set; }
     }
+    public class InstructorAssessmentPerformanceDetailDto
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; }
+        public int StudentCount { get; set; }
+        public double AvgScore { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
 }
-   

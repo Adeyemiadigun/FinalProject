@@ -12,12 +12,10 @@
       display: none !important;
     }
   </style>
-
-  <!-- LoadComponent Helper -->
   <script>
     async function loadComponent(id, url) {
-      const response = await fetch(url);
-      const html = await response.text();
+      const res = await fetch(url);
+      const html = await res.text();
       document.getElementById(id).innerHTML = html;
     }
   </script>
@@ -25,12 +23,11 @@
 
 <body class="bg-gray-100 text-gray-800">
   <div id="sidebar-placeholder"></div>
-
   <div class="md:ml-64 p-6 space-y-6" x-cloak>
     <div id="navbar-placeholder"></div>
 
     <!-- Header + Filters -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
       <h2 class="text-2xl font-bold">📘 My Assessments</h2>
       <div class="flex flex-col md:flex-row gap-4 items-center">
         <select x-model="filters.batchId" @change="applyFilters" class="px-3 py-2 rounded border bg-white text-sm">
@@ -60,20 +57,22 @@
                   <h3 class="text-lg font-bold" x-text="assessment.title"></h3>
                   <p class="text-sm text-gray-500" x-text="assessment.technologyStack"></p>
                   <p class="text-sm text-gray-400"
-                    x-text="`🕒 ${assessment.durationInMinutes} mins | 📅 ${assessment.startDate} - ${assessment.endDate}`">
+                    x-text="`🕒 ${assessment.durationInMinutes} mins | 📅 ${new Date(assessment.startDate).toLocaleString()} - ${new Date(assessment.endDate).toLocaleString()}`">
                   </p>
                 </div>
-                <a :href="`${window.location.origin}/public/assessments/assessment-questions.html?assessmentId=${assessment.id}`"
-                  class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
-                  ➕ Add Questions
-                </a>
+                <template x-if="canAddQuestions(assessment.startDate)">
+                  <a :href="`/public/instructor/assessment-questions.html?assessmentId=${assessment.id}`"
+                    class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">➕ Add Questions</a>
+                </template>
               </div>
+
               <div class="mt-4">
                 <h4 class="text-sm font-medium mb-1">Batch Performance</h4>
                 <div class="relative h-40">
                   <canvas :id="`chart-${assessment.id}`" class="absolute inset-0 w-full h-full"></canvas>
                 </div>
               </div>
+
               <div class="mt-4 overflow-x-auto">
                 <h4 class="text-sm font-medium mb-2">Student Scores</h4>
                 <table class="w-full text-sm">
@@ -86,7 +85,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <template x-for="student in assessment.students" :key="student.id">
+                    <template x-for="student in assessment.students" :key="student.studentId">
                       <tr class="border-t">
                         <td class="p-2" x-text="student.name"></td>
                         <td class="p-2" x-text="student.email"></td>
@@ -99,13 +98,15 @@
               </div>
             </div>
           </template>
-          <div class="flex justify-end space-x-2">
+
+          <!-- Pagination -->
+          <div class="flex justify-end space-x-2 mt-4">
             <button @click="fetchPage(pagination.currentPage - 1)" :disabled="!pagination.hasPreviousPage"
-              class="px-3 py-1 bg-gray-200 rounded disabled:opacity-50">Prev</button>
-            <span class="px-3 py-1 text-sm">Page <span x-text="pagination.currentPage"></span> of
-              <span x-text="pagination.totalPages"></span></span>
+              class="px-4 py-2 bg-gray-200 rounded disabled:opacity-50">Prev</button>
+            <span class="text-sm px-4 py-2">Page <span x-text="pagination.currentPage"></span> of <span
+                x-text="pagination.totalPages"></span></span>
             <button @click="fetchPage(pagination.currentPage + 1)" :disabled="!pagination.hasNextPage"
-              class="px-3 py-1 bg-gray-200 rounded disabled:opacity-50">Next</button>
+              class="px-4 py-2 bg-gray-200 rounded disabled:opacity-50">Next</button>
           </div>
         </div>
       </template>
@@ -113,95 +114,45 @@
         <div class="text-center text-gray-500">No assessments found.</div>
       </template>
     </div>
+
+    <!-- Create Assessment Modal -->
+    <div x-show="showCreateModal" class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+      <div class="bg-white rounded p-6 w-full max-w-lg">
+        <h3 class="text-xl font-bold mb-4">Create Assessment</h3>
+        <form @submit.prevent="submitAssessment">
+          <input type="text" x-model="newAssessment.title" placeholder="Title" class="w-full border p-2 mb-2 rounded"
+            required>
+          <textarea x-model="newAssessment.description" placeholder="Description" class="w-full border p-2 mb-2 rounded"
+            required></textarea>
+          <input type="text" x-model="newAssessment.technologyStack" placeholder="Technology Stack"
+            class="w-full border p-2 mb-2 rounded" required>
+          <input type="number" x-model.number="newAssessment.durationInMinutes" placeholder="Duration (mins)"
+            class="w-full border p-2 mb-2 rounded" required>
+          <input type="datetime-local" x-model="newAssessment.startDate" class="w-full border p-2 mb-2 rounded"
+            required>
+          <input type="datetime-local" x-model="newAssessment.endDate" class="w-full border p-2 mb-2 rounded" required>
+          <input type="number" step="0.01" x-model.number="newAssessment.passingScore" placeholder="Passing Score (%)"
+            class="w-full border p-2 mb-4 rounded" required>
+
+          <div class="mb-4">
+            <label class="block text-sm font-semibold mb-1">Assign to Batches</label>
+            <template x-for="batch in batches" :key="batch.id">
+              <label class="block"><input type="checkbox" :value="batch.id" x-model="newAssessment.batchIds"
+                  class="mr-2"> <span x-text="batch.name"></span></label>
+            </template>
+          </div>
+
+          <div class="flex justify-end space-x-2">
+            <button type="button" @click="showCreateModal = false" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
+            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Create</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 
-  <!-- Alpine Component -->
-  <script>
-    function instructorAssessmentsPage() {
-      return {
-        assessments: [],
-        batches: [],
-        pagination: { currentPage: 0, totalPages: 0, hasNextPage: false, hasPreviousPage: false },
-        filters: { batchId: '', status: '' },
-        showCreateModal: false,
-
-        async init() {
-          const token = localStorage.getItem("token");
-
-          await loadComponent('sidebar-placeholder', 'components/instructor-sidebar.html');
-          await loadComponent('navbar-placeholder', 'components/instructor-nav.html');
-          // Load batches
-          const batchRes = await fetch('/api/v1/instructor/batches', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          this.batches = await batchRes.json();
-
-          await this.fetchPage(this.page);
-        },
-
-        async fetchPage(page) {
-          const token = localStorage.getItem("token");
-          const params = new URLSearchParams({
-            pageNumber: page,
-            pageSize: 2,
-            batchId: this.filters.batchId,
-            status: this.filters.status
-          });
-
-          const res = await fetch(`/api/v1/instructor/assessments?${params.toString()}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          const data = await res.json();
-
-          this.assessments = data.data.items;
-          this.pagination = {
-            currentPage: data.data.currentPage,
-            totalPages: data.data.totalPages,
-            hasNextPage: data.data.hasNextPage,
-            hasPreviousPage: data.data.hasPreviousPage
-          };
-
-          this.drawAllCharts();
-        },
-
-        applyFilters() {
-          this.fetchPage(1);
-        },
-
-        drawAllCharts() {
-          this.assessments.forEach(a => {
-            const ctx = document.getElementById(`chart-${a.id}`);
-            if (!ctx) return;
-
-            const grouped = {};
-            a.students.forEach(s => {
-              grouped[s.batch] = grouped[s.batch] || [];
-              grouped[s.batch].push(s.score);
-            });
-
-            const labels = Object.keys(grouped);
-            const data = labels.map(batch => {
-              const scores = grouped[batch];
-              return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-            });
-
-            new Chart(ctx, {
-              type: 'bar',
-              data: {
-                labels,
-                datasets: [{ label: 'Avg Score (%)', data, backgroundColor: '#3b82f6' }]
-              },
-              options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true, max: 100 } }
-              }
-            });
-          });
-        }
-      }
-    }
+  <!-- Alpine Logic -->
+  <script src="/public/assets/js/instructor/assessment-page.js"></script>
   </script>
 </body>
-
 </html>

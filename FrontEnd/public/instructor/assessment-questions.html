@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html lang="en" x-data="questionsPage()" x-init="init()">
+
 <head>
   <meta charset="UTF-8" />
   <title>Assessment Questions</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <style>[x-cloak] { display: none !important; }</style>
+  <style>
+    [x-cloak] {
+      display: none !important;
+    }
+  </style>
 </head>
 
 <body class="bg-gray-100 text-gray-800">
-  <!-- Sidebar & Navbar -->
   <div id="sidebar-placeholder"></div>
   <div class="md:ml-64 p-6 space-y-6" x-cloak>
     <div id="navbar-placeholder"></div>
@@ -17,7 +21,12 @@
     <!-- Header -->
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-2xl font-bold">Questions for Assessment: <span x-text="assessmentTitle"></span></h2>
-      <button @click="showCreateModal = true" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">➕ Add Question</button>
+      <div class="flex gap-2">
+        <button @click="showCreateModal = true" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">➕
+          Add Question</button>
+        <button @click="showAIModal = true" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">🤖
+          Generate with AI</button>
+      </div>
     </div>
 
     <!-- Question List -->
@@ -47,12 +56,14 @@
                   </ul>
                 </template>
                 <template x-if="q.questionType === 'Objective'">
-                  <p class="text-sm text-gray-600"><strong>Answer:</strong> <span x-text="q.answer.answerText"></span></p>
+                  <p class="text-sm text-gray-600"><strong>Answer:</strong> <span x-text="q.answer.answerText"></span>
+                  </p>
                 </template>
                 <template x-if="q.questionType === 'Coding'">
                   <div class="text-sm text-gray-700">
                     <p><strong>Expected Code:</strong></p>
-                    <pre class="bg-gray-100 p-2 rounded mt-1 text-xs overflow-x-auto" x-text="q.answer.answerText"></pre>
+                    <pre class="bg-gray-100 p-2 rounded mt-1 text-xs overflow-x-auto"
+                      x-text="q.answer.answerText"></pre>
                     <h4 class="font-medium mt-2">Test Cases:</h4>
                     <ul class="list-disc list-inside space-y-1">
                       <template x-for="t in q.testCases" :key="t.input">
@@ -78,12 +89,10 @@
       </table>
     </div>
 
-    <!-- Modal -->
-    <div x-show="showCreateModal || showEditModal"
-         x-transition
-         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-         @click.outside="closeModals()"
-         style="display: none;">
+    <!-- Create/Edit Modal -->
+    <div x-show="showCreateModal || showEditModal" x-transition
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.outside="closeModals()"
+      style="display: none;">
       <div class="bg-white w-full max-w-2xl p-6 rounded shadow overflow-y-auto max-h-[90vh]">
         <h3 class="text-xl font-bold mb-4" x-text="showCreateModal ? 'Create Question' : 'Edit Question'"></h3>
 
@@ -103,7 +112,8 @@
           </div>
           <div>
             <label class="font-semibold block">Type</label>
-            <select x-model="questionForm.questionType" class="w-full border rounded px-2 py-1" :disabled="showEditModal">
+            <select x-model="questionForm.questionType" class="w-full border rounded px-2 py-1"
+              :disabled="showEditModal">
               <option value="">Select</option>
               <option value="MCQ">MCQ</option>
               <option value="Objective">Objective</option>
@@ -112,24 +122,24 @@
           </div>
         </div>
 
-        <!-- MCQ Options -->
         <template x-if="questionForm.questionType === 'MCQ'">
           <div class="space-y-2 mb-4">
             <label class="font-semibold">Options</label>
             <template x-for="(opt, idx) in questionForm.options" :key="idx">
               <div class="flex items-center gap-2">
-                <input type="text" x-model="opt.optionText" class="flex-1 border px-2 py-1 rounded" placeholder="Option text" />
+                <input type="text" x-model="opt.optionText" class="flex-1 border px-2 py-1 rounded"
+                  placeholder="Option text" />
                 <label class="inline-flex items-center gap-1">
                   <input type="checkbox" x-model="opt.isCorrect" /> Correct
                 </label>
                 <button @click="questionForm.options.splice(idx, 1)" class="text-red-600 text-sm">✕</button>
               </div>
             </template>
-            <button @click="questionForm.options.push({ optionText: '', isCorrect: false })" class="text-blue-600 text-sm">+ Add Option</button>
+            <button @click="questionForm.options.push({ optionText: '', isCorrect: false })"
+              class="text-blue-600 text-sm">+ Add Option</button>
           </div>
         </template>
 
-        <!-- Objective Answer -->
         <template x-if="questionForm.questionType === 'Objective'">
           <div class="mb-4">
             <label class="font-semibold block">Expected Answer</label>
@@ -137,42 +147,122 @@
           </div>
         </template>
 
-        <!-- Coding Test Cases -->
         <template x-if="questionForm.questionType === 'Coding'">
           <div class="space-y-3 mb-4">
             <div>
               <label class="font-semibold">Expected Code</label>
-              <textarea x-model="questionForm.answer.answerText" class="w-full border rounded px-4 py-2" rows="3"></textarea>
+              <textarea x-model="questionForm.answer.answerText" class="w-full border rounded px-4 py-2"
+                rows="3"></textarea>
             </div>
             <div>
               <label class="font-semibold">Test Cases</label>
               <template x-for="(test, i) in questionForm.testCases" :key="i">
                 <div class="grid grid-cols-3 gap-2 items-center mb-2">
                   <input type="text" x-model="test.input" placeholder="Input" class="border px-2 py-1 rounded" />
-                  <input type="text" x-model="test.expectedOutput" placeholder="Expected Output" class="border px-2 py-1 rounded" />
+                  <input type="text" x-model="test.expectedOutput" placeholder="Expected Output"
+                    class="border px-2 py-1 rounded" />
                   <input type="number" x-model="test.weight" placeholder="Weight" class="border px-2 py-1 rounded" />
                   <button @click="questionForm.testCases.splice(i, 1)" class="text-red-600 text-sm">✕</button>
                 </div>
               </template>
-              <button @click="questionForm.testCases.push({ input: '', expectedOutput: '', weight: 1 })" class="text-blue-600 text-sm">+ Add Test Case</button>
+              <button @click="questionForm.testCases.push({ input: '', expectedOutput: '', weight: 1 })"
+                class="text-blue-600 text-sm">+ Add Test Case</button>
             </div>
           </div>
         </template>
 
-        <!-- Submit & Cancel -->
-<div class="text-right space-x-2">
-  <button @click="closeModals" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">
-    ❌ Cancel
-  </button>
-  <button @click="submitQuestion" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-    ✅ Submit
-  </button>
-</div>
+        <div class="text-right space-x-2">
+          <button @click="closeModals" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">❌
+            Cancel</button>
+          <button @click="submitQuestion" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">✅
+            Submit</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Generation Modal -->
+    <div x-show="showAIModal" x-transition
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.outside="closeAIModal()"
+      style="display: none;">
+      <div class="bg-white w-full max-w-xl p-6 rounded shadow space-y-4">
+        <h3 class="text-xl font-bold">Generate Question with AI</h3>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="font-semibold block">Technology Stack</label>
+            <input type="text" x-model="aiForm.technologyStack" class="w-full border rounded px-2 py-1" />
+          </div>
+          <div>
+            <label class="font-semibold block">Topic</label>
+            <input type="text" x-model="aiForm.topic" class="w-full border rounded px-2 py-1" />
+          </div>
+          <div>
+            <label class="font-semibold block">Difficulty</label>
+            <select x-model="aiForm.difficulty" class="w-full border rounded px-2 py-1">
+              <option value="">Select</option>
+              <option value="Easy">Easy</option>
+              <option value="Medium">Medium</option>
+              <option value="Hard">Hard</option>
+            </select>
+          </div>
+          <div>
+            <label class="font-semibold block">Question Type</label>
+            <select x-model="aiForm.questionType" class="w-full border rounded px-2 py-1">
+              <option value="">Select</option>
+              <option value="MCQ">MCQ</option>
+              <option value="Objective">Objective</option>
+              <option value="Coding">Coding</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="text-right">
+          <button @click="generateAIQuestion" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">🚀
+            Generate</button>
+        </div>
+
+        <template x-if="aiGeneratedQuestion">
+          <div class="bg-gray-100 p-4 rounded border space-y-2">
+            <h4 class="font-semibold text-lg">Generated Question</h4>
+            <p x-text="aiGeneratedQuestion.questionText"></p>
+
+            <template x-if="aiGeneratedQuestion.questionType === 'MCQ'">
+              <ul class="list-disc list-inside">
+                <template x-for="opt in aiGeneratedQuestion.options">
+                  <li :class="opt.isCorrect ? 'font-bold text-green-700' : ''" x-text="opt.optionText"></li>
+                </template>
+              </ul>
+            </template>
+
+            <template x-if="aiGeneratedQuestion.questionType === 'Objective'">
+              <p><strong>Answer:</strong> <span x-text="aiGeneratedQuestion.answer.answerText"></span></p>
+            </template>
+
+            <template x-if="aiGeneratedQuestion.questionType === 'Coding'">
+              <div>
+                <p><strong>Test Cases:</strong></p>
+                <ul class="list-disc list-inside">
+                  <template x-for="t in aiGeneratedQuestion.testCases">
+                    <li>
+                      <strong>Input:</strong> <span x-text="t.input"></span>,
+                      <strong>Expected:</strong> <span x-text="t.expectedOutput"></span>,
+                      <strong>Weight:</strong> <span x-text="t.weight"></span>
+                    </li>
+                  </template>
+                </ul>
+              </div>
+            </template>
+
+            <div class="text-right pt-2">
+              <button @click="addAIQuestionToList"
+                class="bg-green-600 text-white px-4 py-1 rounded hover:bg-green-700">✅ Add to Assessment</button>
+            </div>
+          </div>
+        </template>
       </div>
     </div>
   </div>
 
-  <!-- Alpine Logic -->
   <script>
     function questionsPage() {
       return {
@@ -181,6 +271,7 @@
         questions: [],
         showCreateModal: false,
         showEditModal: false,
+        showAIModal: false,
         editIndex: null,
 
         questionForm: {
@@ -192,6 +283,15 @@
           testCases: [],
           answer: { answerText: '' }
         },
+
+        aiForm: {
+          questionType: '',
+          technologyStack: '',
+          difficulty: '',
+          topic: ''
+        },
+
+        aiGeneratedQuestion: null,
 
         init() {
           this.getAssessmentIdFromURL();
@@ -206,39 +306,12 @@
         },
 
         async loadComponents() {
-          await loadComponent('sidebar-placeholder', '../../components/sidebar.html');
-          await loadComponent('navbar-placeholder', '../../components/nav.html');
+          await loadComponent('sidebar-placeholder', '../components/instructor-sidebar.html');
+          await loadComponent('navbar-placeholder', '../components/instructor-nav.html');
         },
 
         fetchQuestions() {
-          // Replace this with actual fetch call
-          this.questions = [
-            {
-              questionText: 'What is LINQ?',
-              questionType: 'MCQ',
-              marks: 5,
-              order: 1,
-              options: [
-                { optionText: 'Language Integrated Query', isCorrect: true },
-                { optionText: 'Lightweight Internet Query', isCorrect: false }
-              ]
-            },
-            {
-              questionText: 'What does Select do in LINQ?',
-              questionType: 'Objective',
-              marks: 3,
-              order: 2,
-              answer: { answerText: 'Projects each element of a sequence into a new form.' }
-            },
-            {
-              questionText: 'Write a LINQ query to filter numbers > 10.',
-              questionType: 'Coding',
-              marks: 7,
-              order: 3,
-              answer: { answerText: 'var result = numbers.Where(n => n > 10);' },
-              testCases: [{ input: '[1, 11, 5, 20]', expectedOutput: '[11, 20]', weight: 1 }]
-            }
-          ];
+          this.questions = [];
         },
 
         openEditModal(index) {
@@ -272,6 +345,54 @@
             testCases: [],
             answer: { answerText: '' }
           };
+        },
+
+        closeAIModal() {
+          this.showAIModal = false;
+          this.aiGeneratedQuestion = null;
+          this.aiForm = {
+            questionType: '',
+            technologyStack: '',
+            difficulty: '',
+            topic: ''
+          };
+        },
+
+        async generateAIQuestion() {
+          try {
+            const res = await fetch(`/api/ai/generate-question`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              },
+              body: JSON.stringify(this.aiForm)
+            });
+
+            if (!res.ok) throw new Error('Failed to generate AI question');
+
+            const data = await res.json();
+            this.aiGeneratedQuestion = data;
+          } catch (err) {
+            alert(err.message || 'Something went wrong');
+          }
+        },
+
+        addAIQuestionToList() {
+          if (!this.aiGeneratedQuestion) return;
+
+          const q = this.aiGeneratedQuestion;
+          this.questions.push({
+            questionText: q.questionText,
+            questionType: q.questionType,
+            marks: 1,
+            order: this.questions.length + 1,
+            options: q.options || [],
+            answer: q.answer || { answerText: q.answerText || '' },
+            testCases: q.testCases || []
+          });
+
+          this.closeAIModal();
         }
       };
     }
@@ -283,4 +404,5 @@
     }
   </script>
 </body>
+
 </html>

@@ -99,17 +99,17 @@ namespace Application.Services
             }
         }
 
-        public async Task<BaseResponse<PaginationDto<QuestionDto>>> GetAllQuestionsByAssessmentIdAsync(Guid assessmentId, PaginationRequest request)
+        public async Task<BaseResponse<List<QuestionDto>>> GetAllQuestionsByAssessmentIdAsync(Guid assessmentId)
         {
             var check = await _assessmentRepository.CheckAsync(x => x.Id == assessmentId);
             if (check)
                 throw new ApiException("Assessment not found.", 404, "ASSESSMENT_NOT_FOUND", null);
 
-            var questions = await _questionRepository.GetAllAsync(assessmentId, request);
-            if (questions == null || !questions.Items.Any())
+            var questions = await _questionRepository.GetAllAsync(assessmentId);
+            if (questions == null || !questions.Any())
                 throw new ApiException("No questions found for the given assessment.", 404, "NO_QUESTIONS_FOUND", null);
 
-            var questionDtos = questions.Items.Select(q => new QuestionDto
+            var questionDtos = questions.Select(q => new QuestionDto
             {
                 Id = q.Id,
                 QuestionText = q.QuestionText,
@@ -130,22 +130,12 @@ namespace Application.Services
                     ExpectedOutput = t.ExpectedOutput,
                     Weight = t.Weight
                 }).ToList() ?? null!
-            });
-            var paginationDto = new PaginationDto<QuestionDto>
-            {
-                TotalPages = questions.TotalPages,
-                TotalItems = questions.TotalItems,
-                Items = questionDtos.ToList(),
-                HasNextPage = questions.HasNextPage,
-                HasPreviousPage = questions.HasPreviousPage,
-                PageSize = questions.PageSize,
-                CurrentPage = questions.CurrentPage
-            };
-            return new BaseResponse<PaginationDto<QuestionDto>>
+            }).ToList();
+            return new BaseResponse<List<QuestionDto>>
             {
                 Message = "Questions retrieved successfully.",
                 Status = true,
-                Data = paginationDto
+                Data = questionDtos
             };
         }
 

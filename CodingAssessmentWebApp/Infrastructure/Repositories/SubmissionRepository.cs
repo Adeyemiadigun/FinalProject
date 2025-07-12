@@ -34,6 +34,7 @@ namespace Infrastructure.Repositories
         {
 
             var result =  _context.Set<Submission>()
+                .Include(x => x.Assessment)
                 .Include(x => x.AnswerSubmissions)
                 .ThenInclude(x => x.Question)
                 .Where(exp);
@@ -86,8 +87,10 @@ namespace Infrastructure.Repositories
         public async Task<PaginationDto<Submission>> GetStudentSubmissionsAsync(Guid studentId, PaginationRequest request)
         {
             var query = _context.Set<Submission>()
+                 .Include(x => x.Assessment)
                 .Include(x => x.AnswerSubmissions)
                 .ThenInclude(x => x.Question)
+                .OrderBy(x =>x.SubmittedAt)
                 .Where(x => x.StudentId == studentId);
             var totalRecord = query.Count();
             var totalPages = (int)Math.Ceiling((double)totalRecord / request.PageSize);

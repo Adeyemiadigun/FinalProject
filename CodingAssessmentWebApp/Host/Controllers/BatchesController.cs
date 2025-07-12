@@ -99,5 +99,12 @@ namespace Host.Controllers
             var result = await _batchService.GetBatchPerformanceTrend(batchId);
             return Ok(result);
         }
+        [HttpGet("students")]
+        public async Task<IActionResult> GetStudents([FromQuery] Guid? batchId, [FromQuery] PaginationRequest request)
+        {
+            var result = await _userService.GetAllByBatchId(batchId, request);
+            return Ok(result);
+        }
+
     }
 }

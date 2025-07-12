@@ -33,11 +33,11 @@
 
       // Redirect based on role
       if (role === 'Admin') {
-        window.location.href = '/admin/dashboard.html';
+        window.location.href = '/public/admin/dashboard.html';
       } else if (role === 'Instructor') {
-        window.location.href = '/instructor/dashboard.html';
+        window.location.href = '/public/instructor/instructor-dashboard.html';
       } else {
-        window.location.href = '/student/dashboard.html';
+        window.location.href = '/public/student/student-dashboard.html';
       }
 
     } catch (error) {

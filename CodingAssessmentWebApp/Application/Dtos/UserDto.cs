@@ -16,6 +16,7 @@ namespace Application.Dtos
         public DateTime DateCreated { get; set; }
         public required string Email { get; set; }
         public Role Role { get; set; }
+        public bool Status { get; set; }
     }
     public class StudentDetail
     {
@@ -26,18 +27,18 @@ namespace Application.Dtos
         public required string Email { get; set; }
         public bool Status { get; set; }
         public string BatchName { get; set; }
-}
+    }
     public class StudentAnalytics
     {
         public int TotalAssessments { get; set; }
-        public int Attempted { get;set; }
+        public int Attempted { get; set; }
         public double AvgScore { get; set; }
         public double PassRate { get; set; }
 
     }
     public class ReAssignBatch
     {
-         public Guid BatchId { get; set; }
+        public Guid BatchId { get; set; }
     }
     public class RegisterUserRequestModel
     {
@@ -68,6 +69,7 @@ namespace Application.Dtos
     {
         public Guid Id { get; set; }
         public string Name { get; set; }
+        public Guid BatchId { get; set; }
         public string Batch { get; set; }
         public double AvgScore { get; set; }
         public double HighestScore { get; set; }
@@ -78,6 +80,15 @@ namespace Application.Dtos
         public string Status { get; set; } // "Active" or "Inactive"
     }
 
-
+    public class InstructorDetailsDto
+    {
+        public Guid Id { get; set; }
+        public string FullName { get; set; }
+        public string Email { get; set; }
+        public bool Status { get; set; }
+        public DateTime JoinedDate { get; set; }
+        public int TotalAssessment { get; set; }
+        public double AverageScore { get; set; }
+    }
 }
 

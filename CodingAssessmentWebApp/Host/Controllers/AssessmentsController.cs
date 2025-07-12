@@ -32,14 +32,6 @@ public class AssessmentsController(IAssessmentService assessmentService, IQuesti
         var response = await assessmentService.GetAssessmentAsync(id);
         return response.Status ? Ok(response) : NotFound(response);
     }
-
-    // POST /api/assessments/assign-students
-    [HttpPost("{id:guid}/students")]
-    public async Task<IActionResult> AssignStudents(Guid id,[FromBody] AssignStudentsModel model)
-    {
-        var response = await assessmentService.AssignStudents(id,model);
-        return response.Status ? Ok(response) : BadRequest(response);
-    }
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateAssessmentRequestModel model)
     {
@@ -53,9 +45,9 @@ public class AssessmentsController(IAssessmentService assessmentService, IQuesti
         return response ? Ok(response) : BadRequest(response);
     }
     [HttpGet("{assessmentId:guid}/questions")]
-    public async Task<IActionResult> GetQuestionsByAssessmentId(Guid assessmentId, [FromQuery] PaginationRequest request)
+    public async Task<IActionResult> GetQuestionsByAssessmentId(Guid assessmentId)
     {
-        var response = await questionService.GetAllQuestionsByAssessmentIdAsync(assessmentId, request);
+        var response = await questionService.GetAllQuestionsByAssessmentIdAsync(assessmentId);
         return response.Status ? Ok(response) : NotFound(response);
     }
 
@@ -90,6 +82,7 @@ public class AssessmentsController(IAssessmentService assessmentService, IQuesti
         var result = await assessmentService.GetInstructorAssessmentScoresAsync();
         return Ok(result);
     }
+    
 
 }
 

@@ -34,4 +34,5 @@ public class UserController : ControllerBase
         var response = await _userService.DeleteAsync(id);
         return response.Status ? Ok(response) : NotFound(response);
     }
+   
 }

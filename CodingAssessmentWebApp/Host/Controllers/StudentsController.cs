@@ -1,5 +1,6 @@
 ﻿using Application.Dtos;
 using Application.Interfaces.Services;
+using Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -30,22 +31,23 @@ namespace Host.Controllers
             return response.Status ? Ok(response) : NotFound(response);
         }
         [HttpGet("assessments")]
-        public async Task<IActionResult> GetStudentsAssessment([FromQuery] PaginationRequest request)
+        public async Task<IActionResult> GetStudentsAssessment([FromQuery] PaginationRequest request, [FromQuery] string status)
         {
-            var response = await _assementService.GetCurrentStudentAssessments(request);
+            var response = await _assementService.GetCurrentStudentAssessments(request, status);
             return response.Status ? Ok(response) : NotFound(response);
         }
+
         [HttpGet("search")]
-        public async Task<IActionResult> SearchStudents([FromQuery] string query, [FromQuery] string status)
+        public async Task<IActionResult> SearchStudents([FromQuery] string query, [FromQuery] string status , [FromQuery] PaginationRequest request )
         {
             if (string.IsNullOrWhiteSpace(query))
                 return BadRequest(new { message = "Search term is required." });
 
-            var results = await _userService.SearchByNameOrEmailAsync(query, status);
+            var results = await _userService.SearchByNameOrEmailAsync(query,request, status);
             return Ok(new { status = true, data = results });
         }
 
-        [HttpGet]
+        [HttpGet("leaderboard")]
         public async Task<IActionResult> GetLeaderboard([FromQuery] PaginationRequest request, [FromQuery] Guid? batchId = null)
         {
             var result = await _userService.GetLeaderboardAsync(batchId, request);
@@ -67,6 +69,47 @@ namespace Host.Controllers
         public async Task<IActionResult> UpdateStatus(Guid studentId, [FromBody] UpdateStudentStatusDto dto)
         {
             var result = await _userService.UpdateStudentStatusAsync(studentId, dto.Status);
+            return Ok(result);
+        }
+        [HttpGet("summary")]
+        public async Task<IActionResult> GetSummary()
+        {
+            var result = await _userService.GetSummaryAsync();
+            return Ok(result);
+        }
+
+        [HttpGet("ongoing")]
+        public async Task<IActionResult> GetOngoingAssessments()
+        {
+            var result = await _userService.GetOngoingAssessmentsAsync();
+            return Ok(result);
+        }
+
+        [HttpGet("upcoming")]
+        public async Task<IActionResult> GetUpcomingAssessments()
+        {
+            var result = await _userService.GetUpcomingAssessmentsAsync();
+            return Ok(result);
+        }
+
+        [HttpGet("performance-trend")]
+        public async Task<IActionResult> GetPerformanceTrend()
+        {
+            var result = await _userService.GetScoreTrendAsync();
+            return Ok(result);
+        }
+
+        [HttpGet("history")]
+        public async Task<IActionResult> GetSubmittedAssessments()
+        {
+            var result = await _userService.GetSubmittedAssessmentsAsync();
+            return Ok(result);
+        }
+
+        [HttpGet("rankings")]
+        public async Task<IActionResult> GetRanking()
+        {
+            var result = await _userService.GetBatchRankingAsync();
             return Ok(result);
         }
 

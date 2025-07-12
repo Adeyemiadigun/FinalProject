@@ -32,6 +32,14 @@
         <p class="text-sm text-gray-500" x-text="result.title + ' • ' + result.date"></p>
       </div>
 
+      <!-- Feedback -->
+      <template x-if="result.feedback">
+        <div class="bg-white p-4 rounded shadow">
+          <h2 class="text-lg font-semibold text-gray-700">🗣 Feedback</h2>
+          <p class="text-sm text-gray-600 mt-2" x-text="result.feedback"></p>
+        </div>
+      </template>
+
       <!-- Score Summary -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
         <div class="bg-white p-4 rounded shadow">
@@ -39,42 +47,40 @@
           <div class="text-xl font-bold" x-text="result.score + '%'"></div>
         </div>
         <div class="bg-white p-4 rounded shadow">
-          <div class="text-sm text-gray-500">Time Taken</div>
-          <div class="text-xl font-bold" x-text="result.timeTaken"></div>
+          <div class="text-sm text-gray-500">Time</div>
+          <div class="text-xl font-bold" x-text="result.date"></div>
         </div>
         <div class="bg-white p-4 rounded shadow">
           <div class="text-sm text-gray-500">Correct</div>
-          <div class="text-xl font-bold text-green-600" x-text="result.correct"></div>
+          <div class="text-xl font-bold text-green-600" x-text="result.correctCount"></div>
         </div>
         <div class="bg-white p-4 rounded shadow">
           <div class="text-sm text-gray-500">Wrong</div>
-          <div class="text-xl font-bold text-red-600" x-text="result.wrong"></div>
+          <div class="text-xl font-bold text-red-600" x-text="result.wrongCount"></div>
         </div>
       </div>
 
       <!-- Answers Review -->
       <div>
         <h2 class="text-lg font-semibold mb-4">📝 Answers Review</h2>
-        <template x-for="(q, index) in result.questions" :key="index">
+        <template x-for="(q, index) in result.questions" :key="q.questionId">
           <div class="mb-8 p-5 border bg-white rounded shadow-sm">
             <div class="text-sm text-gray-500 mb-1">Question <span x-text="index + 1"></span></div>
-            <h3 class="text-base font-semibold mb-2 text-gray-800" x-text="q.text"></h3>
+            <h3 class="text-base font-semibold mb-2 text-gray-800" x-text="q.questionText"></h3>
 
             <!-- Objective / MCQ -->
-            <template x-if="q.type !== 'Code'">
+            <template x-if="q.questionType !== 'Coding'">
               <div class="space-y-1 text-sm">
-                <p>
-                  <span class="font-semibold">Your Answer:</span>
-                  <span :class="q.isCorrect ? 'text-green-600' : 'text-red-600'" x-text="q.studentAnswer || '—'"></span>
+                <p><span class="font-semibold">Your Answer:</span>
+                  <span :class="q.isCorrect ? 'text-green-600' : 'text-red-600'"
+                    x-text="q.submittedAnswer || '—'"></span>
                 </p>
                 <template x-if="!q.isCorrect">
-                  <p>
-                    <span class="font-semibold">Correct Answer:</span>
-                    <span class="text-green-600" x-text="q.correctAnswer"></span>
+                  <p><span class="font-semibold">Correct Answer:</span>
+                    <span class="text-green-600" x-text="q.correctAnswerText"></span>
                   </p>
                 </template>
-                <p>
-                  <span class="font-semibold">Status:</span>
+                <p><span class="font-semibold">Status:</span>
                   <span :class="q.isCorrect ? 'text-green-600' : 'text-red-600'"
                     x-text="q.isCorrect ? 'Correct' : 'Wrong'"></span>
                 </p>
@@ -82,23 +88,22 @@
             </template>
 
             <!-- Coding -->
-            <template x-if="q.type === 'Code'">
+            <template x-if="q.questionType === 'Coding'">
               <div class="space-y-4 text-sm mt-2">
                 <div>
                   <span class="font-semibold">Your Code:</span>
                   <pre
-                    class="bg-black text-green-200 text-xs p-3 rounded overflow-auto mt-1"><code x-text="q.studentCode"></code></pre>
+                    class="bg-black text-green-200 text-xs p-3 rounded overflow-auto mt-1"><code x-text="q.submittedAnswer"></code></pre>
                 </div>
                 <div>
                   <span class="font-semibold">Test Cases:</span>
                   <div class="mt-2 space-y-2">
-                    <template x-for="(tc, i) in q.testCases" :key="i">
+                    <template x-for="tc in q.testCases" :key="tc.id">
                       <div class="border rounded p-2 text-xs bg-gray-100">
                         <p><span class="font-semibold">Input:</span> <span x-text="tc.input"></span></p>
                         <p><span class="font-semibold">Expected:</span> <span x-text="tc.expectedOutput"></span></p>
                         <p><span class="font-semibold">Actual:</span> <span x-text="tc.actualOutput"></span></p>
-                        <p>
-                          <span class="font-semibold">Status:</span>
+                        <p><span class="font-semibold">Status:</span>
                           <span :class="tc.passed ? 'text-green-600' : 'text-red-600'"
                             x-text="tc.passed ? 'Passed' : 'Failed'"></span>
                         </p>
@@ -107,10 +112,6 @@
                     </template>
                   </div>
                 </div>
-                <p><span class="font-semibold">Verdict:</span>
-                  <span :class="q.isCorrect ? 'text-green-600' : 'text-red-600'"
-                    x-text="q.isCorrect ? 'Passed' : 'Failed'"></span>
-                </p>
               </div>
             </template>
           </div>
@@ -138,68 +139,60 @@
     function viewResult() {
       return {
         result: {
-          title: "JavaScript Fundamentals",
-          date: "July 1, 2025",
-          score: 85,
-          timeTaken: "22 mins",
-          correct: 17,
-          wrong: 3,
-          questions: [
-            {
-              type: "MCQ",
-              text: "What does `===` mean in JavaScript?",
-              studentAnswer: "`Strict equality` comparison",
-              correctAnswer: "`Strict equality` comparison",
-              isCorrect: true
-            },
-            {
-              type: "Objective",
-              text: "Which company developed JavaScript?",
-              studentAnswer: "Microsoft",
-              correctAnswer: "Netscape",
-              isCorrect: false
-            },
-            {
-              type: "Code",
-              text: "Write a function that returns the sum of two numbers.",
-              studentCode: `function sum(a, b) {\n  return a + b;\n}`,
-              isCorrect: true,
-              testCases: [
-                {
-                  input: "2, 3",
-                  expectedOutput: "5",
-                  actualOutput: "5",
-                  passed: true,
-                  earnedWeight: 1.0
-                },
-                {
-                  input: "0, 0",
-                  expectedOutput: "0",
-                  actualOutput: "0",
-                  passed: true,
-                  earnedWeight: 1.0
-                }
-              ]
-            },
-            {
-              type: "Code",
-              text: "Write a function that reverses a string.",
-              studentCode: `function reverse(str) {\n  return str;\n}`,
-              isCorrect: false,
-              testCases: [
-                {
-                  input: "'abc'",
-                  expectedOutput: "'cba'",
-                  actualOutput: "'abc'",
-                  passed: false,
-                  earnedWeight: 0
-                }
-              ]
-            }
-          ]
+          title: "",
+          date: "",
+          score: 0,
+          feedback: "",
+          correctCount: 0,
+          wrongCount: 0,
+          questions: []
         },
-        init() {
-          // Optional: fetch result by assessmentId and student token
+
+        async init() {
+          const urlParams = new URLSearchParams(window.location.search);
+          const assessmentId = urlParams.get("assessmentId");
+          const token = localStorage.getItem("token");
+
+          if (!assessmentId) return;
+
+          const res = await fetch(`/api/student/assessment/${assessmentId}/submissions`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+
+          const json = await res.json();
+          if (!json.status) return;
+
+          const submission = json.data;
+          const submittedAnswers = submission.submittedAnswers || [];
+
+          const correctCount = submittedAnswers.filter(q => q.isCorrect).length;
+          const wrongCount = submittedAnswers.length - correctCount;
+
+          this.result = {
+            title: submission.title,
+            date: new Date(submission.submittedAt).toLocaleDateString(),
+            score: submission.totalScore,
+            feedback: submission.feedBack,
+            correctCount,
+            wrongCount,
+            questions: submittedAnswers.map(ans => ({
+              questionId: ans.questionId,
+              questionText: ans.questionText,
+              questionType: ans.questionType,
+              submittedAnswer: ans.submittedAnswer,
+              isCorrect: ans.isCorrect,
+              correctAnswerText: this.extractCorrectAnswer(ans),
+              testCases: ans.testCases
+            }))
+          };
+        },
+
+        extractCorrectAnswer(ans) {
+          if (ans.questionType === "MCQ" || ans.questionType === "Objective") {
+            const correctOptions = ans.options.filter(o => o.isCorrect);
+            return correctOptions.map(o => o.optionText).join(", ");
+          }
+          return "";
         }
       };
     }

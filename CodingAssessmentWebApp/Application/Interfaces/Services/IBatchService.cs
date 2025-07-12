@@ -1,4 +1,5 @@
 ﻿using Application.Dtos;
+using Domain.Entitties;
 
 namespace Application.Interfaces.Services
 {
@@ -10,12 +11,13 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<List<BatchDto>>> GetAllBatchesAsync();
         Task<BaseResponse<BatchDto>> UpdateBatchAsync(Guid id, UpdateBatchRequestModel model);
         Task<BaseResponse<BatchDto>> DeleteBatchAsync(Guid id);
-        Task<BaseResponse<List<BatchAnalytics>>> BatchAnalytics();
-        Task<BaseResponse<string>> AssignAssessmentToBatchAsync(Guid batchId, Guid assessmentId);
+        Task<BaseResponse<PaginationDto<BatchAnalytics>>> BatchAnalytics(PaginationRequest request);
+        Task<BaseResponse<string>> AssignAssessmentToBatchAsync(Guid batchId, Assessment assessment);
         Task<BaseResponse<BatchAnalyticsMetricsDto>> GetBatchAnalyticsMetrics(Guid? batchId);
         Task<BaseResponse<BatchPerformanceTrendDto>> GetBatchPerformanceTrend(Guid? batchId);
         Task<BaseResponse<List<BatchSummaryDto>>> GetBatchSummariesAsync();
         Task<BaseResponse<List<BatchStudentCountDto>>> GetBatchStudentCountsAsync();
         Task<BaseResponse<BatchDetails>> GetBatchDetails(Guid batchId);
+        Task<BaseResponse<string>> AssignAssessmentToBatchAsync(Guid batchId, Guid assessmentId);
     }
 }

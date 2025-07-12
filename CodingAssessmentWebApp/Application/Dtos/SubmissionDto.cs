@@ -1,4 +1,5 @@
-﻿using Domain.Entitties;
+﻿using Domain.Entities;
+using Domain.Entitties;
 using Domain.Enum;
 
 namespace Application.Dtos
@@ -7,6 +8,7 @@ namespace Application.Dtos
     {
         public Guid Id { get; set; }
         public Guid AssessmentId {  get; set; }
+        public string AssessmentTitle { get; set; }
         public DateTime SubmittedAt { get; set; }
         public string Title { get; set; }
         public int TotalScore { get;set; }
@@ -24,9 +26,20 @@ namespace Application.Dtos
         public bool IsCorrect { get; set; }
         public int Score { get; set; }
         public List<OptionDto> Options { get; set; } = new();
-        //public List<TestCaseDto> TestCases { get; set; } = new();
+        public List<OptionDto> SelectedOptions { get; set; } = new List<OptionDto>();
+        public List<TestCaseResultDto> TestCases { get; set; } = new List<TestCaseResultDto>();
     }
-
+    public class TestCaseResultDto
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public Guid AnswerSubmissionId { get; set; }
+        public AnswerSubmission AnswerSubmission { get; set; }
+        public string Input { get; set; }
+        public string ExpectedOutput { get; set; }
+        public string ActualOutput { get; set; }
+        public bool Passed { get; set; }
+        public double EarnedWeight { get; set; }
+    }
     public class AnswerSubmissionDto
     {
         public List<QuestionAnswers> Answers { get; set; } 
