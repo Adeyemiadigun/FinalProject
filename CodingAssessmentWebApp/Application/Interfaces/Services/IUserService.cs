@@ -1,4 +1,5 @@
-﻿using Application.Dtos;
+﻿using System.Threading.Tasks;
+using Application.Dtos;
 
 namespace Application.Interfaces.Services
 {
@@ -24,8 +25,7 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<StudentDashboardSummaryDto>> GetSummaryAsync( );
         Task<BaseResponse<List<StudentAssessmentDto>>> GetOngoingAssessmentsAsync( );
         Task<BaseResponse<List<StudentAssessmentDto>>> GetUpcomingAssessmentsAsync();
-        Task<BaseResponse<ScoreTrendDto>> GetScoreTrendAsync();
-        Task<BaseResponse<List<StudentAssessmentDto>>> GetSubmittedAssessmentsAsync();
-        Task<BaseResponse<List<StudentRankingDto>>> GetBatchRankingAsync();
+        Task<BaseResponse<List<StudentScoreTrendDto>>> GetStudentScoreTrendsAsync();
+        Task<BaseResponse<List<SubmissionDto>>> GetSubmittedAssessmentsAsync();
     }
 }

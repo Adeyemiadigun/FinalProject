@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Globalization;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Net.WebSockets;
 using Application.Dtos;
@@ -347,94 +348,90 @@ namespace Application.Services
         }
         public async Task<BaseResponse<PaginationDto<LeaderboardDto>>> GetLeaderboardAsync(Guid? batchId, PaginationRequest request)
         {
-            
-            List<Guid> assignedAssessmentIds = new();
-            if (batchId.HasValue)
+            if (!batchId.HasValue)
             {
-                var batch = await _batchRepository.GetBatchByIdAsync(batchId.Value);
+                return new BaseResponse<PaginationDto<LeaderboardDto>>
+                {
+                    Status = false,
+                    Message = "BatchId is required in this setup.",
+                };
+            }
+
+            var batchIdValue = batchId.Value;
+
+            var leaderboard = await _leaderboardStore.GetLeaderBoardByBatchId(batchIdValue);
+
+            if (!leaderboard.Any())
+            {
+                var batch = await _batchRepository.GetBatchByIdAsync(batchIdValue);
                 if (batch == null)
                 {
                     return new BaseResponse<PaginationDto<LeaderboardDto>>
                     {
                         Status = false,
-                        Message = "Batch not found",
-                        Data = null
+                        Message = "Batch not found"
                     };
                 }
 
-                assignedAssessmentIds = batch.AssessmentAssignments.Select(x => x.AssessmentId).ToList();
-            }
-
-            
-            var students = await _userRepository.GetAllWithRelationshipAsync(
-                s => !batchId.HasValue || s.BatchId == batchId, request
-            );
-
-            if (students.Items == null || !students.Items.Any())
-            {
-                return new BaseResponse<PaginationDto<LeaderboardDto>>
-                {
-                    Message = "No students found",
-                    Status = true,
-                    Data = new PaginationDto<LeaderboardDto>
-                    {
-                        Items = new List<LeaderboardDto>(),
-                        TotalItems = 0,
-                        TotalPages = 0,
-                        CurrentPage = 0,
-                        PageSize = request.PageSize,
-                        HasNextPage = false,
-                        HasPreviousPage = false
-                    }
-                };
-            }
-
-            
-            var leaderboard = students.Items.Select(student =>
-            {
-                var studentSubmissions = student.Submissions
-                    .Where(sub => !batchId.HasValue || assignedAssessmentIds.Contains(sub.AssessmentId))
+                var assignedAssessmentIds = batch.AssessmentAssignments
+                    .Select(x => x.AssessmentId)
                     .ToList();
 
-                var completed = studentSubmissions.Count;
-                var avgScore = completed > 0 ? Math.Round(studentSubmissions.Average(s => s.TotalScore), 2) : 0;
-                var highestScore = completed > 0 ? studentSubmissions.Max(s => s.TotalScore) : 0;
+                var students = await _userRepository.GetAllAsync(s => s.BatchId == batchIdValue);
 
-                return new LeaderboardDto
+                leaderboard = students.Select(student =>
                 {
-                    Id = student.Id,
-                    Name = student.FullName,
-                    Batch = student.Batch?.Name ?? "-",
-                    CompletedAssessments = completed,
-                    AvgScore = avgScore,
-                    HighestScore = highestScore,
-                };
-            })
-            .OrderByDescending(l => l.AvgScore)
-            .ToList();
+                    var submissions = student.Submissions
+                        .Where(sub => assignedAssessmentIds.Contains(sub.AssessmentId))
+                        .ToList();
 
-           
+                    var avgScore = submissions.Any() ? Math.Round(submissions.Average(s => s.TotalScore), 2) : 0;
+                    var highestScore = submissions.Any() ? submissions.Max(s => s.TotalScore) : 0;
+
+                    return new LeaderboardDto
+                    {
+                        Id = student.Id,
+                        Name = student.FullName,
+                        BatchId = batchIdValue,
+                        AvgScore = avgScore,
+                        HighestScore = highestScore,
+                        CompletedAssessments = submissions.Count
+                    };
+                })
+                .OrderByDescending(l => l.AvgScore)
+                .ThenByDescending(l => l.HighestScore)
+                .ToList();
+
+                await _leaderboardStore.StoreLeaderboard(batchIdValue, leaderboard);
+            }
+
+            var skip = (request.CurrentPage - 1) * request.PageSize;
+            var paginatedItems = leaderboard.Skip(skip).Take(request.PageSize).ToList();
+
+            var paginatedResponse = new PaginationDto<LeaderboardDto>
+            {
+                Items = paginatedItems,
+                TotalItems = leaderboard.Count,
+                TotalPages = (int)Math.Ceiling((double)leaderboard.Count / request.PageSize),
+                CurrentPage = request.CurrentPage,
+                PageSize = request.PageSize,
+                HasNextPage = skip + request.PageSize < leaderboard.Count,
+                HasPreviousPage = request.CurrentPage > 1
+            };
+
             return new BaseResponse<PaginationDto<LeaderboardDto>>
             {
-                Message = "Leaderboard retrieved successfully",
                 Status = true,
-                Data = new PaginationDto<LeaderboardDto>
-                {
-                    TotalItems = students.TotalItems,
-                    TotalPages = students.TotalPages,
-                    CurrentPage = students.CurrentPage,
-                    HasNextPage = students.HasNextPage,
-                    HasPreviousPage = students.HasPreviousPage,
-                    PageSize = students.PageSize,
-                    Items = leaderboard
-                }
+                Message = "Leaderboard retrieved successfully",
+                Data = paginatedResponse
             };
         }
+
+
         public async Task<BaseResponse<PaginationDto<LeaderboardDto>>> GetStudentBatchLeaderboardAsync(PaginationRequest request)
         {
             var userId = _currentUser.GetCurrentUserId();
 
-            // Step 1: Get the current student and their batch
             var student = await _userRepository.GetAsync(userId);
             if (student == null || student.BatchId == null)
             {
@@ -447,19 +444,26 @@ namespace Application.Services
 
             var batchId = student.BatchId.Value;
 
-            // Step 2: Try to get all leaderboard entries from cache
-            var allLeaderboards = await _leaderboardStore.GetLeaderBoardByBatchId(batchId);
+            var leaderboard = await _leaderboardStore.GetLeaderBoardByBatchId(batchId);
 
-            // Step 4: If batch leaderboard is empty, regenerate it
-            if (!allLeaderboards.Any())
+            if (!leaderboard.Any())
             {
                 var assignedAssessmentIds = student.Batch.AssessmentAssignments
                     .Select(x => x.AssessmentId)
                     .ToList();
 
+                if (assignedAssessmentIds == null || !assignedAssessmentIds.Any())
+                {
+                    return new BaseResponse<PaginationDto<LeaderboardDto>>
+                    {
+                        Status = false,
+                        Message = "No assessments assigned to this batch"
+                    };
+                }
+
                 var batchStudents = await _userRepository.GetAllAsync(s => s.BatchId == batchId);
 
-                allLeaderboards = batchStudents.Select(s =>
+                leaderboard = batchStudents.Select(s =>
                 {
                     var submissions = s.Submissions
                         .Where(sub => assignedAssessmentIds.Contains(sub.AssessmentId))
@@ -472,7 +476,7 @@ namespace Application.Services
                     {
                         Id = s.Id,
                         Name = s.FullName,
-                        Batch = batchId.ToString(), // store batch as Guid string
+                        BatchId = batchId,
                         AvgScore = avgScore,
                         HighestScore = highestScore,
                         CompletedAssessments = submissions.Count
@@ -482,22 +486,20 @@ namespace Application.Services
                 .ThenByDescending(l => l.HighestScore)
                 .ToList();
 
-                // Step 5: Store regenerated leaderboard in the cache
-                await _leaderboardStore.StoreLeaderboard(allLeaderboards);
+                await _leaderboardStore.StoreLeaderboard(batchId, leaderboard);
             }
 
-            // Step 6: Paginate the result
             var skip = (request.CurrentPage - 1) * request.PageSize;
-            var paginatedItems = allLeaderboards.Skip(skip).Take(request.PageSize).ToList();
+            var paginatedItems = leaderboard.Skip(skip).Take(request.PageSize).ToList();
 
             var paginatedResponse = new PaginationDto<LeaderboardDto>
             {
                 Items = paginatedItems,
-                TotalItems = allLeaderboards.Count,
-                TotalPages = (int)Math.Ceiling((double)allLeaderboards.Count / request.PageSize),
+                TotalItems = leaderboard.Count,
+                TotalPages = (int)Math.Ceiling((double)leaderboard.Count / request.PageSize),
                 CurrentPage = request.CurrentPage,
                 PageSize = request.PageSize,
-                HasNextPage = skip + request.PageSize < allLeaderboards.Count,
+                HasNextPage = skip + request.PageSize < leaderboard.Count,
                 HasPreviousPage = request.CurrentPage > 1
             };
 
@@ -508,6 +510,7 @@ namespace Application.Services
                 Data = paginatedResponse
             };
         }
+
 
 
 
@@ -720,17 +723,48 @@ namespace Application.Services
             };
         }
 
-        public async Task<BaseResponse<ScoreTrendDto>> GetScoreTrendAsync()
+        public async Task<BaseResponse<List<StudentScoreTrendDto>>> GetStudentScoreTrendsAsync()
         {
-            var submissions = await _submissionRepo.GetByStudentIdAsync(studentId);
-            var grouped = submissions.GroupBy(s => s.SubmittedAt.Date).OrderBy(g => g.Key);
+            var studentId = _currentUser.GetCurrentUserId();
 
-            return new ScoreTrendDto
+            if (studentId == Guid.Empty)
+                throw new ApiException("Invalid student ID.", 403, "InvalidStudent", null);
+
+            var submissions = await _submissionRepo.GetAllAsync(s =>
+                s.StudentId == studentId && s.SubmittedAt != default(DateTime));
+
+            if (!submissions.Any())
             {
-                Labels = grouped.Select(g => g.Key.ToString("MMM dd")).ToList(),
-                Scores = grouped.Select(g => g.Average(x => x.TotalScore)).ToList()
+                return new BaseResponse<List<StudentScoreTrendDto>>
+                {
+                    Message = "No submissions found to generate score trend.",
+                    Status = true,
+                    Data = new List<StudentScoreTrendDto>()
+                };
+            }
+
+            var trends = submissions
+                .GroupBy(s =>
+                    CultureInfo.InvariantCulture.Calendar.GetWeekOfYear(
+                        s.SubmittedAt,
+                        CalendarWeekRule.FirstFourDayWeek,
+                        DayOfWeek.Monday))
+                .OrderBy(g => g.Key)
+                .Select(g => new StudentScoreTrendDto
+                {
+                    Labels = $"Week {g.Key}",
+                    Scores = Math.Round(g.Average(s => s.TotalScore), 2)
+                })
+                .ToList();
+
+            return new BaseResponse<List<StudentScoreTrendDto>>
+            {
+                Message = "Student score trends generated.",
+                Status = true,
+                Data = trends
             };
         }
+
 
         public async Task<BaseResponse<List<SubmissionDto>>> GetSubmittedAssessmentsAsync()
         {
@@ -755,23 +789,6 @@ namespace Application.Services
             };
         }
 
-        public async Task<BaseResponse<List<StudentRankingDto>>> GetBatchRankingAsync( )
-        {
-            var student = await _userRepo.GetByIdAsync(studentId);
-            var batchStudents = await _userRepo.GetByBatchIdAsync(student.BatchId);
-            var ranked = batchStudents
-                .Where(s => s.Submissions.Any())
-                .Select(s => new StudentRankingDto
-                {
-                    Id = s.Id,
-                    Name = s.FullName,
-                    Score = s.Submissions.Average(x => x.TotalScore)
-                })
-                .OrderByDescending(x => x.Score)
-                .ToList();
-
-            for (int i = 0; i < ranked.Count; i++) ranked[i].Rank = i + 1;
-            return ranked;
-        }
+      
     }
 }

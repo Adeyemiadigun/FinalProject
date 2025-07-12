@@ -33,8 +33,8 @@ namespace Application.Dtos
 
     public class StudentScoreTrendDto
     {
-        public List<string> Labels { get; set; }
-        public List<double> Scores { get; set; }
+        public string Labels { get; set; }
+        public double Scores { get; set; }
     }
 
     public class StudentRankingDto

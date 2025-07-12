@@ -95,7 +95,7 @@ namespace Host.Controllers
         [HttpGet("performance-trend")]
         public async Task<IActionResult> GetPerformanceTrend()
         {
-            var result = await _userService.GetScoreTrendAsync();
+            var result = await _userService.GetStudentScoreTrendsAsync();
             return Ok(result);
         }
 
@@ -103,13 +103,6 @@ namespace Host.Controllers
         public async Task<IActionResult> GetSubmittedAssessments()
         {
             var result = await _userService.GetSubmittedAssessmentsAsync();
-            return Ok(result);
-        }
-
-        [HttpGet("rankings")]
-        public async Task<IActionResult> GetRanking()
-        {
-            var result = await _userService.GetBatchRankingAsync();
             return Ok(result);
         }
 

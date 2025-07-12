@@ -8,51 +8,31 @@ namespace Application.Services
     {
         private readonly IMemoryCache _cache;
         private readonly TimeSpan _cacheDuration = TimeSpan.FromMinutes(5);
-        private const string AllLeaderboardKey = "leaderboards";
 
         public LeaderboardStore(IMemoryCache cache)
         {
             _cache = cache;
         }
 
-        public async Task<List<LeaderboardDto>> GetAllLeaderboards()
+        private string GetBatchKey(Guid batchId) => $"leaderboard_batch_{batchId}";
+
+        public Task<List<LeaderboardDto>> GetLeaderBoardByBatchId(Guid batchId)
         {
-            _cache.TryGetValue(AllLeaderboardKey, out List<LeaderboardDto> leaderboards);
-            return await Task.FromResult(leaderboards ?? new List<LeaderboardDto>());
+            var key = GetBatchKey(batchId);
+            _cache.TryGetValue(key, out List<LeaderboardDto> leaderboard);
+            return Task.FromResult(leaderboard ?? new List<LeaderboardDto>());
         }
 
-        public async Task<List<LeaderboardDto>> GetLeaderBoardByBatchId(Guid batchId)
+        public Task<bool> StoreLeaderboard(Guid batchId, List<LeaderboardDto> leaderboard)
         {
-            var all = await GetAllLeaderboards();
-            var filtered = all
-                .Where(l => l.BatchId == batchId)
-                .OrderByDescending(l => l.AvgScore)
-                .ThenByDescending(l => l.HighestScore)
-                .ToList();
-
-            return filtered;
-        }
-
-        public Task<bool> StoreLeaderboard(List<LeaderboardDto> newEntries)
-        {
-            // Get existing full leaderboard
-            _cache.TryGetValue(AllLeaderboardKey, out List<LeaderboardDto> existing);
-            existing ??= new List<LeaderboardDto>();
-
-            var newIds = newEntries.Select(e => e.Id).ToHashSet();
-            existing.RemoveAll(e => newIds.Contains(e.Id));
-
-            // Add new entries
-            existing.AddRange(newEntries);
-
-            _cache.Set(AllLeaderboardKey, existing, _cacheDuration);
-
+            var key = GetBatchKey(batchId);
+            _cache.Set(key, leaderboard, _cacheDuration);
             return Task.FromResult(true);
         }
 
-        public void Invalidate()
+        public void Invalidate(Guid batchId)
         {
-            _cache.Remove(AllLeaderboardKey);
+            _cache.Remove(GetBatchKey(batchId));
         }
     }
 

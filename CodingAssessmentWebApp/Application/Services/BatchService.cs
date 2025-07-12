@@ -10,7 +10,7 @@ using Domain.Entitties;
 
 namespace Application.Services
 {
-    public class BatchService(IBatchRepository batchRepository, IUnitOfWork unitOfwork, IAssessmentRepository assessmentRepository, IBackgroundService _backgroundService) : IBatchService
+    public class BatchService(IBatchRepository batchRepository, IUnitOfWork unitOfwork, IAssessmentRepository assessmentRepository, IBackgroundService _backgroundService, ILeaderboardStore _leaderboardStore) : IBatchService
     {
         public async Task<BaseResponse<string>> AssignAssessmentToBatchAsync(Guid batchId, Assessment assessment)
         {
@@ -55,6 +55,7 @@ namespace Application.Services
                 EndDate = assessment.EndDate,
                 PassingScore = assessment.PassingScore
             }));
+            _leaderboardStore.Invalidate(batchId);
             // Update the batch in the repository  
             await batchRepository.UpdateAsync(batch);
             await unitOfwork.SaveChangesAsync();

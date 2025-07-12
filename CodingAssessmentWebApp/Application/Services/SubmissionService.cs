@@ -119,7 +119,7 @@ namespace Application.Services
 
             await _submissionRepository.CreateAsync(submissionEntity);
             await _unitOfWork.SaveChangesAsync();
-            _leaderboardStore.Invalidate();
+            _leaderboardStore.Invalidate(student.Batch!.Id);
             _backgroundService.Enqueue<IGradingService>(g =>
                 g.GradeSubmissionAndNotifyAsync(submissionEntity.Id, studentId));
 

@@ -9,9 +9,9 @@ namespace Application.Interfaces.Services
 {
     public interface ILeaderboardStore
     {
-        Task<List<LeaderboardDto>> GetAllLeaderboards();
         Task<List<LeaderboardDto>> GetLeaderBoardByBatchId(Guid batchId);
-        Task<bool> StoreLeaderboard(List<LeaderboardDto> leaderboard);
-        void Invalidate();
+        Task<bool> StoreLeaderboard(Guid batchId, List<LeaderboardDto> leaderboard);
+        void Invalidate(Guid batchId);
     }
+
 }

@@ -37,6 +37,7 @@ namespace Host.Configurations
             builder.AddHttpClient();
             builder.AddHttpContextAccessor();
             builder.AddSingleton<IRefreshTokenStore, InMemoryRefreshTokenStore>();
+            builder.AddSingleton<ILeaderboardStore, LeaderboardStore>();
 
             //FluentValidation
             builder.AddFluentValidationAutoValidation();

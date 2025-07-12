@@ -11,7 +11,7 @@ using Domain.Enum;
 
 namespace Application.Services
 {
-    public class AssessmentService(IUnitOfWork _unitOfWork, IAssessmentRepository _assessmentRepository, IUserRepository _userRepository, IBackgroundService _backgroundService, ICurrentUser _currentUser,IBatchRepository _batchRepository,IBatchService batchService, ILeaderboardStore _leaderboardStore) : IAssessmentService
+    public class AssessmentService(IUnitOfWork _unitOfWork, IAssessmentRepository _assessmentRepository, IUserRepository _userRepository, IBackgroundService _backgroundService, ICurrentUser _currentUser,IBatchRepository _batchRepository,IBatchService batchService ) : IAssessmentService
     {
                  //case 400: // Bad Request
                  //   case 401: // Unauthorized
@@ -128,7 +128,7 @@ namespace Application.Services
             }
 
             await _unitOfWork.SaveChangesAsync();
-            _leaderboardStore.Invalidate();
+            
 
             return new BaseResponse<AssessmentDto>()
             {
