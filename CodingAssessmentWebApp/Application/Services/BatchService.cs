@@ -44,7 +44,12 @@ namespace Application.Services
                 Assessment = assessment
             }
             );
-            var validStudent = batch.Students;
+            var validStudent = batch.Students.Select(x => new UserDto()
+            {
+                Id = x.Id,
+                Email = x.Email,
+                FullName = x.FullName
+            }).ToList();
             _backgroundService.Enqueue<IEmailService>(emailService => emailService.SendBulkEmailAsync(validStudent, "New Assessment", new AssessmentDto()
             {
                 Title = assessment.Title,
@@ -103,7 +108,12 @@ namespace Application.Services
                 Assessment = assessment
             }
             );
-            var validStudent = batch.Students;
+            var validStudent = batch.Students.Select(x => new UserDto()
+            {
+                Id = x.Id,
+                Email = x.Email,
+                FullName = x.FullName
+            }).ToList();
             _backgroundService.Enqueue<IEmailService>(emailService => emailService.SendBulkEmailAsync(validStudent, "New Assessment", new AssessmentDto()
             {
                 Title = assessment.Title,
@@ -145,11 +155,12 @@ namespace Application.Services
                                  .Select(student => student.Submissions.Sum(sub => sub.TotalScore))
                                  .DefaultIfEmpty(0)
                                  .Average(),
-                PassRate = x.Students
+                PassRate = x.Students.Count == 0 ? 0
+                             : x.Students
                              .Where(student => student.Submissions.Any())
                              .Count(student => student.Submissions.Any(sub => sub.TotalScore >= sub.Assessment.PassingScore))
-                             / (double)x.Students.Count * 100
-            }).ToList();
+                         / (double)x.Students.Count * 100
+                           }).ToList();
 
             var paginationDto = new PaginationDto<BatchAnalytics>
             {
@@ -181,7 +192,8 @@ namespace Application.Services
             var createdBatch = new Batch()
             {
                 Name = model.Name,
-                BatchNumber = (short)model.BatchNumber
+                BatchNumber = (short)model.BatchNumber,
+                StartDate = model.StartDate
             };
             await batchRepository.CreateAsync(createdBatch);
             await unitOfwork.SaveChangesAsync();

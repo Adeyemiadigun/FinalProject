@@ -17,12 +17,12 @@ namespace Application.Services
 
         public Guid GetCurrentUserId()
         {
-            var id = Guid.Parse(_http.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty);
-            if (id == Guid.Empty)
+            var id = _http.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(id) || !Guid.TryParse(id, out var parsed) || parsed == Guid.Empty)
             {
-                throw new ApiException("User ID is invalid.", (int)HttpStatusCode.BadRequest, "InvalidUserId", null);
+                throw new ApiException("User ID is invalid or missing.", (int)HttpStatusCode.BadRequest, "InvalidUserId", null);
             }
-            return id;
+            return parsed;
         }
     }
 }

@@ -13,15 +13,23 @@ function adminDashboard() {
         loadComponent("sidebar-placeholder", "../components/sidebar.html");
         loadComponent("navbar-placeholder", "../components/nav.html");
         const [metricsRes, topRes, lowRes, batchRes] = await Promise.all([
-          fetch("/api/v1/admin/metrics/overview", headers),
-          fetch("/api/v1/admin/analytics/assessments/top-performing", headers),
           fetch(
-            "/api/v1/admin/analytics/assessments/lowest-performing",
+            "http://localhost:5162/api/v1/dashboard/admin/metrics/overview",
             headers
           ),
-          fetch("/api/v1/admin/analytics/students-per-batch", headers),
+          fetch(
+            "http://localhost:5162/api/v1/dashboard/admin/analytics/assessments/top-performing",
+            headers
+          ),
+          fetch(
+            "http://localhost:5162/api/v1/dashboard/admin/analytics/assessments/lowest-performing",
+            headers
+          ),
+          fetch(
+            "http://localhost:5162/api/v1/dashboard/batch-distribution",
+            headers
+          ),
         ]);
-
         if (
           [metricsRes, topRes, lowRes, batchRes].some(
             (res) => res.status === 401
@@ -85,7 +93,11 @@ function adminDashboard() {
         alert("Dashboard failed to load. Please try again later.");
       }
     },
-
+    logOut() {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("userRole");
+      window.location.href = "/public/auth/login.html";
+    },
     drawChart(id, data) {
       const ctx = document.getElementById(id).getContext("2d");
       new Chart(ctx, {

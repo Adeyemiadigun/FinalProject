@@ -126,16 +126,23 @@ namespace Application.Services
 
             if (model.Users == null || !model.Users.Any())
                 throw new ApiException("User list cannot be empty", 400, "EmptyUserList", null); // Fix for CS7036 and CS1002
-      
+
+         
+
             var users = new List<User>();
             foreach (var user in model.Users)
             {
+                var batch = await _batchRepository.GetBatchByIdAsync(user.BatchId);
+                if (batch is null)
+                    throw new ApiException("Batch not found", 404, "BatchNotFound", null);
                 var newUser = new User()
                 {
                     FullName = user.FullName,
                     Email = user.Email,
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword(user.Password),
                     Role = Role.Student,
+                    BatchId = batch.Id,
+                    Batch = batch,
                     IsActive = true,
                 };
                 users.Add(newUser);
@@ -153,13 +160,18 @@ namespace Application.Services
             var user = await _userRepository.CheckAsync(x => x.Email == model.Email);
             if (user)
                 throw new ApiException("User with the provided email already exists", 400, "DuplicateEmail", null); // Fix for CS7036 and CS1002
+            
             var batch = await _batchRepository.GetBatchByIdAsync(model.BatchId);
+            if(batch is null)
+                throw new ApiException("Batch not found", 404, "BatchNotFound", null); // Fix for CS7036 and CS1002
             var newUser = new User()
             {
                 FullName = model.FullName,
                 Email = model.Email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.Password),
                 Role = Domain.Enum.Role.Student,
+                BatchId = batch.Id,
+                Batch = batch,
                 IsActive = false,
             };
             await _userRepository.CreateAsync(newUser);
@@ -276,16 +288,20 @@ namespace Application.Services
         }
 
 
-        public async Task<BaseResponse<PaginationDto<UserDto>>> SearchByNameOrEmailAsync(string query, PaginationRequest request, string? status = null)
+        public async Task<BaseResponse<PaginationDto<UserDto>>> SearchByNameOrEmailAsync(
+      Guid? batchId, string? query, PaginationRequest request, string? status = null)
         {
-            var normalizedQuery = query.Trim().ToLower();
+            var normalizedQuery = query?.Trim().ToLower() ?? "";
 
             var users = await _userRepository.GetAllAsync(s =>
-                (s.Role == Role.Student) &&
+                s.Role == Role.Student &&
                 (string.IsNullOrEmpty(normalizedQuery) ||
                  s.FullName.ToLower().Contains(normalizedQuery) ||
                  s.Email.ToLower().Contains(normalizedQuery)) &&
-                (status == null || (status == "active" && s.IsActive) || (status == "inactive" && !s.IsActive)),
+                (batchId == null || s.BatchId == batchId) &&
+                (string.IsNullOrEmpty(status) ||
+                 (status == "active" && s.IsActive) ||
+                 (status == "inactive" && !s.IsActive)),
                 request
             );
 
@@ -313,14 +329,15 @@ namespace Application.Services
                 HasPreviousPage = users.HasPreviousPage
             };
 
-            return new BaseResponse<PaginationDto<UserDto>>()
+            return new BaseResponse<PaginationDto<UserDto>>
             {
                 Message = "Users retrieved successfully",
                 Status = true,
                 Data = paginationDto
             };
         }
-        public async Task<BaseResponse<List<UserDto>>> SearchInstructorByNameOrEmailAsync(string query, string? status = null)
+
+        public async Task<BaseResponse<PaginationDto<UserDto>>> SearchInstructorByNameOrEmailAsync(string? query,PaginationRequest request, string? status = null)
         {
             var normalizedQuery = query?.Trim().ToLower() ?? string.Empty;
 
@@ -329,21 +346,33 @@ namespace Application.Services
                 (string.IsNullOrEmpty(normalizedQuery) ||
                  s.FullName.ToLower().Contains(normalizedQuery) ||
                  s.Email.ToLower().Contains(normalizedQuery)) &&
-                (status == null || (status == "active" && s.IsActive) || (status == "inactive" && !s.IsActive))
+                (status == null || (status == "active" && s.IsActive) || (status == "inactive" && !s.IsActive)), request
             );
 
-            var userDtos = users.Select(s => new UserDto
+            var userDtos = users.Items.Select(s => new UserDto
             {
                 Id = s.Id,
                 FullName = s.FullName,
                 Email = s.Email,
+                Status = s.IsActive
             }).ToList();
+            var paginated = new PaginationDto<UserDto>()
+            {
+                Items = userDtos,
+                TotalPages = users.TotalPages,
+                TotalItems = users.TotalItems,
+                HasNextPage = users.HasNextPage,
+                HasPreviousPage = users.HasNextPage,
+                CurrentPage = users.CurrentPage,
+                PageSize = users.PageSize,
 
-            return new BaseResponse<List<UserDto>>()
+            };
+
+            return new BaseResponse<PaginationDto<UserDto>>()
             {
                 Message = "Users retrieved successfully",
                 Status = true,
-                Data = userDtos
+                Data = paginated
             };
         }
         public async Task<BaseResponse<PaginationDto<LeaderboardDto>>> GetLeaderboardAsync(Guid? batchId, PaginationRequest request)
@@ -627,10 +656,10 @@ namespace Application.Services
                 Status = instructor.IsActive,
                 JoinedDate = instructor.CreatedAt,
                 TotalAssessment = instructor.Assessments.Count,
-                AverageScore = instructor.Assessments
+                AverageScore = instructor.Assessments.Any()? instructor.Assessments
                     .Where(x => x.Submissions.Any())
                     .SelectMany(x => x.Submissions)
-                    .Average(s => s.TotalScore) 
+                    .Average(s => s.TotalScore) : 0
             };
 
             return new BaseResponse<InstructorDetailsDto>
@@ -789,6 +818,25 @@ namespace Application.Services
             };
         }
 
-      
+        public async Task<BaseResponse<List<UserDto>>> GetInstructors()
+        {
+            var users = await _userRepository.GetAllAsync(x => x.Role == Role.Instructor);
+            if (users is null || !users.Any())
+                throw new ApiException("No Instructors found", 404, "NoInstructorsInSystem", null);
+            var userDtos = users.Select(x => new UserDto()
+            {
+                Id = x.Id,
+                FullName = x.FullName,
+                Email = x.Email,
+
+            });
+
+            return new BaseResponse<List<UserDto>>()
+            {
+                Message = "Instructors Retreived",
+                Status = true,
+                Data = userDtos.ToList()
+            };
+        }
     }
 }

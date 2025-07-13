@@ -5,14 +5,14 @@ function instructorDetailsPage() {
 
     async init() {
       const id = new URLSearchParams(window.location.search).get("id");
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("accessToken");
 
       const [profileRes, assessmentRes] = await Promise.all([
-        fetch(`/api/admin/instructors/${id}/details`, {
+        fetch(`http://localhost:5162/api/v1/Instructors/${id}/details`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch(
-          `/api/admin/instructors/${id}/assessment/details?pageSize=20&currentPage=1`,
+          `http://localhost:5162/api/v1/Instructors/${id}/assessment/details?pageSize=10&currentPage=1`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -21,10 +21,17 @@ function instructorDetailsPage() {
 
       const profileData = await profileRes.json();
       const assessmentsData = await assessmentRes.json();
-
-      this.instructor = profileData;
+      console.log(profileData);
+      console.log(assessmentsData);
+      this.instructor = profileData.data;
+      console.log(this.instructor);
       this.assessments =
         assessmentsData.items || assessmentsData.data?.items || [];
+    },
+    logOut() {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("userRole");
+      window.location.href = "/public/auth/login.html";
     },
 
     formatDate(date) {

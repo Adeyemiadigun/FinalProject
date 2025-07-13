@@ -32,7 +32,7 @@ builder.Services.AddDbContext<ClhAssessmentAppDpContext>(config => config.UseNpg
         options.DefaultApiVersion = new ApiVersion(1, 0);
         options.ReportApiVersions = true;
 
-        // Optional: allow clients to specify the version via a query param or header
+        
         options.ApiVersionReader = ApiVersionReader.Combine(
             new QueryStringApiVersionReader("api-version"),
             new HeaderApiVersionReader("X-Version"),
@@ -134,9 +134,12 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 app.UseCors("CLH_App");
-app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
+
+app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseAuthorization();
 

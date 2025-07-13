@@ -1,12 +1,14 @@
 ﻿using Application.Dtos;
 using Application.Interfaces.Services;
 using Application.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace Host.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/v{version:apiVersion}/[controller]")]
     [ApiVersion("1.0")]
@@ -19,9 +21,9 @@ namespace Host.Controllers
             return response.Status ? Created("Students Registered", response) : BadRequest(response);
         }
         [HttpGet("{studentId:guid}/details")]
-        public async Task<IActionResult> GetStudentDetais(Guid id)
+        public async Task<IActionResult> GetStudentDetais(Guid studentId)
         {
-            var response = await _userService.GetStudentDetail(id);
+            var response = await _userService.GetStudentDetail(studentId);
             return response.Status ? Ok(response) : NotFound(response);
         }
         [HttpGet("{studentId:guid}/assessments")]
@@ -38,31 +40,29 @@ namespace Host.Controllers
         }
 
         [HttpGet("search")]
-        public async Task<IActionResult> SearchStudents([FromQuery] string query, [FromQuery] string status , [FromQuery] PaginationRequest request )
+        public async Task<IActionResult> SearchStudents([FromQuery] Guid? batchId,[FromQuery] string? query, [FromQuery] string? status , [FromQuery] PaginationRequest request )
         {
-            if (string.IsNullOrWhiteSpace(query))
-                return BadRequest(new { message = "Search term is required." });
 
-            var results = await _userService.SearchByNameOrEmailAsync(query,request, status);
-            return Ok(new { status = true, data = results });
+            var results = await _userService.SearchByNameOrEmailAsync(batchId,query,request, status);
+            return Ok(results);
         }
 
         [HttpGet("leaderboard")]
-        public async Task<IActionResult> GetLeaderboard([FromQuery] PaginationRequest request, [FromQuery] Guid? batchId = null)
+        public async Task<IActionResult> GetLeaderboard([FromQuery] Guid batchId, [FromQuery] PaginationRequest request)
         {
             var result = await _userService.GetLeaderboardAsync(batchId, request);
             return Ok(result);
         }
         [HttpGet("{studentId:guid}/analytics")]
-        public async Task<IActionResult> GetStudentAnalytics([FromQuery] Guid studentId)
+        public async Task<IActionResult> GetStudentAnalytics(Guid studentId)
         {
             var result = await _userService.GetStudentAnalytics(studentId);
             return result.Status ? Ok(result) : NotFound(result);
         }
-        [HttpPost("{studentId:guid}/reassign-batch")]
-        public async Task<IActionResult> UpdateStudentBatch(Guid studentId, ReAssignBatch batchId)
+        [HttpPatch("{studentId:guid}/reassign-batch")]
+        public async Task<IActionResult> UpdateStudentBatch(Guid studentId, Guid batchId)
         {
-            var result = await _userService.UpdateStudentBatch(studentId, batchId.BatchId);
+            var result = await _userService.UpdateStudentBatch(studentId, batchId);
             return result.Status ? Ok(result) : NotFound(result);
         }
         [HttpPatch("{studentId}/status")]
@@ -108,3 +108,4 @@ namespace Host.Controllers
 
     }
 }
+    

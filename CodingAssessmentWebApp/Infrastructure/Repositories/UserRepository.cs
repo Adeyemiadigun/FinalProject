@@ -68,7 +68,7 @@ namespace Infrastructure.Repositories
             var query = _context.Set<User>()
                 .Where(exp);
             var totalRecord = query.Count();
-            var totalPages = totalRecord / request.PageSize;
+           var totalPages = (int)Math.Ceiling((double)totalRecord / request.PageSize);
             var result = await query.Skip((request.CurrentPage - 1) * request.PageSize).Take(request.PageSize)
                .ToListAsync();
             return new PaginationDto<User>
@@ -92,7 +92,7 @@ namespace Infrastructure.Repositories
                 .Include(x => x.AssessmentAssignments)
                 .Where(exp);
             var totalRecord = query.Count();
-            var totalPages = totalRecord / request.PageSize;
+            var totalPages = (int)Math.Ceiling((double)totalRecord / request.PageSize);
             var result = await query.Skip((request.CurrentPage - 1) * request.PageSize).Take(request.PageSize)
                .ToListAsync();
             return new PaginationDto<User>

@@ -1,19 +1,21 @@
 ﻿using Application.Dtos;
 using Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Host.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/v{version:apiVersion}/[controller]")]
     [ApiVersion("1.0")]
-    public class BatchController : ControllerBase
+    public class BatchesController : ControllerBase
     {
         private readonly IBatchService _batchService;
         private readonly IUserService _userService;
         private readonly IAssessmentService _assessmentService;
 
-        public BatchController(IBatchService batchService, IUserService userService, IAssessmentService assessmentService)
+        public BatchesController(IBatchService batchService, IUserService userService, IAssessmentService assessmentService)
         {
             _batchService = batchService;
             _userService = userService;
@@ -24,7 +26,7 @@ namespace Host.Controllers
         public async Task<IActionResult> CreateBatch([FromBody] CreateBatchRequestModel request)
         {
             var result = await _batchService.CreateBatchAsync(request);
-            return CreatedAtAction(nameof(GetBatchById), new { id = result.Data.Id }, result);
+            return Created("Batch Created Successfully",result.Data);
         }
 
         [HttpGet("{id:guid}")]

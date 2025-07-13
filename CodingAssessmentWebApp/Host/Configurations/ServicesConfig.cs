@@ -38,6 +38,7 @@ namespace Host.Configurations
             builder.AddHttpContextAccessor();
             builder.AddSingleton<IRefreshTokenStore, InMemoryRefreshTokenStore>();
             builder.AddSingleton<ILeaderboardStore, LeaderboardStore>();
+            builder.AddMemoryCache();
 
             //FluentValidation
             builder.AddFluentValidationAutoValidation();

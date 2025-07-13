@@ -1,21 +1,30 @@
 ﻿using Application.Dtos;
 using Application.Interfaces.Services;
 using Application.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Host.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/v{version:apiVersion}/[controller]")]
     [ApiVersion("1.0")]
-    public class InstructorController(IAssessmentService _assessmentService, IUserService _userService) : ControllerBase
+    public class InstructorsController(IAssessmentService _assessmentService, IUserService _userService) : ControllerBase
     {
         [HttpPost]
         public async Task<IActionResult> RegisterInstructor([FromBody] RegisterIstructorRequestModel model)
         {
             var response = await _userService.RegisterInstructor(model);
             return response.Status ? Created("response", response) : BadRequest(response);
+        }
+        [HttpGet]
+        public async Task<IActionResult> GeetInstructors()
+        {
+            var response = await _userService.GetInstructors();
+            return Ok(response);
         }
 
         [HttpGet("{instructorId:guid}/assessments")]
@@ -32,15 +41,14 @@ namespace Host.Controllers
             return Ok(result);
         }
         [HttpGet("search")]
-        public async Task<IActionResult> SearchStudents([FromQuery] string query,[FromQuery] string status)
+        public async Task<IActionResult> SearchStudents([FromQuery] string? query, [FromQuery] string? status,[FromQuery]PaginationRequest request)
         {
-            if (string.IsNullOrWhiteSpace(query))
-                return BadRequest(new { message = "Search term is required." });
+            
 
-            var results = await _userService.SearchInstructorByNameOrEmailAsync(query,status);
-            return Ok(new { status = true, data = results });
+            var results = await _userService.SearchInstructorByNameOrEmailAsync(query,request,status);
+            return Ok(results);
         }
-        [HttpGet("/assessment/recents")]
+        [HttpGet("assessment/recents")]
         public async Task<IActionResult> GetInstructorRecentAssessments()
         {
             var response = await _assessmentService.GetInstructorRecentAssessment();
@@ -53,7 +61,7 @@ namespace Host.Controllers
             return Ok(result);
         }
         [HttpGet("{instructorId}/assessment/details")]
-        public async Task<IActionResult> GetInstructorAssessmentsDetails([FromQuery] Guid instructorId,PaginationRequest request)
+        public async Task<IActionResult> GetInstructorAssessmentsDetails([FromRoute] Guid instructorId,[FromQuery] PaginationRequest request)
         {
             var result = await _assessmentService.GetInstructorAssessmentDetail(instructorId,request);
             return Ok(result);

@@ -8,35 +8,66 @@ function instructorDashboard() {
     },
     batches: [],
     recentAssessments: [],
+    assessmentScoreTrends: [],
 
     async loadData() {
-      const token = localStorage.getItem("token");
-      const headers = { Authorization: `Bearer ${token}` };
-
-      this.summary = await fetch("/api/v1/instructor/dashboard/summary", {
-        headers,
-      }).then((r) => r.json());
+      const token = localStorage.getItem("accessToken");
+      console.log("Token:", token);
+    
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
+    try{
+      this.summary = await fetch(
+        "https://localhost:7157/api/v1/Dashboard/instructor/metrics/overview",
+        {
+          method: "GET",
+          headers: headers,
+        }
+      ).then((r) => r.json());
+    
       this.batches = await fetch(
-        "/api/v1/instructor/dashboard/batch-distribution",
-        { headers }
+        "https://localhost:7157/api/v1/Dashboard/batch-distribution",
+        {
+          method: "GET",
+          headers: headers,
+        }
       ).then((r) => r.json());
+    
       this.recentAssessments = await fetch(
-        "/api/v1/instructor/dashboard/recent-assessments",
-        { headers }
+        "https://localhost:7157/api/v1/Instructors/assessment/recents",
+        {
+          method: "GET",
+          headers: headers,
+        }
       ).then((r) => r.json());
-
+    
+      this.assessmentScoreTrends = await fetch(
+        "https://localhost:7157/api/v1/Assessments/assessment-scores",
+        {
+          method: "GET",
+          headers: headers,
+        }
+      ).then((r) => r.json());
+    
       this.drawCharts();
+    }
+    catch (error) {
+      console.error("Error loading data:", error);
+      alert("Failed to load data. Please try again later.");
+    }
     },
 
     drawCharts() {
       new Chart(document.getElementById("assessmentScoreChart"), {
         type: "bar",
         data: {
-          labels: ["OOP Basics", "LINQ Challenge", "Entity Framework"],
+          labels: this.assessmentScoreTrends.map((x) => x.assessmentTitle),
           datasets: [
             {
               label: "Average Score (%)",
-              data: [74, 69, 78],
+              data: this.assessmentScoreTrends.map((x) => x.averageScore),
               backgroundColor: "#3b82f6",
             },
           ],

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Application.Dtos;
 using Application.Interfaces.ExternalServices;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
@@ -27,10 +28,17 @@ namespace Application.Services
                 a.StartDate <= DateTime.UtcNow.AddHours(1) &&  // Adjust time window as needed
                 !a.Questions.Any());
 
+            
             foreach (var assessment in upcomingAssessments)
             {
                 var template = EmptyAsseementTemplate(assessment);
-                await _emailService.SendEmailAsync(assessment.Instructor, "Assessment Without Questions ALert",template);
+                var instructor = assessment.Instructor;
+                var instructorDto = new UserDto()
+                {
+                    FullName = instructor.FullName,
+                    Email = instructor.Email
+                };
+                await _emailService.SendEmailAsync(instructorDto, "Assessment Without Questions ALert",template);
             }
         }
         public string EmptyAsseementTemplate(Assessment assessment )

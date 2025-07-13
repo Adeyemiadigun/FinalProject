@@ -1,3 +1,9 @@
+const token = localStorage.getItem("accessToken");
+const headers = {
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${token}`,
+};
+
 function instructorAssessmentsPage() {
   return {
     assessments: [],
@@ -9,20 +15,20 @@ function instructorAssessmentsPage() {
       hasNextPage: false,
       hasPreviousPage: false,
     },
+    pageSize : 2,
     showCreateModal: false,
     newAssessment: {
       title: "",
       description: "",
       technologyStack: "",
       durationInMinutes: 0,
+      batchIds: [],
       startDate: "",
       endDate: "",
       passingScore: 0,
-      batchIds: [],
     },
 
     async init() {
-      const token = localStorage.getItem("token");
       await loadComponent(
         "sidebar-placeholder",
         "../components/instructor-sidebar.html"
@@ -32,27 +38,39 @@ function instructorAssessmentsPage() {
         "../components/instructor-nav.html"
       );
 
-      const batchRes = await fetch("/api/v1/instructor/batches", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      this.batches = await batchRes.json();
-      await this.fetchPage(1);
+      const batchRes = await fetch(
+        "https://localhost:7157/api/v1/Batches/all",
+        {
+          method: "GET",
+          headers: headers,
+        }
+      );
+     const data = await batchRes.json();
+     console.log(data)
+     this.batches = data.data
+      await this.fetchPage();
     },
 
-    async fetchPage(page) {
+    async fetchPage() {
       const token = localStorage.getItem("token");
-      const params = new URLSearchParams({
-        pageNumber: page,
-        pageSize: 5,
-        batchId: this.filters.batchId,
-        status: this.filters.status,
-      });
+      const params = new URLSearchParams();
+      if (this.filters.batchId) params.append("batchId", this.filters.batchId);
+      if (this.filters.status) params.append("status", this.filters.status);
+      params.append("pageSize", this.pageSize);
+      params.append("currentPage", this.pagination.currentPage);
 
-      const res = await fetch(`/api/v1/instructor/assessments?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+
+      const res = await fetch(
+        `https://localhost:7157/api/v1/Instructors/assessments?${params}`,
+        {
+          method: "GET",
+          headers: headers,
+        }
+      );
       const result = await res.json();
+      console.log(result)
       this.assessments = result.data.items;
+      console.log(this.assessments)
       this.pagination = {
         currentPage: result.data.currentPage,
         totalPages: result.data.totalPages,
@@ -63,8 +81,7 @@ function instructorAssessmentsPage() {
     },
 
     async submitAssessment() {
-      const token = localStorage.getItem("token");
-      const res = await fetch("/api/v1/instructor/assessments", {
+      const res = await fetch("https://localhost:7157/api/v1/assessments", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -73,25 +90,40 @@ function instructorAssessmentsPage() {
         body: JSON.stringify(this.newAssessment),
       });
       if (res.ok) {
+        alert("Assessment created successfully")
         this.showCreateModal = false;
         this.newAssessment = {
           title: "",
           description: "",
           technologyStack: "",
           durationInMinutes: 0,
+          batchIds: [],
           startDate: "",
           endDate: "",
           passingScore: 0,
-          batchIds: [],
         };
-        await this.fetchPage(1);
+        console.log(this.newAssessment)
+        await this.fetchPage();
       } else {
         alert("Failed to create assessment.");
       }
     },
+    prevPage() {
+      if (this.pagination.hasPreviousPage) {
+        this.currentPage--;
+        this.fetchStudents();
+      }
+    },
 
+    nextPage() {
+      if (this.pagination.hasNextPage) {
+        this.currentPage++;
+        this.fetchStudents();
+      }
+    },
     applyFilters() {
-      this.fetchPage(1);
+      this.pagination.currentPage = 1;
+      this.fetchPage();
     },
 
     drawAllCharts() {

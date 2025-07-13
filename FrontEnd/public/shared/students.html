@@ -5,8 +5,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Students | Admin</title>
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jwt-decode@3.1.2/build/jwt-decode.min.js"></script>
   <style>
     [x-cloak] {
       display: none !important;
@@ -16,11 +18,16 @@
 
 <body class="bg-gray-100 text-gray-800">
   <div id="sidebar-placeholder"></div>
+
   <div class="md:ml-64 p-6 space-y-6" x-cloak>
     <div id="navbar-placeholder"></div>
 
     <div class="flex justify-between items-center">
       <h2 class="text-2xl font-bold">Students</h2>
+      <button id="addStudentBtn" @click="openCreateModal"
+        class="bg-indigo-600 text-white px-4 py-2 rounded text-sm hover:bg-indigo-700 disabled:opacity-50">
+        ➕ Add Student
+      </button>
     </div>
 
     <!-- Filters -->
@@ -83,7 +90,7 @@
       <div class="flex justify-between items-center mt-4">
         <button @click="prevPage" :disabled="!pagination.hasPreviousPage"
           class="px-3 py-1 rounded bg-gray-200 text-sm hover:bg-gray-300 disabled:opacity-50">Previous</button>
-        <span class="text-sm">Page <span x-text="pagination.currentPage + 1"></span> of <span
+        <span class="text-sm">Page <span x-text="pagination.currentPage"></span> of <span
             x-text="pagination.totalPages"></span></span>
         <button @click="nextPage" :disabled="!pagination.hasNextPage"
           class="px-3 py-1 rounded bg-gray-200 text-sm hover:bg-gray-300 disabled:opacity-50">Next</button>
@@ -91,7 +98,37 @@
     </div>
   </div>
 
-  <script src="/public/assets/js/shared/students.js"></script>
+  <!-- Create Student Modal -->
+  <div x-show="showCreateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg w-full max-w-lg p-6 space-y-4" @click.outside="closeCreateModal">
+      <h3 class="text-xl font-semibold text-gray-800">Create Student</h3>
+      <form @submit.prevent="submitStudent">
+        <div class="space-y-4">
+          <input type="text" placeholder="Full Name" x-model="newStudent.fullName" required
+            class="w-full border px-3 py-2 rounded" />
+          <input type="email" placeholder="Email" x-model="newStudent.email" required
+            class="w-full border px-3 py-2 rounded" />
+          <input type="password" placeholder="Password" x-model="newStudent.password" required
+            class="w-full border px-3 py-2 rounded" />
+          <input type="password" placeholder="Confirm Password" x-model="newStudent.confirmPassword" required
+            class="w-full border px-3 py-2 rounded" />
+          <select x-model="newStudent.batchId" required class="w-full border px-3 py-2 rounded">
+            <option value="" disabled>Select Batch</option>
+            <template x-for="batch in batches" :key="batch.id">
+              <option :value="batch.id" x-text="batch.name"></option>
+            </template>
+          </select>
+        </div>
+        <div class="flex justify-end mt-4 space-x-2">
+          <button type="button" @click="closeCreateModal" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
+          <button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded hover:bg-indigo-700">Create</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/public/assets/js/shared/students.js">
+  </script>
 </body>
 
 </html>

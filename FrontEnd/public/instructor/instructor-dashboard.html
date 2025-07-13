@@ -25,19 +25,19 @@
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
       <div class="bg-white p-4 rounded shadow">
         <div class="text-sm text-gray-500">📘 My Assessments</div>
-        <div class="text-xl font-semibold" x-text="summary.totalAssessments"></div>
+        <div class="text-xl font-semibold" x-text="summary.totalAssessments || 0"></div>
       </div>
       <div class="bg-white p-4 rounded shadow">
         <div class="text-sm text-gray-500">👥 My Students</div>
-        <div class="text-xl font-semibold" x-text="summary.totalStudents"></div>
+        <div class="text-xl font-semibold" x-text="summary.totalStudents || 0"></div>
       </div>
       <div class="bg-white p-4 rounded shadow">
         <div class="text-sm text-gray-500">🎯 Avg Score</div>
-        <div class="text-xl font-semibold" x-text="summary.avgScore + '%' "></div>
+        <div class="text-xl font-semibold" x-text="summary.avgScore || 0 + '%' "></div>
       </div>
       <div class="bg-white p-4 rounded shadow">
         <div class="text-sm text-gray-500">📊 Pass Rate</div>
-        <div class="text-xl font-semibold" x-text="summary.passRate + '%' "></div>
+        <div class="text-xl font-semibold" x-text="summary.passRate || 0 + '%' "></div>
       </div>
     </div>
 

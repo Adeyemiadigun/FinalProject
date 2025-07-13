@@ -51,7 +51,12 @@ namespace Application.Services
                 assessment.AssessmentAssignments.Add(assignment);
             }
             _assessmentRepository.Update(assessment);
-            _backgroundService.Enqueue<IEmailService>(emailService => emailService.SendBulkEmailAsync(validStudentIds, "New Assessment", new AssessmentDto()
+            var validstudentDto = validStudentIds.Select(x => new UserDto
+            {
+                Email = x.Email,
+                FullName = x.FullName
+            }).ToList();
+            _backgroundService.Enqueue<IEmailService>(emailService => emailService.SendBulkEmailAsync(validstudentDto, "New Assessment", new AssessmentDto()
             {
                 Title = assessment.Title,
                 Description = assessment.Description,
@@ -65,7 +70,7 @@ namespace Application.Services
             var delay = reminderTime - DateTime.UtcNow;
             if (delay > TimeSpan.Zero)
             {
-                _backgroundService.Schedule<IEmailService>((emailService => emailService.SendBulkEmailAsync(validStudentIds, "Assessment Reminder", new AssessmentDto() {
+                _backgroundService.Schedule<IEmailService>((emailService => emailService.SendBulkEmailAsync(validstudentDto, "Assessment Reminder", new AssessmentDto() {
                     Title = assessment.Title,
                     Description = assessment.Description,
                     TechnologyStack = assessment.TechnologyStack,

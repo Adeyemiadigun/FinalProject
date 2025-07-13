@@ -1,4 +1,5 @@
-﻿using Application.Exceptions;
+﻿using System.Text.Json;
+using Application.Exceptions;
 using Application.Interfaces.ExternalServices.AIProviderStrategy;
 using Infrastructure.Configurations;
 using Microsoft.Extensions.Options;
@@ -19,7 +20,9 @@ namespace Application.Services
             {
                 return null!;
             }
-            var actualPayload = template.Replace("{{prompt}}", prompt);
+            var escapedPrompt = JsonSerializer.Serialize(prompt); 
+            escapedPrompt = escapedPrompt.Trim('"');
+            var actualPayload = template.Replace("{{prompt}}", escapedPrompt);
             return actualPayload;
         }
     }

@@ -22,7 +22,7 @@ namespace Infrastructure.ExternalServices
             Password = _config["SMTP:password"]!;
             _logger = logger;
         }
-        public async Task<bool> SendBulkEmailAsync(ICollection<User> to, string subject, AssessmentDto assessment)
+        public async Task<bool> SendBulkEmailAsync(ICollection<UserDto> to, string subject, AssessmentDto assessment)
         {
             if (to == null || to.Any(x => string.IsNullOrWhiteSpace(x.Email)))
             {
@@ -63,7 +63,7 @@ namespace Infrastructure.ExternalServices
             return true;
         }
 
-        public async Task SendEmailAsync(User to, string subject, string body)
+        public async Task SendEmailAsync(UserDto to, string subject, string body)
         {
             try
             {
@@ -93,7 +93,7 @@ namespace Infrastructure.ExternalServices
             }
         }
 
-        public async Task<bool> SendResultEmailAsync( Submission submission, User user)
+        public async Task<bool> SendResultEmailAsync( Submission submission, UserDto user)
         {
             if (user == null)
             {
@@ -132,7 +132,7 @@ namespace Infrastructure.ExternalServices
             return true;
         }
 
-        public string Template(User user, AssessmentDto assessment)
+        public string Template(UserDto user, AssessmentDto assessment)
         {
             string template = $@"
                 <html>
@@ -164,7 +164,7 @@ namespace Infrastructure.ExternalServices
                 </html>";
             return template;
         }
-        public string ResultTemplate(User user , Submission submission)
+        public string ResultTemplate(UserDto user , Submission submission)
         {
             string template = $@"
                 <html>

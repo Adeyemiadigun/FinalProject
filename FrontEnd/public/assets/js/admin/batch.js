@@ -17,10 +17,15 @@ function batchPage() {
       await this.fetchMetrics();
       this.drawCharts(); // Dummy for now or add real endpoint if exists
     },
+    logOut() {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("userRole");
+      window.location.href = "/public/auth/login.html";
+    },
 
     async fetchBatchOptions() {
-      const token = localStorage.getItem("token");
-      const res = await fetch("/api/v1/admin/batches/all", {
+      const token = localStorage.getItem("accessToken");
+      const res = await fetch("http://localhost:5162/api/v1/Batches/all", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -28,9 +33,9 @@ function batchPage() {
     },
 
     async fetchBatchList() {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("accessToken");
       const res = await fetch(
-        `/api/v1/admin/batches/analytics?pageNumber=1&pageSize=10`,
+        `http://localhost:5162/api/v1/Dashboard/admin/batches/analytics?PageSize=10&CurrentPage=1`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -46,19 +51,36 @@ function batchPage() {
     },
 
     async fetchMetrics() {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("accessToken");
       const batchIdParam = this.selectedBatchId
         ? `?batchId=${this.selectedBatchId}`
         : "";
-      const res = await fetch(`/api/v1/admin/batch/analytics${batchIdParam}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `http://localhost:5162/api/v1/Dashboard/admin/batch/analytics${batchIdParam}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       const data = await res.json();
       this.metrics = data.data;
     },
+    async fetchTrend() {
+      const token = localStorage.getItem("accessToken");
+      const batchIdParam = this.selectedBatchId
+        ? `?batchId=${this.selectedBatchId}`
+        : "";
+      const res = await fetch(
+        `http://localhost:5162/api/v1/Dashboard/admin/batches/performance-trend${batchIdParam}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const data = await res.json();
+      this.trendChart = data.data;
+    },
 
     async createBatch() {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("accessToken");
       const payload = {
         name: this.newBatch.name,
         batchNumber: parseInt(this.newBatch.number),
@@ -66,7 +88,7 @@ function batchPage() {
         endDate: null,
       };
 
-      const res = await fetch("/api/v1/admin/batches", {
+      const res = await fetch("http://localhost:5162/api/v1/Batches", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -85,15 +107,15 @@ function batchPage() {
       }
     },
 
-    drawCharts() {
+    drawCharts(data) {
       this.trendChart = new Chart(document.getElementById("trendChart"), {
         type: "line",
         data: {
-          labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
+          labels: data.map((d) => d.label),
           datasets: [
             {
               label: "Avg Score",
-              data: [70, 75, 74, 78],
+              data: data.map((d) => d.scores),
               fill: false,
               borderColor: "#3b82f6",
               tension: 0.4,

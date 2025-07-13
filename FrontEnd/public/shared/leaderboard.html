@@ -34,7 +34,6 @@
           <label class="block text-sm font-medium text-gray-700 mb-1">Filter by Batch</label>
           <select x-model="selectedBatch" @change="filterByBatch"
             class="border border-gray-300 rounded px-3 py-2 text-sm">
-            <option value="">All Batches</option>
             <template x-for="batch in batches" :key="batch.id">
               <option :value="batch.id" x-text="batch.name"></option>
             </template>
@@ -48,8 +47,7 @@
           <thead class="bg-gray-50 border-b">
             <tr>
               <th class="p-2">Rank</th>
-              <th class="p-2">Student</th>
-              <th class="p-2">Batch</th>
+              <th class="p-2">Student</th>\
               <th class="p-2">Avg Score</th>
               <th class="p-2">Highest</th>
               <th class="p-2">Completed</th>
@@ -57,10 +55,9 @@
           </thead>
           <tbody>
             <template x-for="(student, index) in leaderboard" :key="student.id">
-              <tr class="border-t hover:bg-gray-50">
+              <tr class="border-t hover:bg-gray-50" @click="viewStudentDetails(student.id)">
                 <td class="p-2 font-medium" x-text="(pagination.pageNumber - 1) * pagination.pageSize + index + 1"></td>
                 <td class="p-2" x-text="student.name"></td>
-                <td class="p-2" x-text="student.batch"></td>
                 <td class="p-2" x-text="student.avgScore + '%'"></td>
                 <td class="p-2" x-text="student.highestScore + '%'"></td>
                 <td class="p-2" x-text="student.completedAssessments"></td>

@@ -10,9 +10,9 @@ namespace Application.Interfaces.ExternalServices
 {
     public interface IEmailService
     {
-        Task SendEmailAsync(User to, string subject, string body);
-        Task<bool> SendResultEmailAsync(Submission submission, User user);
+        Task SendEmailAsync(UserDto to, string subject, string body);
+        Task<bool> SendResultEmailAsync(Submission submission, UserDto user);
 
-        Task<bool> SendBulkEmailAsync(ICollection<User> to, string subject, AssessmentDto assessment);
+        Task<bool> SendBulkEmailAsync(ICollection<UserDto> to, string subject, AssessmentDto assessment);
     }
 }

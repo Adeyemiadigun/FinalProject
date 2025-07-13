@@ -7,6 +7,7 @@ namespace Application.Interfaces.Services
     {
         Task<BaseResponse<UserDto>> RegisterInstructor(RegisterIstructorRequestModel model);
         Task<BaseResponse<UserDto>> RegisterStudents(BulkRegisterUserRequestModel model);
+        Task<BaseResponse<List<UserDto>>> GetInstructors();
         Task<BaseResponse<UserDto>> RegisterStudent(RegisterUserRequestModel model);
         Task<BaseResponse<UserDto>> GetAsync(Guid id);
         Task<BaseResponse<PaginationDto<UserDto>>> GetAllByBatchId(Guid id, PaginationRequest request);
@@ -14,9 +15,9 @@ namespace Application.Interfaces.Services
         
             Task<BaseResponse<UserDto>> UpdateUser(UpdateUserRequsteModel model);
         Task<BaseResponse<UserDto>> DeleteAsync(Guid id);
-        Task<BaseResponse<PaginationDto<UserDto>>> SearchByNameOrEmailAsync(string query, PaginationRequest request, string? status = null);
+        Task<BaseResponse<PaginationDto<UserDto>>> SearchByNameOrEmailAsync(Guid? batchId,string? query, PaginationRequest request, string? status = null);
         Task<BaseResponse<PaginationDto<LeaderboardDto>>> GetLeaderboardAsync(Guid? batchId, PaginationRequest request);
-        Task<BaseResponse<List<UserDto>>> SearchInstructorByNameOrEmailAsync(string query, string? status = null);
+        Task<BaseResponse<PaginationDto<UserDto>>> SearchInstructorByNameOrEmailAsync(string? query, PaginationRequest request, string? status = null);
         Task<BaseResponse<StudentDetail>> GetStudentDetail(Guid id);
         Task<BaseResponse<StudentAnalytics>> GetStudentAnalytics(Guid id);
         Task<BaseResponse<UserDto>> UpdateStudentBatch(Guid studentId, Guid newBatchId);

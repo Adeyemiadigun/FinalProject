@@ -11,19 +11,24 @@
 </head>
 
 <body class="bg-gray-100 text-gray-800" x-data="{ sidebarOpen: false }" x-init="initLayout()">
+
+  <!-- Sidebar -->
   <div id="sidebar-placeholder"
     :class="sidebarOpen ? 'fixed inset-y-0 left-0 w-64 z-40' : 'hidden md:block fixed inset-y-0 left-0 w-64 z-40'">
   </div>
 
+  <!-- Main Content -->
   <div class="md:ml-64 min-h-screen flex flex-col">
     <div id="navbar-placeholder"></div>
 
     <main class="flex-grow px-6 py-6 space-y-10">
+      <!-- Header -->
       <section>
         <h1 class="text-3xl font-bold" x-text="'Welcome, ' + student.name"></h1>
         <p class="text-gray-600 text-sm mt-1" x-text="'Batch: ' + student.batch"></p>
       </section>
 
+      <!-- Summary Cards -->
       <section class="grid grid-cols-2 md:grid-cols-4 gap-6">
         <template x-for="(value, label) in summaryCards" :key="label">
           <div class="bg-white p-4 rounded shadow text-center">
@@ -33,10 +38,82 @@
         </template>
       </section>
 
-      <!-- The rest remains as-is -->
+      <!-- Ongoing Assessments -->
+      <section class="bg-white p-6 rounded shadow" x-show="ongoing.length > 0">
+        <h2 class="text-xl font-semibold mb-4">🚀 Ongoing Assessments</h2>
+        <ul class="divide-y">
+          <template x-for="a in ongoing" :key="a.id">
+            <li class="flex justify-between items-center py-3">
+              <div>
+                <h3 class="font-medium" x-text="a.title"></h3>
+                <p class="text-sm text-gray-500" x-text="formatDate(a.startedDate) + ' • ' + a.type"></p>
+              </div>
+              <a :href="`/student/assessment.html?id=${a.id}`"
+                class="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700">Enter</a>
+            </li>
+          </template>
+        </ul>
+      </section>
+
+      <!-- Upcoming Assessments -->
+      <section class="bg-white p-6 rounded shadow" x-show="upcoming.length > 0">
+        <h2 class="text-xl font-semibold mb-4">🕒 Upcoming Assessments</h2>
+        <ul class="divide-y">
+          <template x-for="a in upcoming" :key="a.id">
+            <li class="flex justify-between items-center py-3">
+              <div>
+                <h3 class="font-medium" x-text="a.title"></h3>
+                <p class="text-sm text-gray-500"
+                  x-text="formatDate(a.startedDate) + ' • ' + a.duration + ' mins • ' + a.type"></p>
+              </div>
+            </li>
+          </template>
+        </ul>
+      </section>
+
+      <!-- Score Trend -->
+      <section class="bg-white p-6 rounded shadow">
+        <h2 class="text-xl font-semibold mb-4">📈 Score Trend</h2>
+        <canvas id="performanceChart" class="w-full h-56"></canvas>
+      </section>
+
+      <!-- Submitted Assessments -->
+      <section class="bg-white p-6 rounded shadow">
+        <h2 class="text-xl font-semibold mb-4">📚 Submitted Assessments</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm table-auto">
+            <thead class="bg-gray-50 text-gray-600">
+              <tr>
+                <th class="p-2 text-left">Title</th>
+                <th class="p-2 text-left">Score</th>
+                <th class="p-2 text-left">Submitted At</th>
+                <th class="p-2 text-left">Feedback</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="h in history" :key="h.id">
+                <tr class="border-t hover:bg-gray-50">
+                  <td class="p-2" x-text="h.assessmentTitle"></td>
+                  <td class="p-2" x-text="h.totalScore + '%'"></td>
+                  <td class="p-2" x-text="formatDate(h.submittedAt)"></td>
+                  <td class="p-2" x-text="h.feedBack || '—'"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 🏆 Student Ranking (Pending API Integration) -->
+      <section class="bg-white p-6 rounded shadow">
+        <h2 class="text-xl font-semibold mb-4">🏆 Student Ranking in Batch</h2>
+        <p class="text-sm text-gray-500">Coming soon...</p>
+      </section>
+
     </main>
   </div>
 
+  <!-- JavaScript Logic -->
   <script>
     async function loadComponent(id, path) {
       const res = await fetch(path);
@@ -47,36 +124,100 @@
     function initLayout() {
       loadComponent('sidebar-placeholder', '/public/components/sidebar-student.html');
       loadComponent('navbar-placeholder', '/public/components/navbar-student.html');
-
-      window.addEventListener('toggle-sidebar', () => {
-        document.querySelector('#sidebar-placeholder')?.classList.toggle('hidden');
-      });
     }
 
     function dashboardApp() {
       return {
         student: { name: '', batch: '' },
         summaryCards: {},
-        initDashboard() {
-          const token = localStorage.getItem("token");
-          const headers = { "Authorization": `Bearer ${token}` };
+        ongoing: [],
+        upcoming: [],
+        history: [],
+        scoreTrend: [],
 
-          fetch("/api/v1/student/dashboard", { headers })
-            .then(res => res.json())
-            .then(data => {
-              const stats = data.data;
-              this.summaryCards = {
-                "Total Assessments": stats.totalAssessments,
-                "Avg Score": stats.averageScore.toFixed(2) + '%',
-                "Completion Rate": stats.completionRate.toFixed(2) + '%',
-                "Completed": stats.completedAssessments
-              };
-              this.student.name = stats.fullName ?? 'Student';
-              this.student.batch = stats.batchName ?? '';
-            });
+        async initDashboard() {
+          const token = localStorage.getItem('accessToken');
+          const headers = { Authorization: `Bearer ${token}` };
+
+          await Promise.all([
+            this.fetchStudentInfo(headers),
+            this.fetchSummary(headers),
+            this.fetchOngoing(headers),
+            this.fetchUpcoming(headers),
+            this.fetchHistory(headers),
+            this.fetchTrend(headers)
+          ]);
+        },
+
+        async fetchStudentInfo(headers) {
+          // optional: if you have a separate endpoint for student profile
+          this.student.name = localStorage.getItem('userFullName') || "Student";
+          this.student.batch = localStorage.getItem('userBatch') || "—";
+        },
+
+        async fetchSummary(headers) {
+          const res = await fetch('/api/v1/student/dashboard', { headers });
+          const data = await res.json();
+          const d = data.data;
+          this.summaryCards = {
+            "Total Assessments": d.totalAssessments,
+            "Avg Score": `${Math.round(d.averageScore)}%`,
+            "Completion Rate": `${Math.round(d.completionRate)}%`,
+            "Completed": d.completedAssessments
+          };
+        },
+
+        async fetchOngoing(headers) {
+          const res = await fetch('/api/v1/student/ongoing', { headers });
+          const data = await res.json();
+          this.ongoing = data.data || [];
+        },
+
+        async fetchUpcoming(headers) {
+          const res = await fetch('/api/v1/student/upcoming', { headers });
+          const data = await res.json();
+          this.upcoming = data.data || [];
+        },
+
+        async fetchHistory(headers) {
+          const res = await fetch('/api/v1/student/history', { headers });
+          const data = await res.json();
+          this.history = data.data || [];
+        },
+
+        async fetchTrend(headers) {
+          const res = await fetch('/api/v1/student/performance-trend', { headers });
+          const data = await res.json();
+          const labels = data.data.map(x => x.labels);
+          const scores = data.data.map(x => x.scores);
+          new Chart(document.getElementById("performanceChart"), {
+            type: 'line',
+            data: {
+              labels: labels,
+              datasets: [{
+                label: 'Score %',
+                data: scores,
+                borderColor: '#6366f1',
+                tension: 0.4,
+                fill: false
+              }]
+            },
+            options: {
+              responsive: true,
+              scales: { y: { beginAtZero: true, max: 100 } }
+            }
+          });
+        },
+
+        formatDate(dateStr) {
+          const d = new Date(dateStr);
+          return d.toLocaleDateString('en-US', {
+            year: 'numeric', month: 'short', day: 'numeric'
+          });
         }
-      }
+      };
     }
   </script>
 </body>
+
 </html>

@@ -1,4 +1,5 @@
-﻿using Application.Exceptions;
+﻿using Application.Dtos;
+using Application.Exceptions;
 using Application.Interfaces.ExternalServices;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
@@ -39,7 +40,13 @@ namespace Application.Services
             submission.FeedBack = submission.TotalScore >= submission.Assessment.PassingScore ? "You Passed the assessment" : "You failed the assessment";
              _submissionRepository.Update(submission);
             await _unitOfWork.SaveChangesAsync();
-            await _emailService.SendResultEmailAsync(submission, submission.Student);
+            var student = submission.Student;
+            var studentDto = new UserDto()
+            {
+                Email = student.Email,
+                FullName = student.FullName,
+            };
+            await _emailService.SendResultEmailAsync(submission, studentDto);
 
         }
     }

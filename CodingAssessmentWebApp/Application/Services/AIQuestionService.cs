@@ -52,56 +52,45 @@ namespace Application.Services
         {
             return request.QuestionType switch
             {
-                QuestionType.MCQ => @$"
-                    Generate a {request.Difficulty} multiple-choice question (MCQ) in the {request.TechnologyStack} domain. 
+                QuestionType.MCQ =>
+                    $"Generate a {request.Difficulty} multiple-choice question (MCQ) in the {request.TechnologyStack} domain. " +
+                    "Format the response strictly in this JSON structure: " +
+                    "{{ " +
+                    "\"questionText\": \"<question>\", " +
+                    "\"questionType\": \"MCQ\", " +
+                    "\"options\": [" +
+                        "{ \"optionText\": \"Option A\", \"isCorrect\": false }, " +
+                        "{ \"optionText\": \"Option B\", \"isCorrect\": true }, " +
+                        "{ \"optionText\": \"Option C\", \"isCorrect\": false }, " +
+                        "{ \"optionText\": \"Option D\", \"isCorrect\": false } " +
+                    "] " +
+                    "}}",
 
-                    Format the response strictly in this JSON structure:
-                    {{
-                      ""questionText"": ""<question>"",
-                      ""questionType"": ""MCQ"",
-                      ""options"": [
-                        {{ ""optionText"": ""Option A"", ""isCorrect"": false }},
-                        {{ ""optionText"": ""Option B"", ""isCorrect"": true }},
-                        {{ ""optionText"": ""Option C"", ""isCorrect"": false }},
-                        {{ ""optionText"": ""Option D"", ""isCorrect"": false }}
-                      ]
-                    }}",
+                QuestionType.Objective =>
+                    $"Generate a {request.Difficulty} objective question in {request.TechnologyStack} that requires a short text-based answer. " +
+                    "Return it strictly in this JSON format: " +
+                    "{{ " +
+                    "\"questionText\": \"<question>\", " +
+                    "\"questionType\": \"Objective\", " +
+                    "\"answerText\": \"<short-answer>\" " +
+                    "}}",
 
-                QuestionType.Objective => @$"
-                    Generate a {request.Difficulty} objective question in {request.TechnologyStack} that requires a short text-based answer.
+                QuestionType.Coding =>
+                    $"Generate a {request.Difficulty} coding challenge in {request.TechnologyStack}. " +
+                    "It should include a concise problem statement, and a list of test cases with input, expected output, and weight. " +
+                    "Return it strictly in this JSON format: " +
+                    "{{ " +
+                    "\"questionText\": \"<problem description>\", " +
+                    "\"questionType\": \"Coding\", " +
+                    "\"testCases\": [" +
+                        "{ \"input\": \"input string here\", \"expectedOutput\": \"expected output here\", \"weight\": 5 }, " +
+                        "{ \"input\": \"another input\", \"expectedOutput\": \"another output\", \"weight\": 5 } " +
+                    "] " +
+                    "}}",
 
-                    Return it strictly in this JSON format:
-                    {{
-                      ""questionText"": ""<question>"",
-                      ""questionType"": ""Objective"",
-                      ""answerText"": ""<short-answer>""
-                    }}",
+                _ => throw new ArgumentException("Invalid question type")
+            };
 
-                QuestionType.Coding => @$"
-                    Generate a {request.Difficulty} coding challenge in {request.TechnologyStack}.
-
-                    It should include a concise problem statement, and a list of test cases with input, expected output, and weight for each.
-
-                    Return it strictly in this JSON format:
-                    {{
-                      ""questionText"": ""<problem description>"",
-                      ""questionType"": ""Coding"",
-                      ""testCases"": [
-                        {{
-                          ""input"": ""input string here"",
-                          ""expectedOutput"": ""expected output here"",
-                          ""weight"": 5
-                        }},
-                        {{
-                          ""input"": ""another input"",
-                          ""expectedOutput"": ""another output"",
-                          ""weight"": 5
-                        }}
-                      ]
-                    }}",
-
-                    _ => throw new ArgumentException("Invalid question type")
-               };
         }
 
     }

@@ -11,14 +11,14 @@ function loadLayout() {
       (html) => (document.getElementById("navbar-placeholder").innerHTML = html)
     );
 }
-
 function instructorsPage() {
   return {
     instructors: [],
     search: "",
     statusFilter: "",
-    page: 1,
-    perPage: 10,
+    currentPage: 1,
+    pagination: {},
+    pageSize: 10,
     showCreateModal: false,
     newInstructor: {
       fullName: "",
@@ -31,18 +31,42 @@ function instructorsPage() {
       this.fetchInstructors();
     },
 
-    fetchInstructors() {
-      fetch("/api/admin/instructors", {
-        headers: { Authorization: "Bearer " + localStorage.getItem("token") },
-      })
-        .then((res) => res.json())
-        .then((data) => (this.instructors = data));
+    async fetchInstructors() {
+      const params = new URLSearchParams();
+      if (this.searchQuery) params.append("query", this.search);
+      if (this.statusFilter) params.append("status", this.statusFilter);
+      params.append("pageSize", this.pageSize);
+      params.append("currentPage", this.currentPage);
+
+      try {
+        const res = await fetch(
+          `http://localhost:5162/api/v1/Instructors/search?${params.toString()}`,
+          {
+            headers: {
+              Authorization: "Bearer " + localStorage.getItem("accessToken"),
+            },
+          }
+        );
+        const data = await res.json();
+        console.log("Response data:", data);
+        if (data.status) {
+          this.instructors = data.data.items;
+          this.pagination = data.data;
+          console.log(this.pagination);
+          console.log(this.instructors);
+        } else {
+          this.instructors = [];
+          this.pagination = {};
+        }
+      } catch (err) {
+        console.error("Failed to fetch students:", err);
+      }
     },
 
     async registerInstructor() {
       const payload = { ...this.newInstructor };
 
-      const response = await fetch("/api/admin/register-instructor", {
+      const response = await fetch("http://localhost:5162/api/v1/Instructors", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -71,34 +95,31 @@ function instructorsPage() {
       };
     },
 
-    get filteredInstructors() {
-      return this.instructors.filter(
-        (i) =>
-          (!this.search ||
-            i.name.toLowerCase().includes(this.search.toLowerCase()) ||
-            i.email.toLowerCase().includes(this.search.toLowerCase())) &&
-          (!this.statusFilter || i.status === this.statusFilter)
-      );
+    resetAndFetch() {
+      this.currentPage = 1;
+      this.fetchInstructors();
     },
 
-    get paginatedInstructors() {
-      const start = (this.page - 1) * this.perPage;
-      return this.filteredInstructors.slice(start, start + this.perPage);
-    },
-
-    get totalPages() {
-      return Math.ceil(this.filteredInstructors.length / this.perPage);
-    },
-
-    nextPage() {
-      if (this.page < this.totalPages) this.page++;
-    },
     prevPage() {
-      if (this.page > 1) this.page--;
+      if (this.pagination.hasPreviousPage) {
+        this.currentPage--;
+        this.fetchStudents();
+      }
+    },
+    logOut() {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("userRole");
+      window.location.href = "/public/auth/login.html";
+    },
+    nextPage() {
+      if (this.pagination.hasNextPage) {
+        this.currentPage++;
+        this.fetchStudents();
+      }
     },
 
     viewInstructor(instructor) {
-      window.location.href = `/admin/instructor-details.html?id=${instructor.id}`;
+      window.location.href = `/public/admin/instructor-details.html?id=${instructor.id}`;
     },
 
     editInstructor(instructor) {
