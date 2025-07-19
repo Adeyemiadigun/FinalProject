@@ -3,6 +3,7 @@ using Domain.Entities;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System;
+using System.Diagnostics;
 
 namespace Infrastructure.Repositories
 {
@@ -19,7 +20,12 @@ namespace Infrastructure.Repositories
                     .ThenInclude(a => a.SelectedOptions)
                 .FirstOrDefaultAsync(p => p.StudentId == studentId && p.AssessmentId == assessmentId);
         }
+        public async Task RemoveAnswersAndOptionsAsync(StudentAssessmentProgress progress)
+        {
+            _context.InProgressSelectedOptions.RemoveRange(progress.Answers.SelectMany(a => a.SelectedOptions));
+            _context.InProgressAnswers.RemoveRange(progress.Answers);
+            await Task.CompletedTask;
+        }
 
     }
-
 }

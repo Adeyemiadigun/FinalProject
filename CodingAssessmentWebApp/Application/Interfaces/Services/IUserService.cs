@@ -6,6 +6,7 @@ namespace Application.Interfaces.Services
     public interface IUserService
     {
         Task<BaseResponse<UserDto>> RegisterInstructor(RegisterIstructorRequestModel model);
+        Task<BaseResponse<UserDto>> UploadStudentFileAsync(UploadFileDto studentFile);
         Task<BaseResponse<UserDto>> RegisterStudents(BulkRegisterUserRequestModel model);
         Task<BaseResponse<List<UserDto>>> GetInstructors();
         Task<BaseResponse<UserDto>> RegisterStudent(RegisterUserRequestModel model);
@@ -17,6 +18,7 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<UserDto>> DeleteAsync(Guid id);
         Task<BaseResponse<PaginationDto<UserDto>>> SearchByNameOrEmailAsync(Guid? batchId,string? query, PaginationRequest request, string? status = null);
         Task<BaseResponse<PaginationDto<LeaderboardDto>>> GetLeaderboardAsync(Guid? batchId, PaginationRequest request);
+        Task<BaseResponse<PaginationDto<LeaderboardDto>>> GetStudentBatchLeaderboardAsync(PaginationRequest request);
         Task<BaseResponse<PaginationDto<UserDto>>> SearchInstructorByNameOrEmailAsync(string? query, PaginationRequest request, string? status = null);
         Task<BaseResponse<StudentDetail>> GetStudentDetail(Guid id);
         Task<BaseResponse<StudentAnalytics>> GetStudentAnalytics(Guid id);
@@ -28,5 +30,8 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<List<StudentAssessmentDto>>> GetUpcomingAssessmentsAsync();
         Task<BaseResponse<List<StudentScoreTrendDto>>> GetStudentScoreTrendsAsync();
         Task<BaseResponse<List<SubmissionDto>>> GetSubmittedAssessmentsAsync();
+        Task<BaseResponse<StudentDetail>> GetStudentDetail();
+        Task<BaseResponse<StudentProfileMetrics>> GetStudentMetrics();
+        Task<BaseResponse<List<SubmissionsDto>>> GetStudentSubmissionsAsync(Guid studentId);
     }
 }

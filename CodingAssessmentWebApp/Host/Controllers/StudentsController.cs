@@ -12,7 +12,7 @@ namespace Host.Controllers
     [ApiController]
     [Route("api/v{version:apiVersion}/[controller]")]
     [ApiVersion("1.0")]
-    public class StudentsController(IUserService _userService, IAssessmentService _assementService) : ControllerBase
+    public class StudentsController(IUserService _userService, IAssessmentService _assementService,ISubmissionService submissionService) : ControllerBase
     {
         [HttpPost]
         public async Task<IActionResult> RegisterStudents([FromBody] BulkRegisterUserRequestModel model)
@@ -20,10 +20,22 @@ namespace Host.Controllers
             var response = await _userService.RegisterStudents(model);
             return response.Status ? Created("Students Registered", response) : BadRequest(response);
         }
+        [HttpPost("upload")]
+        public async Task<IActionResult> UploadStudentFile(UploadFileDto fileUpload)
+        {
+            var res = await _userService.UploadStudentFileAsync(fileUpload);
+            return Ok(res);
+        }
         [HttpGet("{studentId:guid}/details")]
         public async Task<IActionResult> GetStudentDetais(Guid studentId)
         {
             var response = await _userService.GetStudentDetail(studentId);
+            return response.Status ? Ok(response) : NotFound(response);
+        }
+        [HttpGet("details")]
+        public async Task<IActionResult> GetCurrentStudentDetais()
+        {
+            var response = await _userService.GetStudentDetail();
             return response.Status ? Ok(response) : NotFound(response);
         }
         [HttpGet("{studentId:guid}/assessments")]
@@ -33,7 +45,7 @@ namespace Host.Controllers
             return response.Status ? Ok(response) : NotFound(response);
         }
         [HttpGet("assessments")]
-        public async Task<IActionResult> GetStudentsAssessment([FromQuery] PaginationRequest request, [FromQuery] string status)
+        public async Task<IActionResult> GetStudentsAssessment([FromQuery] PaginationRequest request, [FromQuery] string? status)
         {
             var response = await _assementService.GetCurrentStudentAssessments(request, status);
             return response.Status ? Ok(response) : NotFound(response);
@@ -51,6 +63,12 @@ namespace Host.Controllers
         public async Task<IActionResult> GetLeaderboard([FromQuery] Guid batchId, [FromQuery] PaginationRequest request)
         {
             var result = await _userService.GetLeaderboardAsync(batchId, request);
+            return Ok(result);
+        }
+        [HttpGet("batch/leaderboard")]
+        public async Task<IActionResult> CurrentStudentLeaaderBoard([FromQuery] PaginationRequest request)
+        {
+            var result = await _userService.GetStudentBatchLeaderboardAsync(request);
             return Ok(result);
         }
         [HttpGet("{studentId:guid}/analytics")]
@@ -103,6 +121,31 @@ namespace Host.Controllers
         public async Task<IActionResult> GetSubmittedAssessments()
         {
             var result = await _userService.GetSubmittedAssessmentsAsync();
+            return Ok(result);
+        }
+        [HttpGet("submissions")]
+        public async Task<IActionResult> GetStudentSubmissions([FromQuery] PaginationRequest request)
+        {
+                var result = await submissionService.GetCurrentStudentSubmission(request);
+            return Ok(result);
+        }
+        [HttpGet("{studentId:guid}/submissions")]
+        public async Task<IActionResult> GetStudentSubmissions(Guid studentId)
+        {
+            var result = await _userService.GetStudentSubmissionsAsync(studentId);
+            return Ok(result);
+        }
+        [HttpGet("{submissionId:guid}/submission")]
+        public async Task<IActionResult> GetSubmissionById(Guid submissionId)
+        {
+            var response = await submissionService.GetSubmissionByIdAsync(submissionId);
+            return response.Status ? Ok(response) : NotFound(response);
+        }
+
+        [HttpGet("metrics/summary")]
+        public async Task<IActionResult> GetStudentMetrics()
+        {
+            var result = await _userService.GetStudentMetrics();
             return Ok(result);
         }
 

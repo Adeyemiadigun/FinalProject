@@ -12,6 +12,7 @@ namespace Infrastructure.Repositories
         public async Task<PaginationDto<Submission>> GetAllAsync(Guid assessmentId, PaginationRequest request)
         {
             var query = _context.Set<Submission>()
+                .Include(x => x.Student)
                 .Include(x => x.AnswerSubmissions)
                 .ThenInclude(x => x.Question)
                 .Where(x => x.AssessmentId == assessmentId);
@@ -35,6 +36,7 @@ namespace Infrastructure.Repositories
 
             var result =  _context.Set<Submission>()
                 .Include(x => x.Assessment)
+                .Include(x => x.Student)
                 .Include(x => x.AnswerSubmissions)
                 .ThenInclude(x => x.Question)
                 .Where(exp);
@@ -69,6 +71,7 @@ namespace Infrastructure.Repositories
         public async Task<Submission?> GetAsync(Expression<Func<Submission, bool>> exp)
         {
             return await _context.Set<Submission>()
+                .Include(x => x.Student)
                .Include(x => x.AnswerSubmissions)
                .ThenInclude(x => x.Question)
                 .Include(x => x.Assessment)
@@ -106,6 +109,15 @@ namespace Infrastructure.Repositories
                 CurrentPage = request.CurrentPage,
             };
         }
+        public async Task<List<Guid>> GetAllIdsAsync(Expression<Func<Submission, bool>> predicate)
+        {
+            return await _context.Submissions
+                .Include(x => x.Student)
+                .Where(predicate)
+                .Select(s => s.StudentId)
+                .ToListAsync();
+        }
+
     }
 }
 

@@ -8,6 +8,8 @@ function batchPage() {
     metrics: null,
     trendChart: null,
     difficultyChart: null,
+    trendData: null,
+    sidebarOpen: true,
 
     async init() {
       await loadComponent("sidebar-placeholder", "../components/sidebar.html");
@@ -15,6 +17,7 @@ function batchPage() {
       await this.fetchBatchOptions();
       await this.fetchBatchList();
       await this.fetchMetrics();
+      await this.fetchTrend();
       this.drawCharts(); // Dummy for now or add real endpoint if exists
     },
     logOut() {
@@ -25,7 +28,7 @@ function batchPage() {
 
     async fetchBatchOptions() {
       const token = localStorage.getItem("accessToken");
-      const res = await fetch("http://localhost:5162/api/v1/Batches/all", {
+      const res = await fetch("https://localhost:7157/api/v1/Batches/all", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -35,7 +38,7 @@ function batchPage() {
     async fetchBatchList() {
       const token = localStorage.getItem("accessToken");
       const res = await fetch(
-        `http://localhost:5162/api/v1/Dashboard/admin/batches/analytics?PageSize=10&CurrentPage=1`,
+        `https://localhost:7157/api/v1/Dashboard/admin/batches/analytics?PageSize=10&CurrentPage=1`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -56,7 +59,7 @@ function batchPage() {
         ? `?batchId=${this.selectedBatchId}`
         : "";
       const res = await fetch(
-        `http://localhost:5162/api/v1/Dashboard/admin/batch/analytics${batchIdParam}`,
+        `https://localhost:7157/api/v1/Dashboard/admin/batch/analytics${batchIdParam}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -70,13 +73,14 @@ function batchPage() {
         ? `?batchId=${this.selectedBatchId}`
         : "";
       const res = await fetch(
-        `http://localhost:5162/api/v1/Dashboard/admin/batches/performance-trend${batchIdParam}`,
+        `https://localhost:7157/api/v1/Dashboard/admin/batches/performance-trend${batchIdParam}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
       const data = await res.json();
-      this.trendChart = data.data;
+      this.trendData = data.data;
+      console.log(this.trendData.labels);
     },
 
     async createBatch() {
@@ -88,7 +92,7 @@ function batchPage() {
         endDate: null,
       };
 
-      const res = await fetch("http://localhost:5162/api/v1/Batches", {
+      const res = await fetch("https://localhost:7157/api/v1/Batches", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -107,15 +111,15 @@ function batchPage() {
       }
     },
 
-    drawCharts(data) {
+    drawCharts() {
       this.trendChart = new Chart(document.getElementById("trendChart"), {
         type: "line",
         data: {
-          labels: data.map((d) => d.label),
+          labels: this.trendData.labels || "",
           datasets: [
             {
               label: "Avg Score",
-              data: data.map((d) => d.scores),
+              data: this.trendData.scores || 0,
               fill: false,
               borderColor: "#3b82f6",
               tension: 0.4,

@@ -1,4 +1,5 @@
-﻿using Application.Dtos;
+﻿using System.Threading.Tasks;
+using Application.Dtos;
 using Domain.Entitties;
 
 namespace Application.Interfaces.Services
@@ -11,6 +12,8 @@ namespace Application.Interfaces.Services
         Task<Submission> GetWithAnswersAsync(Guid id);
         Task<PaginationDto<Submission>> GetAllAsync(Guid assessmentId, PaginationRequest request);
         Task<BaseResponse<SubmissionDto>> GetCurrentStudentSubmission(Guid assessmentId);
-       Task<PaginationDto<Submission>> GetStudentSubmissionsAsync(Guid studentId, PaginationRequest request);
+        Task<BaseResponse<PaginationDto<SubmissionDto>>> GetCurrentStudentSubmission(PaginationRequest request);
+        Task<BaseResponse<PaginationDto<SubmissionDto>>> GetAssessmentSubmissions(Guid assessmentId, PaginationRequest request);
+        Task<BaseResponse<SubmissionDto>> GetSubmissionByIdAsync(Guid submissionId);
     }
 }

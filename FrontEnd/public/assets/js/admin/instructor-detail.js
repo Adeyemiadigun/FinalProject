@@ -2,17 +2,17 @@ function instructorDetailsPage() {
   return {
     instructor: {},
     assessments: [],
-
+    sidebarOpen: true,
     async init() {
       const id = new URLSearchParams(window.location.search).get("id");
       const token = localStorage.getItem("accessToken");
 
       const [profileRes, assessmentRes] = await Promise.all([
-        fetch(`http://localhost:5162/api/v1/Instructors/${id}/details`, {
+        fetch(`https://localhost:7157/api/v1/Instructors/${id}/details`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch(
-          `http://localhost:5162/api/v1/Instructors/${id}/assessment/details?pageSize=10&currentPage=1`,
+          `https://localhost:7157/api/v1/Instructors/${id}/assessment/details?pageSize=10&currentPage=1`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }

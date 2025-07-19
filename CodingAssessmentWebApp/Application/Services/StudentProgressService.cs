@@ -26,113 +26,107 @@ namespace Application.Services
         {
             var userId = _currentUser.GetCurrentUserId();
             if (userId == Guid.Empty)
-            {
                 throw new ApiException("User ID is empty.", 400, "INVALID_USER", null);
-            }
-            var selectedOptionCount = saveProgressDto.Answers
-                .SelectMany(a => a.SelectedOptionIds);
-            if (selectedOptionCount.Distinct().Count() != selectedOptionCount.Count())
-                throw new ApiException("Duplicate options selected in answers.", 400, "INVALID_INPUT", selectedOptionCount);
-            // Validate assessment and student exist
-            var studentExists = await _studentRepository.CheckAsync(x => x.Id == userId);
-            var assessmentExists = await _assessmentRepository.CheckAsync(x => x.Id == saveProgressDto.AssessmentId);
 
-            if (!studentExists || !assessmentExists)
+            if (saveProgressDto == null || saveProgressDto.AssessmentId == Guid.Empty)
+                throw new ApiException("Invalid request payload.", 400, "INVALID_INPUT", null);
+
+            // Check student and assessment
+            var studentExists = await _studentRepository.CheckAsync(x => x.Id == userId);
+            var assessment = await _assessmentRepository.GetWithQuestionsAndOptionsAsync(saveProgressDto.AssessmentId);
+
+            if (!studentExists || assessment == null)
                 throw new ApiException("Invalid student or assessment.", 400, "INVALID_INPUT", null);
 
-            // Load assessment and questions with options
-            var assessment = await _assessmentRepository
-                .GetWithQuestionsAndOptionsAsync(saveProgressDto.AssessmentId);
+            // Build valid question/option sets
+            var questionDict = assessment.Questions.ToDictionary(q => q.Id);
+            var validOptionIds = assessment.Questions.SelectMany(q => q.Options).Select(o => o.Id).ToHashSet();
 
-            if (assessment == null)
-                throw new ApiException("Assessment not found.", 404, "NOT_FOUND", null);
+            // Global duplicate check
+            var allSelectedOptionIds = saveProgressDto.Answers.SelectMany(a => a.SelectedOptionIds ?? new List<Guid>());
+            if (allSelectedOptionIds.Count() != allSelectedOptionIds.Distinct().Count())
+                throw new ApiException("Duplicate selected options in answers.", 400, "INVALID_INPUT", allSelectedOptionIds);
 
-            var questionDict = assessment.Questions.ToDictionary(q => q.Id, q => q);
-            var validOptionIds = assessment.Questions
-                .SelectMany(q => q.Options)
-                .Select(o => o.Id)
-                .ToHashSet();
-
-            // Validate incoming answers
+            // Per-answer validation
             foreach (var answer in saveProgressDto.Answers)
             {
-                if (answer.SelectedOptionIds.Count != answer.SelectedOptionIds.Distinct().Count())
-                {
-                    throw new ApiException(
-                        $"Duplicate selected options in answer for question {answer.QuestionId}.",
-                        400,
-                        "INVALID_INPUT",
-                        answer.SelectedOptionIds
-                    );
-                }
                 if (!questionDict.ContainsKey(answer.QuestionId))
-                    throw new ApiException($"Invalid question ID: {answer.QuestionId}", 400, "INVALID_INPUT", null);
+                    throw new ApiException($"Invalid question ID: {answer.QuestionId}", 400, "INVALID_QUESTION", null);
 
-                foreach (var optionId in answer.SelectedOptionIds)
+                var selectedIds = answer.SelectedOptionIds ?? new List<Guid>();
+                if (selectedIds.Count != selectedIds.Distinct().Count())
+                    throw new ApiException($"Duplicate selected options in question {answer.QuestionId}.", 400, "INVALID_INPUT", selectedIds);
+
+                foreach (var optionId in selectedIds)
                 {
                     if (!validOptionIds.Contains(optionId))
-                        throw new ApiException($"Invalid option ID: {optionId}", 400, "INVALID_INPUT", null);
+                        throw new ApiException($"Invalid option ID: {optionId}", 400, "INVALID_OPTION", null);
                 }
             }
-            var progress = await _progressRepository.GetByStudentAndAssessmentAsync(userId, saveProgressDto.AssessmentId);
+
+            // Load existing progress with tracking
+            var progress = await _progressRepository
+                .GetByStudentAndAssessmentAsync(userId, saveProgressDto.AssessmentId); // 👈 includes Answers & SelectedOptions
 
             if (progress == null)
             {
-                progress = new StudentAssessmentProgress
+                // First save
+                var newProgress = new StudentAssessmentProgress
                 {
                     StudentId = userId,
                     AssessmentId = saveProgressDto.AssessmentId,
                     StartedAt = DateTime.UtcNow,
-                    CurrentSessionStart = DateTime.UtcNow,
+                    CurrentSessionStart = saveProgressDto.CurrentSessionStart ?? DateTime.UtcNow,
                     LastSavedAt = DateTime.UtcNow,
                     Answers = saveProgressDto.Answers.Select(a => new InProgressAnswer
                     {
                         QuestionId = a.QuestionId,
                         AnswerText = a.AnswerText,
-                        SelectedOptions = a.SelectedOptionIds.Select(id => new InProgressSelectedOption { OptionId = id }).ToList()
+                        SelectedOptions = (a.SelectedOptionIds ?? new List<Guid>())
+                            .Select(id => new InProgressSelectedOption { OptionId = id }).ToList()
                     }).ToList()
                 };
 
-                await _progressRepository.CreateAsync(progress);
+                await _progressRepository.CreateAsync(newProgress);
             }
             else
             {
+                // Update timing
                 if (progress.CurrentSessionStart.HasValue)
                 {
-                    var sessionTime = DateTime.UtcNow - progress.CurrentSessionStart.Value;
-                    progress.ElapsedTime += sessionTime;
+                    var sessionDuration = DateTime.UtcNow - progress.CurrentSessionStart.Value;
+                    progress.ElapsedTime += sessionDuration;
                 }
 
                 progress.CurrentSessionStart = null;
                 progress.LastSavedAt = DateTime.UtcNow;
 
-                progress.Answers.Clear();
+                // remove existing answers & options 
+                await _progressRepository.RemoveAnswersAndOptionsAsync(progress);
+
+                // Replace with new answers
                 foreach (var answer in saveProgressDto.Answers)
                 {
-                    if (answer.SelectedOptionIds.Count != answer.SelectedOptionIds.Distinct().Count())
-                    {
-                        throw new ApiException(
-                            $"Duplicate selected options in answer for question {answer.QuestionId}.",
-                            400,
-                            "INVALID_INPUT",
-                            answer.SelectedOptionIds
-                        );
-                    }
+                    var selectedOptions = (answer.SelectedOptionIds ?? new List<Guid>())
+                        .Select(id => new InProgressSelectedOption { OptionId = id }).ToList();
 
                     var newAnswer = new InProgressAnswer
                     {
                         QuestionId = answer.QuestionId,
                         AnswerText = answer.AnswerText,
-                        SelectedOptions = answer.SelectedOptionIds.Select(id => new InProgressSelectedOption { OptionId = id }).ToList()
+                        SelectedOptions = selectedOptions
                     };
+
                     progress.Answers.Add(newAnswer);
                 }
 
-                _progressRepository.Update(progress);
+                // No need to call Update, EF is tracking it
             }
 
             await _unitOfWork.SaveChangesAsync();
         }
+
+
         public async Task<BaseResponse<LoadProgressDto>> GetProgressAsync(Guid assessmentId)
         {
             var userId = _currentUser.GetCurrentUserId();

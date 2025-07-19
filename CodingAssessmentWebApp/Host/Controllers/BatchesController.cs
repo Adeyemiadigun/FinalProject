@@ -81,6 +81,13 @@ namespace Host.Controllers
             var result = await _assessmentService.GetAssessmentsByBatchId(id, request);
 
             return Ok(result);
+        } 
+        [HttpGet("{id:guid}/assessments/details")]
+        public async Task<IActionResult> GetAssessmentsByBatchIdDetails(Guid id, [FromQuery] PaginationRequest request)
+        {
+            var result = await _assessmentService.GetAssessmentsByBatchIdDetails(id, request);
+
+            return Ok(result);
         }
         [HttpGet("summary")]
         public async Task<IActionResult> GetBatchSummaries()
@@ -96,7 +103,7 @@ namespace Host.Controllers
 
         }
         [HttpGet("{batchId}/performance-trend")]
-        public async Task<IActionResult> GetBatchPerformanceTrend([FromQuery] Guid batchId)
+        public async Task<IActionResult> GetBatchPerformanceTrend(Guid batchId)
         {
             var result = await _batchService.GetBatchPerformanceTrend(batchId);
             return Ok(result);
@@ -105,6 +112,12 @@ namespace Host.Controllers
         public async Task<IActionResult> GetStudents([FromQuery] Guid? batchId, [FromQuery] PaginationRequest request)
         {
             var result = await _userService.GetAllByBatchId(batchId, request);
+            return Ok(result);
+        }
+        [HttpGet("{batchId:guid}/submission-stats")]
+        public async Task<IActionResult> GetBatchSubmissionStats([FromRoute] Guid batchId)
+        {
+            var result = await _batchService.GetBatchSubmissionStats(batchId);
             return Ok(result);
         }
 

@@ -9,11 +9,18 @@ function leaderboardPage() {
     selectedBatch: "",
     batches: [],
     leaderboard: [],
+    sidebarOpen: true,
     pagination: {
       pageNumber: 1,
       pageSize: 10,
       totalPages: 1,
       totalItems: 0,
+    },
+
+    logOut() {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("userRole");
+      window.location.href = "/public/auth/login.html";
     },
 
     async init() {
@@ -34,13 +41,13 @@ function leaderboardPage() {
 
     async loadBatches() {
       const token = localStorage.getItem("accessToken");
-      const res = await fetch("http://localhost:5162/api/v1/batches/all", {
+      const res = await fetch("https://localhost:7157/api/v1/batches/all", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       this.batches = data.data;
       this.selectedBatch = this.batches.length > 0 ? this.batches[0].id : "";
-      console.log(data)
+      console.log(data);
       await this.loadLeaderboard();
     },
 
@@ -53,7 +60,7 @@ function leaderboardPage() {
       });
 
       const res = await fetch(
-        `http://localhost:5162/api/v1/Students/leaderboard?${query.toString()}`,
+        `https://localhost:7157/api/v1/Students/leaderboard?${query.toString()}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }

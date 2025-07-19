@@ -23,11 +23,11 @@ namespace Infrastructure.ExternalServices
 
         public async Task<Judge0Result> ExecuteCodeAsync(Judge0CodeExecutionRequest answer)
         {
+
             var payload = new
             {
                 language_id = answer.Id,
                 source_code = answer.SourceCode,
-                stdin = answer.TestCase,
                 expected_output = answer.ExpectedOutput,
                 cpu_time_limit = 2
             };

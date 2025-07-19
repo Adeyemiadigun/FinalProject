@@ -26,7 +26,7 @@ function instructorsPage() {
       password: "",
       confirmPassword: "",
     },
-
+    sidebarOpen: true,
     init() {
       this.fetchInstructors();
     },
@@ -40,7 +40,7 @@ function instructorsPage() {
 
       try {
         const res = await fetch(
-          `http://localhost:5162/api/v1/Instructors/search?${params.toString()}`,
+          `https://localhost:7157/api/v1/Instructors/search?${params.toString()}`,
           {
             headers: {
               Authorization: "Bearer " + localStorage.getItem("accessToken"),
@@ -66,14 +66,17 @@ function instructorsPage() {
     async registerInstructor() {
       const payload = { ...this.newInstructor };
 
-      const response = await fetch("http://localhost:5162/api/v1/Instructors", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + localStorage.getItem("token"),
-        },
-        body: JSON.stringify(payload),
-      });
+      const response = await fetch(
+        "https://localhost:7157/api/v1/Instructors",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + localStorage.getItem("token"),
+          },
+          body: JSON.stringify(payload),
+        }
+      );
 
       if (response.ok) {
         alert("Instructor registered successfully");

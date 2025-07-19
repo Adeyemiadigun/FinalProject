@@ -1,31 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http.Headers;
-using System.Net.Http;
+﻿using System.Net.Http.Headers;
 using System.Text;
-using System.Threading.Tasks;
 using Application.Dtos;
 using Application.Exceptions;
 using Application.Interfaces.ExternalServices.AIProviderStrategy;
-using Application.Services;
 using Infrastructure.Configurations;
-using Domain.Enum;
 using Microsoft.Extensions.Options;
-using System.Net.Http.Json;
 
 namespace Infrastructure.ExternalServices.AIProviderStrategy
 {
     public class AIStrategyGateway : IAIProviderGateway
     {
         private readonly HttpClient _httpClient;
-        private readonly AISettings aISettings;
+        private readonly OpenRouter _openRouter;
         private readonly IPayloadBuider _payloadBuilder;
-        public AIStrategyGateway(HttpClient httpClient, IOptions<AISettings> option, IPayloadBuider payloadBuider)
+        public AIStrategyGateway(HttpClient httpClient, IPayloadBuider payloadBuider, IOptions<OpenRouter> openRouter)
         {
             _httpClient = httpClient;
-            aISettings = option.Value;
             _payloadBuilder = payloadBuider;
+            _openRouter = openRouter.Value;
+        
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", _openRouter.ApiKey);
+            _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "http://localhost");
         }
         public async Task<string> GenerateTextAsync(AiQuestionGenerationRequestDto request, string prompt)
         {
@@ -33,35 +29,28 @@ namespace Infrastructure.ExternalServices.AIProviderStrategy
             {
                 throw new ApiException("Prompt cannot be null or empty.", 400, nameof(prompt), null);
             }
-            var models = aISettings.QuestionTypeProviders[request.QuestionType.ToString()];
-            foreach (var model in models)
-            {
-                _httpClient.DefaultRequestHeaders.Clear();
-                var payload = _payloadBuilder.BuildPayload(model.Name, prompt);
+            const int maxRetries = 3;
+
+
+            string url = _openRouter.Url;
+            var payload = _payloadBuilder.BuildPayload(prompt, "questionGen");
                 if (payload is null)
-                    continue;
-                string finalUrl = string.Empty;
-                    if (model.AuthType == "Bearer")
-                    {
-                        _httpClient.DefaultRequestHeaders.Authorization =
-                            new AuthenticationHeaderValue("Bearer", model.ApiKey);
-                        finalUrl = model.ApiUrl;
-                    }
-                    if (model.AuthType == "Query")
-                    {
-                        _httpClient.DefaultRequestHeaders.Authorization = null;
-                        finalUrl = $"{model.ApiUrl}?key={model.ApiKey}";
-                    }
+                    throw new ApiException("Payload cannot be null or empty.", 400, nameof(payload), null);
+
+               
 
                 var content = new StringContent(payload, Encoding.UTF8, "application/json");
-                var response = await _httpClient.PostAsync(finalUrl, content);
-                if (response.IsSuccessStatusCode)
-                {
-                    var modelResponse = await response.Content.ReadAsStringAsync();
-                    return modelResponse;
-                }
-            }
+
+                 var response = await _httpClient.PostAsync(url, content);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var modelResponse = await response.Content.ReadAsStringAsync();
+                        return modelResponse;
+                    }
+                           
             return null!;
         }
+
     }
 }

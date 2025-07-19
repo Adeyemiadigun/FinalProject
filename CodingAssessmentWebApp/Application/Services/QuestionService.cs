@@ -23,15 +23,21 @@ namespace Application.Services
 
                 var assessment = await _assessmentRepository.GetAsync(assessmentId) ??
                     throw new ApiException("Assessment not found.", 404, "ASSESSMENT_NOT_FOUND", null);
-                if(currentUser != assessment.InstructorId)
+                    if(currentUser != assessment.InstructorId)
                     throw new ApiException("You are not authorized to add questions to this assessment.", 403, "UNAUTHORIZED_ACCESS", null);
-
+                TechnologyStack techStack;
+                if(assessment.TechnologyStack == "c#" || assessment.TechnologyStack =="C#")
+                    techStack = TechnologyStack.CSharp;
+                else
+                    techStack = (TechnologyStack)Enum.Parse(typeof(TechnologyStack), assessment.TechnologyStack);
+              
                 var questions = model.Select(x => new Question
                 {
                     QuestionText = x.QuestionText,
                     QuestionType = x.QuestionType,
                     AssessmentId = assessmentId,
                     Assessment = assessment,
+                    TechnologyStack = techStack,
                     Options = x.QuestionType == QuestionType.MCQ
                         ? x.Options.Select(o => new Option
                         {
@@ -49,8 +55,6 @@ namespace Application.Services
                         : null!,
                     Answer = x.QuestionType == QuestionType.Objective ? new Answer()
                     {
-                        QuestionId = x.Answer.QuestionId,
-                        Question = x.Answer.Question,
                         AnswerText = x.Answer.AnswerText
                     } : null!,
                     Marks = (short)x.Marks,
@@ -102,7 +106,7 @@ namespace Application.Services
         public async Task<BaseResponse<List<QuestionDto>>> GetAllQuestionsByAssessmentIdAsync(Guid assessmentId)
         {
             var check = await _assessmentRepository.CheckAsync(x => x.Id == assessmentId);
-            if (check)
+            if (!check)
                 throw new ApiException("Assessment not found.", 404, "ASSESSMENT_NOT_FOUND", null);
 
             var questions = await _questionRepository.GetAllAsync(assessmentId);
@@ -116,21 +120,22 @@ namespace Application.Services
                 QuestionType = q.QuestionType,
                 Marks = q.Marks,
                 Order = q.Order,
-                Answer = new CreateAnswerDto
+                Answer = q.QuestionType == QuestionType.Objective ? new CreateAnswerDto
                 {
-                    AnswerText = q.QuestionText,
-                } ?? null!,
-                Options = q.Options?.Select(o => new OptionDto
+                    AnswerText = q.Answer.AnswerText,
+                } : null!,
+                Options = q.QuestionType == QuestionType.MCQ ? q.Options?.Select(o => new OptionDto
                 {
                     OptionText = o.OptionText,
-                }).ToList() ?? null!,
-                TestCases = q.Tests?.Select(t => new CreateTestCaseDto
+                    IsCorrect = o.IsCorrect
+                }).ToList() : null!,
+                TestCases = q.QuestionType==QuestionType.Coding ? q.Tests?.Select(t => new CreateTestCaseDto
                 {
                     Input = t.Input,
                     ExpectedOutput = t.ExpectedOutput,
                     Weight = t.Weight
-                }).ToList() ?? null!
-            }).ToList();
+                }).ToList() : null!
+            }).OrderByDescending(x => x.Order).ToList();
             return new BaseResponse<List<QuestionDto>>
             {
                 Message = "Questions retrieved successfully.",
@@ -217,5 +222,52 @@ namespace Application.Services
                 Data = questionDto
             };
         }
+        public async Task<BaseResponse<StudentQuestionAssessmentDto>> GetAssessmentForAttemptAsync(Guid assessmentId)   
+        {
+            var studentId = _currentUser.GetCurrentUserId();
+
+            var assessment = await _assessmentRepository.GetAsync(assessmentId);
+            if (assessment is null)
+                throw new ApiException("Assessment not found.", 404, "ASSESSMENT_NOT_FOUND", null);
+            var currentDate = DateTime.UtcNow;
+            if (assessment.StartDate > currentDate)
+                throw new ApiException("Assessment has not started yet.", 404, "ASSESMENT_NOT_STARTED", null);
+            if (assessment.EndDate < currentDate)
+                throw new ApiException("Assessment has Ended yet.", 404, "ASSESMENT_NOT_STARTED", null);
+            var questions = await _questionRepository.GetAllAsync(assessmentId);
+            if (questions == null || !questions.Any())
+                throw new ApiException("No questions found for the given assessment.", 404, "NO_QUESTIONS_FOUND", null);
+            var questionDtos = questions.Select(q => new StudentQuestionDto
+            {
+                Id = q.Id,
+                Title = q.QuestionText,
+                Type = q.QuestionType.ToString(),
+                TechStack = q.QuestionType.ToString(),
+                Options = q.Options?.Select(o => new StudentOptionDto
+                {
+                    Id = o.Id,
+                    Text = o.OptionText
+                }).ToList(),    
+                TestCases = q.Tests?.Select(t => new StudentTestCaseDto
+                {
+                    Input = t.Input,
+                    Weight = t.Weight
+                }).ToList()
+            }).ToList();
+
+            return new BaseResponse<StudentQuestionAssessmentDto>
+            {
+                Status = true,
+                Message = "Assessment for student loaded",
+                Data = new StudentQuestionAssessmentDto
+                {
+                    Id = assessment.Id,
+                    Title = assessment.Title,
+                    DurationInMinutes = assessment.DurationInMinutes,
+                    Questions = questionDtos
+                }
+            };
+        }
+
     }
 }

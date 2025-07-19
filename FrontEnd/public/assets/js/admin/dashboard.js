@@ -3,40 +3,53 @@ function adminDashboard() {
     statCards: [],
     topStudents: [],
     lowestStudents: [],
-
+    sidebarOpen: true,
     async initDashboard() {
-      const token = localStorage.getItem("token");
-      const headers = { headers: { Authorization: `Bearer ${token}` } };
-
+      const token = localStorage.getItem("accessToken");
+      console.log(token);
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
+      console.log(headers);
+      console.log(localStorage.getItem("userRole"));
       try {
-        
         loadComponent("sidebar-placeholder", "../components/sidebar.html");
         loadComponent("navbar-placeholder", "../components/nav.html");
         const [metricsRes, topRes, lowRes, batchRes] = await Promise.all([
           fetch(
-            "http://localhost:5162/api/v1/dashboard/admin/metrics/overview",
-            headers
+            "https://localhost:7157/api/v1/dashboard/admin/metrics/overview",
+            {
+              method: "GET",
+              headers: headers,
+            }
           ),
           fetch(
-            "http://localhost:5162/api/v1/dashboard/admin/analytics/assessments/top-performing",
-            headers
+            "https://localhost:7157/api/v1/dashboard/admin/analytics/assessments/top-performing",
+            {
+              method: "GET",
+              headers: headers,
+            }
           ),
           fetch(
-            "http://localhost:5162/api/v1/dashboard/admin/analytics/assessments/lowest-performing",
-            headers
+            "https://localhost:7157/api/v1/dashboard/admin/analytics/assessments/lowest-performing",
+            {
+              method: "GET",
+              headers: headers,
+            }
           ),
-          fetch(
-            "http://localhost:5162/api/v1/dashboard/batch-distribution",
-            headers
-          ),
+          fetch("https://localhost:7157/api/v1/dashboard/batch-distribution", {
+            method: "GET",
+            headers: headers,
+          }),
         ]);
         if (
           [metricsRes, topRes, lowRes, batchRes].some(
             (res) => res.status === 401
           )
         ) {
-          await window.refreshToken(); 
-          return this.initDashboard();
+          // await window.refreshToken();
+          // return this.initDashboard();
         }
 
         const metrics = await metricsRes.json();

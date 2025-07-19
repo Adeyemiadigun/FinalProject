@@ -25,7 +25,7 @@
     <main class="p-8 max-w-6xl mx-auto space-y-8">
       <!-- Profile Header -->
       <div class="flex items-center space-x-6">
-        <img src="https://api.dicebear.com/6.x/initials/svg?seed=Student" alt="Avatar"
+        <img  src="https://api.dicebear.com/6.x/initials/svg?seed=student.name" alt="Avatar"
           class="w-24 h-24 rounded-full border shadow">
         <div>
           <h1 class="text-2xl font-bold" x-text="student.name"></h1>
@@ -69,10 +69,10 @@
             </tr>
           </thead>
           <tbody>
-            <template x-for="(a, i) in history" :key="i">
+            <template x-for="a in history" :key="a.id">
               <tr class="border-t hover:bg-gray-50">
                 <td class="px-4 py-2" x-text="a.title"></td>
-                <td class="px-4 py-2" x-text="a.date"></td>
+                <td class="px-4 py-2" x-text="new Date(a.date).toLocaleDateString()"></td>
                 <td class="px-4 py-2 text-green-600" x-text="a.score + '%'"></td>
                 <td class="px-4 py-2">
                   <span :class="a.passed ? 'text-green-600' : 'text-red-500'"
@@ -89,41 +89,7 @@
     </main>
   </div>
 
-  <script>
-    function loadLayout() {
-      fetch("/public/components/sidebar-student.html")
-        .then(res => res.text()).then(html => document.getElementById("sidebar-placeholder").innerHTML = html);
-      fetch("/public/components/navbar-student.html")
-        .then(res => res.text()).then(html => document.getElementById("navbar-placeholder").innerHTML = html);
-    }
-
-    function studentProfile() {
-      return {
-        student: {
-          name: "Adeyemi Mubarak",
-          email: "mubarak@example.com",
-          batch: "Batch A",
-          joinedAt: "July 1, 2024"
-        },
-        summary: {
-          avgScore: 86,
-          completedAssessments: 12,
-          passRate: 83,
-          rank: 5
-        },
-        history: [
-          { id: 1, title: "JavaScript Basics", date: "July 1, 2025", score: 92, passed: true },
-          { id: 2, title: "OOP in C#", date: "July 5, 2025", score: 88, passed: true },
-          { id: 3, title: "Algorithms Test", date: "July 6, 2025", score: 65, passed: false },
-          { id: 4, title: "Entity Framework Quiz", date: "July 8, 2025", score: 91, passed: true },
-        ],
-
-        init() {
-          // Later: Replace with API call to fetch student data by ID
-        }
-      }
-    }
-  </script>
+  <script src="/public/assets/js/student/student-profile.js"></script>
 </body>
 
 </html>

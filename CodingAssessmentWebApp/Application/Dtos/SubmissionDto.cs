@@ -13,6 +13,8 @@ namespace Application.Dtos
         public string Title { get; set; }
         public int TotalScore { get;set; }
         public string FeedBack { get; set; }
+        public Guid StudentId { get; set; }
+        public string StudentName { get; set; }
 
         public List<SubmittedAnswerDto> SubmittedAnswers { get; set; } = new List<SubmittedAnswerDto>();
     }
@@ -49,5 +51,23 @@ namespace Application.Dtos
         public Guid QuestionId { get; set; }
         public string SubmittedAnswer { get; set; }
         public List<Guid> SelectedOptionIds { get; set; } = [];
+    }
+    public class SubmissionsDto
+    {
+        public Guid Id { get; set; }
+        public Guid AssessmentId { get; set; }
+        public string AssessmentTitle { get; set; }
+        public DateTime SubmittedAt { get; set; }
+        public string Title { get; set; }
+        public int TotalScore { get; set; }
+        public string FeedBack { get; set; }
+        public DateTime AssignedDate { get; set; }
+        public string StudentName { get; set; }
+    }
+    public class SubmissionStatsDto
+    {
+        public string AssessmentTitle { get; set; }
+        public int TotalAssigned { get; set; }
+        public int TotalSubmitted { get; set; }
     }
 }

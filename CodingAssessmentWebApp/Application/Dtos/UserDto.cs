@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Domain.Entitties;
 using Domain.Enum;
+using Microsoft.AspNetCore.Http;
 
 namespace Application.Dtos
 {
@@ -17,6 +18,11 @@ namespace Application.Dtos
         public required string Email { get; set; }
         public Role Role { get; set; }
         public bool Status { get; set; }
+    }
+    public class UploadFileDto
+    {
+        public IFormFile StudentFile { get; set; }
+        public Guid BatchId { get; set; }
     }
     public class StudentDetail
     {
@@ -89,6 +95,20 @@ namespace Application.Dtos
         public DateTime JoinedDate { get; set; }
         public int TotalAssessment { get; set; }
         public double AverageScore { get; set; }
+    }
+    public class StudentProfileMetrics
+    {
+
+        public double AverageScore { get; set; }
+        public double PassRate { get; set; }
+        public double SubmmittedCount { get; set; }
+        public int Rank { get; set; }
+    }
+    public class ResetPasswordDto
+    {
+        public string Email { get; set; }
+        public string Token { get; set; }
+        public string NewPassword { get; set; }
     }
 }
 

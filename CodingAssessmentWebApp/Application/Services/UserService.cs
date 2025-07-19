@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net.WebSockets;
+using System.Reflection;
 using Application.Dtos;
 using Application.Exceptions;
 using Application.Interfaces.Repositories;
@@ -9,6 +10,7 @@ using Application.Interfaces.Services;
 using Domain.Entities;
 using Domain.Entitties;
 using Domain.Enum;
+using Microsoft.AspNetCore.Identity;
 
 namespace Application.Services
 {
@@ -390,50 +392,6 @@ namespace Application.Services
 
             var leaderboard = await _leaderboardStore.GetLeaderBoardByBatchId(batchIdValue);
 
-            if (!leaderboard.Any())
-            {
-                var batch = await _batchRepository.GetBatchByIdAsync(batchIdValue);
-                if (batch == null)
-                {
-                    return new BaseResponse<PaginationDto<LeaderboardDto>>
-                    {
-                        Status = false,
-                        Message = "Batch not found"
-                    };
-                }
-
-                var assignedAssessmentIds = batch.AssessmentAssignments
-                    .Select(x => x.AssessmentId)
-                    .ToList();
-
-                var students = await _userRepository.GetAllAsync(s => s.BatchId == batchIdValue);
-
-                leaderboard = students.Select(student =>
-                {
-                    var submissions = student.Submissions
-                        .Where(sub => assignedAssessmentIds.Contains(sub.AssessmentId))
-                        .ToList();
-
-                    var avgScore = submissions.Any() ? Math.Round(submissions.Average(s => s.TotalScore), 2) : 0;
-                    var highestScore = submissions.Any() ? submissions.Max(s => s.TotalScore) : 0;
-
-                    return new LeaderboardDto
-                    {
-                        Id = student.Id,
-                        Name = student.FullName,
-                        BatchId = batchIdValue,
-                        AvgScore = avgScore,
-                        HighestScore = highestScore,
-                        CompletedAssessments = submissions.Count
-                    };
-                })
-                .OrderByDescending(l => l.AvgScore)
-                .ThenByDescending(l => l.HighestScore)
-                .ToList();
-
-                await _leaderboardStore.StoreLeaderboard(batchIdValue, leaderboard);
-            }
-
             var skip = (request.CurrentPage - 1) * request.PageSize;
             var paginatedItems = leaderboard.Skip(skip).Take(request.PageSize).ToList();
 
@@ -474,49 +432,6 @@ namespace Application.Services
             var batchId = student.BatchId.Value;
 
             var leaderboard = await _leaderboardStore.GetLeaderBoardByBatchId(batchId);
-
-            if (!leaderboard.Any())
-            {
-                var assignedAssessmentIds = student.Batch.AssessmentAssignments
-                    .Select(x => x.AssessmentId)
-                    .ToList();
-
-                if (assignedAssessmentIds == null || !assignedAssessmentIds.Any())
-                {
-                    return new BaseResponse<PaginationDto<LeaderboardDto>>
-                    {
-                        Status = false,
-                        Message = "No assessments assigned to this batch"
-                    };
-                }
-
-                var batchStudents = await _userRepository.GetAllAsync(s => s.BatchId == batchId);
-
-                leaderboard = batchStudents.Select(s =>
-                {
-                    var submissions = s.Submissions
-                        .Where(sub => assignedAssessmentIds.Contains(sub.AssessmentId))
-                        .ToList();
-
-                    var avgScore = submissions.Any() ? Math.Round(submissions.Average(sub => sub.TotalScore), 2) : 0;
-                    var highestScore = submissions.Any() ? submissions.Max(sub => sub.TotalScore) : 0;
-
-                    return new LeaderboardDto
-                    {
-                        Id = s.Id,
-                        Name = s.FullName,
-                        BatchId = batchId,
-                        AvgScore = avgScore,
-                        HighestScore = highestScore,
-                        CompletedAssessments = submissions.Count
-                    };
-                })
-                .OrderByDescending(l => l.AvgScore)
-                .ThenByDescending(l => l.HighestScore)
-                .ToList();
-
-                await _leaderboardStore.StoreLeaderboard(batchId, leaderboard);
-            }
 
             var skip = (request.CurrentPage - 1) * request.PageSize;
             var paginatedItems = leaderboard.Skip(skip).Take(request.PageSize).ToList();
@@ -566,6 +481,31 @@ namespace Application.Services
                 }
             };
         }
+        public async Task<BaseResponse<StudentDetail>> GetStudentDetail()
+        {
+            var id = _currentUser.GetCurrentUserId();
+            if (Guid.Empty == id)
+                throw new ApiException("Invalid student ID provided", 400, "InvalidId", null);
+
+
+            var student = await _userRepository.GetAsync(id)
+                          ?? throw new ApiException("Student not found", 404, "StudentNotFound", null);
+
+            return new BaseResponse<StudentDetail>
+            {
+                Message = "Student details retrieved successfully",
+                Status = true,
+                Data = new StudentDetail
+                {
+                    Id = student.Id,
+                    FullName = student.FullName,
+                    Email = student.Email,
+                    BatchName = student.Batch?.Name,
+                    Status = student.IsActive,
+                    DateCreated = student.CreatedAt
+                }
+            };
+        }
         public async Task<BaseResponse<StudentAnalytics>> GetStudentAnalytics(Guid id)
         {
             if (Guid.Empty == id)
@@ -575,10 +515,10 @@ namespace Application.Services
                                   ?? throw new ApiException("Student analytics not found", 404, "AnalyticsNotFound", null);
             var studentAnalytics = new StudentAnalytics()
             {
-                TotalAssessments = student.Assessments.Count,
+                TotalAssessments = student.AssessmentAssignments.Count,
                 Attempted = student.Submissions.Count(),
                 AvgScore = student.Submissions.Any() ? Math.Round(student.Submissions.Average(s => s.TotalScore), 2) : 0,
-                PassRate = student.Submissions.Count(s => s.Assessment.PassingScore <= s.TotalScore) / (double)student.Assessments.Count * 100
+                PassRate = student.Submissions.Count(s => s.Assessment.PassingScore <= s.TotalScore) / (double)student.AssessmentAssignments.Count * 100
             };
             return new BaseResponse<StudentAnalytics>
             {
@@ -619,7 +559,7 @@ namespace Application.Services
             var student = await _userRepository.GetAsync(studentId)
                           ?? throw new ApiException("Student not found", 404, "StudentNotFound", null);
 
-            if (newStatus.ToLower() != "ictive" && newStatus.ToLower() != "inactive")
+            if (newStatus.ToLower() != "active" && newStatus.ToLower() != "inactive")
                 throw new ApiException("Invalid status value", 400, "InvalidStatus", null);
 
             student.IsActive = newStatus.ToLower() == "active"; 
@@ -838,5 +778,130 @@ namespace Application.Services
                 Data = userDtos.ToList()
             };
         }
+        public async Task<BaseResponse<StudentProfileMetrics>> GetStudentMetrics()
+        {
+            var studentId = _currentUser.GetCurrentUserId();
+            if (studentId == Guid.Empty)
+                throw new ApiException("Invalid student ID provided", 400, "InvalidId", null);
+            var student = await _userRepository.GetAsync(studentId);
+            if (student == null)
+                throw new ApiException("No users found", 404, "UserNotFound", null);
+            var submissions = await _submissionRepo.GetAllAsync(x => x.StudentId == studentId);
+            if (!submissions.Any())
+                throw new ApiException("NoSubmissionForStudent", 500, "UnknownError", null);
+            var assessmets = await _assessmentRepository.GetAllAsync(x => x.AssessmentAssignments.Any(x => x.StudentId == studentId));
+            var studentBatchRanking = await _leaderboardStore.GetLeaderBoardByBatchId(student.BatchId.Value);
+            var currentStudentRanking = studentBatchRanking.FindIndex(x => x.Id == studentId);
+            return new BaseResponse<StudentProfileMetrics>
+            {
+                Message = "Student dashboard summary retrieved successfully",
+                Status = true,
+                Data = new StudentProfileMetrics
+                {
+                    SubmmittedCount = submissions.Count,
+                    AverageScore = submissions.Average(s => s.TotalScore),
+                    PassRate = submissions.Count(x => x.TotalScore >= x.Assessment.PassingScore)/assessmets.Count() * 100,
+                    Rank = currentStudentRanking + 1
+
+                }
+            };
+        }
+        public async Task<BaseResponse<List<SubmissionsDto>>> GetStudentSubmissionsAsync(Guid studentId)
+        {
+
+            var check = await _userRepository.CheckAsync(x => x.Id == studentId);
+            if (!check)
+                throw new ApiException("InvalidStudentId", 404, "Invalid_Id", null);
+            var submissions = await _submissionRepo.GetAllAsync(s => s.StudentId == studentId);
+            var data = submissions.Select(s => new SubmissionsDto
+            {
+                Id = s.Id,
+                Title = s.Assessment.Title,
+                TotalScore = s.TotalScore,
+                FeedBack = s.FeedBack,
+                AssignedDate = s.Assessment.CreatedAt,
+                SubmittedAt = s.SubmittedAt,
+                StudentName = s.Student.FullName
+            }).ToList();
+
+            return new BaseResponse<List<SubmissionsDto>>
+            {
+                Status = true,
+                Message = "Student submissions retrieved",
+                Data = data
+            };
+        }
+        public async Task<BaseResponse<UserDto>> UploadStudentFileAsync(UploadFileDto studentFile)
+        {
+            if (studentFile == null || studentFile.StudentFile == null || studentFile.StudentFile.Length == 0)
+                throw new ApiException("No file uploaded.", 400, "FileEmpty", null);
+
+            var batchExists = await _batchRepository.CheckAsync(x => x.Id == studentFile.BatchId);
+            if (!batchExists)
+                throw new ApiException("Invalid batch ID.", 404, "BatchNotFound", null);
+
+            var students = new List<RegisterUserRequestModel>();
+
+            using var stream = new StreamReader(studentFile.StudentFile.OpenReadStream());
+            var content = await stream.ReadToEndAsync();
+
+            var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+            if (lines.Length <= 1)
+                throw new ApiException("The uploaded file contains no student data.", 400, "EmptyFile", null);
+
+            foreach (var line in lines.Skip(1)) // Skip header
+            {
+                var parts = line.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length < 2) continue;
+
+                var fullName = parts[0].Trim();
+                var email = parts[1].Trim();
+
+                if (string.IsNullOrWhiteSpace(fullName) || string.IsNullOrWhiteSpace(email))
+                    continue;
+
+                students.Add(new RegisterUserRequestModel
+                {
+                    FullName = fullName,
+                    Email = email,
+                    Password = "password", // Consider generating random passwords or requiring reset
+                    BatchId = studentFile.BatchId
+                });
+            }
+
+            if (!students.Any())
+                throw new ApiException("No valid student records found in the uploaded file.", 400, "InvalidContent", null);
+
+            var emails = students.Select(x => x.Email).ToList();
+            var existingEmails = await _userRepository.CheckEmails(emails);
+
+            if (existingEmails.Any())
+                throw new ApiException($"Duplicate emails found: {string.Join(", ", existingEmails)}", 400, "DuplicateEmails", null);
+
+            var batch = await _batchRepository.GetBatchByIdAsync(studentFile.BatchId);
+            if (batch is null)
+                throw new ApiException("Batch not found", 404, "BatchNotFound", null);
+
+            var newUsers = students.Select(s => new User
+            {
+                FullName = s.FullName,
+                Email = s.Email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(s.Password),
+                Role = Role.Student,
+                BatchId = batch.Id,
+                IsActive = true
+            }).ToList();
+
+            await _userRepository.CreateAsync(newUsers);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new BaseResponse<UserDto>
+            {
+                Status = true,
+                Message = $"{newUsers.Count} student(s) registered successfully."
+            };
+        }
+
     }
 }

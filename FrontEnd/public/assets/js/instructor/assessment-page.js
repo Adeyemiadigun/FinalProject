@@ -15,7 +15,7 @@ function instructorAssessmentsPage() {
       hasNextPage: false,
       hasPreviousPage: false,
     },
-    pageSize : 2,
+    pageSize: 2,
     showCreateModal: false,
     newAssessment: {
       title: "",
@@ -45,20 +45,19 @@ function instructorAssessmentsPage() {
           headers: headers,
         }
       );
-     const data = await batchRes.json();
-     console.log(data)
-     this.batches = data.data
+      const data = await batchRes.json();
+      console.log(data);
+      this.batches = data.data;
       await this.fetchPage();
     },
 
     async fetchPage() {
-      const token = localStorage.getItem("token");
+      
       const params = new URLSearchParams();
       if (this.filters.batchId) params.append("batchId", this.filters.batchId);
       if (this.filters.status) params.append("status", this.filters.status);
       params.append("pageSize", this.pageSize);
       params.append("currentPage", this.pagination.currentPage);
-
 
       const res = await fetch(
         `https://localhost:7157/api/v1/Instructors/assessments?${params}`,
@@ -68,9 +67,9 @@ function instructorAssessmentsPage() {
         }
       );
       const result = await res.json();
-      console.log(result)
+      console.log(result);
       this.assessments = result.data.items;
-      console.log(this.assessments)
+      console.log(this.assessments);
       this.pagination = {
         currentPage: result.data.currentPage,
         totalPages: result.data.totalPages,
@@ -81,6 +80,7 @@ function instructorAssessmentsPage() {
     },
 
     async submitAssessment() {
+      console.log(this.newAssessment)
       const res = await fetch("https://localhost:7157/api/v1/assessments", {
         method: "POST",
         headers: {
@@ -90,7 +90,7 @@ function instructorAssessmentsPage() {
         body: JSON.stringify(this.newAssessment),
       });
       if (res.ok) {
-        alert("Assessment created successfully")
+        alert("Assessment created successfully");
         this.showCreateModal = false;
         this.newAssessment = {
           title: "",
@@ -102,7 +102,7 @@ function instructorAssessmentsPage() {
           endDate: "",
           passingScore: 0,
         };
-        console.log(this.newAssessment)
+        console.log(this.newAssessment);
         await this.fetchPage();
       } else {
         alert("Failed to create assessment.");
@@ -110,15 +110,16 @@ function instructorAssessmentsPage() {
     },
     prevPage() {
       if (this.pagination.hasPreviousPage) {
-        this.currentPage--;
-        this.fetchStudents();
+        this.pagination.currentPage--;
+        this.fetchPage();
       }
     },
 
     nextPage() {
       if (this.pagination.hasNextPage) {
-        this.currentPage++;
-        this.fetchStudents();
+        this.pagination.currentPage++;
+        console.log(this.pagination.currentPage)
+        this.fetchPage();
       }
     },
     applyFilters() {
@@ -151,6 +152,11 @@ function instructorAssessmentsPage() {
           },
         });
       });
+    },
+    logOut() {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("userRole");
+      window.location.href = "/public/auth/login.html";
     },
 
     canAddQuestions(startDate) {

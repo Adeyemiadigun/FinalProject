@@ -19,6 +19,36 @@ namespace Application.Dtos
         public double CompletionRate { get; set; }
 
     }
+    public class StudentQuestionAssessmentDto
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; }
+        public int DurationInMinutes { get; set; }
+        public List<StudentQuestionDto> Questions { get; set; }
+    }
+
+    public class StudentQuestionDto
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; }
+        public string Type { get; set; } // MCQ, Objective, Coding
+        public string TechStack { get; set; }
+        public List<StudentOptionDto>? Options { get; set; }
+        public List<StudentTestCaseDto>? TestCases { get; set; }
+    }
+
+    public class StudentOptionDto
+    {
+        public Guid Id { get; set; }
+        public string Text { get; set; }
+    }
+
+    public class StudentTestCaseDto
+    {
+        public string Input { get; set; }
+        public int Weight { get; set; }
+    }
+
     public class StudentAssessmentDto
     {
         public Guid Id { get; set; }
@@ -117,7 +147,8 @@ namespace Application.Dtos
         public double PassRate { get; set; }
         public double CompletionRate { get; set; }
     }
-    public class QuestionTypeMetrics
+   
+     public class QuestionTypeMetrics
     {
         public string QuestionType { get; set; }
         public double AverageScore { get; set; }

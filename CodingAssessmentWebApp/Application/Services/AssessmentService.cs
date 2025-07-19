@@ -1,4 +1,5 @@
-﻿using System.Linq.Expressions;
+﻿using System.Linq;
+using System.Linq.Expressions;
 using System.Net;
 using Application.Dtos;
 using Application.Exceptions;
@@ -11,14 +12,14 @@ using Domain.Enum;
 
 namespace Application.Services
 {
-    public class AssessmentService(IUnitOfWork _unitOfWork, IAssessmentRepository _assessmentRepository, IUserRepository _userRepository, IBackgroundService _backgroundService, ICurrentUser _currentUser,IBatchRepository _batchRepository,IBatchService batchService ) : IAssessmentService
+    public class AssessmentService(IUnitOfWork _unitOfWork, IAssessmentRepository _assessmentRepository, IUserRepository _userRepository, IBackgroundService _backgroundService, ICurrentUser _currentUser, IBatchRepository _batchRepository, IBatchService batchService) : IAssessmentService
     {
-                 //case 400: // Bad Request
-                 //   case 401: // Unauthorized
-                 //   case 403: // Forbidden
-                 //   case 404: // Not Found
-                 //   case 409: // Conflict
-                 //   case 422: // Unprocessable Entity
+        //case 400: // Bad Request
+        //   case 401: // Unauthorized
+        //   case 403: // Forbidden
+        //   case 404: // Not Found
+        //   case 409: // Conflict
+        //   case 422: // Unprocessable Entity
         public async Task<BaseResponse<AssessmentDto>> AssignStudents(Guid id, AssignStudentsModel model)
         {
             if (id == Guid.Empty || model.StudentIds == null || model.StudentIds.Count == 0)
@@ -66,11 +67,12 @@ namespace Application.Services
                 EndDate = assessment.EndDate,
                 PassingScore = assessment.PassingScore
             }));
-            var reminderTime = assessment.StartDate.AddMinutes(-30); 
+            var reminderTime = assessment.StartDate.AddMinutes(-30);
             var delay = reminderTime - DateTime.UtcNow;
             if (delay > TimeSpan.Zero)
             {
-                _backgroundService.Schedule<IEmailService>((emailService => emailService.SendBulkEmailAsync(validstudentDto, "Assessment Reminder", new AssessmentDto() {
+                _backgroundService.Schedule<IEmailService>((emailService => emailService.SendBulkEmailAsync(validstudentDto, "Assessment Reminder", new AssessmentDto()
+                {
                     Title = assessment.Title,
                     Description = assessment.Description,
                     TechnologyStack = assessment.TechnologyStack,
@@ -78,7 +80,7 @@ namespace Application.Services
                     StartDate = assessment.StartDate,
                     EndDate = assessment.EndDate,
                     PassingScore = assessment.PassingScore
-                })),delay);
+                })), delay);
             }
             await _unitOfWork.SaveChangesAsync();
             return new BaseResponse<AssessmentDto>()
@@ -99,7 +101,7 @@ namespace Application.Services
             var batches = await _batchRepository.GetSelectedIds(model.BatchIds);
             if (batches.Count == 0)
                 throw new ApiException("No valid batches found", (int)HttpStatusCode.BadRequest, "NO_VALID_BATCHES", null);
-            if(batches.Count != model.BatchIds.Count)
+            if (batches.Count != model.BatchIds.Count)
                 throw new ApiException("Some batch IDs are invalid", (int)HttpStatusCode.BadRequest, "INVALID_BATCH_IDS", null);
             var assessment = new Assessment()
             {
@@ -114,6 +116,8 @@ namespace Application.Services
                 Instructor = user,
             };
 
+            await _assessmentRepository.CreateAsync(assessment);
+
             var batchAssessment = batches.Select(x => new BatchAssessment()
             {
                 BatchId = x.Id,
@@ -121,19 +125,17 @@ namespace Application.Services
                 AssessmentId = assessment.Id,
                 Assessment = assessment
             });
-            foreach(var batch in batchAssessment)
-            {
 
-                assessment.BatchAssessment.Add(batch);
-            }
-            foreach(var batch in batches)
+            assessment.BatchAssessment = batchAssessment.ToList();
+
+            foreach (var batch in batches)
             {
 
                 await batchService.AssignAssessmentToBatchAsync(batch.Id, assessment);
             }
 
             await _unitOfWork.SaveChangesAsync();
-            
+
 
             return new BaseResponse<AssessmentDto>()
             {
@@ -157,7 +159,7 @@ namespace Application.Services
             throw new NotImplementedException();
         }
 
-      
+
 
         public async Task<BaseResponse<PaginationDto<AssessmentDto>>> GetAllAssessmentsByInstructorIdAsync(PaginationRequest request, Guid instructorId = default)
         {
@@ -194,8 +196,8 @@ namespace Application.Services
                 Data = paginationDto
             };
         }
-       public async Task<BaseResponse<PaginationDto<AssessmentDto>>> GetCurrentStudentAssessments(
-    PaginationRequest request, string status)
+        public async Task<BaseResponse<PaginationDto<AssessmentDto>>> GetCurrentStudentAssessments(
+     PaginationRequest request, string? status)
         {
             var userId = _currentUser.GetCurrentUserId();
             if (userId == Guid.Empty)
@@ -210,7 +212,7 @@ namespace Application.Services
                     string.IsNullOrWhiteSpace(status) ||
                     (status.ToLower() == "upcoming" && x.StartDate > now) ||
                     (status.ToLower() == "inprogress" && x.StartDate <= now && x.EndDate >= now) ||
-                    (status.ToLower() == "completed" && x.EndDate < now)
+                    (status.ToLower() == "completed" && x.EndDate < now) && x.Questions.Count() > 0
                 );
 
             var assessments = await _assessmentRepository.GetAllAsync(filter, request);
@@ -245,7 +247,7 @@ namespace Application.Services
             };
         }
 
-   
+
 
         public async Task<BaseResponse<PaginationDto<AssessmentDto>>> GetAssessmentsByStudentId(Guid studentId, PaginationRequest request)
         {
@@ -257,7 +259,7 @@ namespace Application.Services
         }
         public async Task<BaseResponse<PaginationDto<AssessmentDto>>> GetAllStudentAssessments(PaginationRequest request, Guid studentId)
         {
-           
+
             var assessments = await _assessmentRepository.GetAllAsync(
                 x => x.AssessmentAssignments.Any(a => a.StudentId == studentId),
                 request
@@ -316,7 +318,6 @@ namespace Application.Services
                 Data = assessmentDto
             };
         }
-
         public async Task<BaseResponse<AssessmentDto>> UpdateAssessmentAsync(Guid id, UpdateAssessmentRequestModel model)
         {
             if (id == Guid.Empty || model == null)
@@ -359,7 +360,7 @@ namespace Application.Services
             };
         }
 
-        public async Task<BaseResponse<PaginationDto<AssessmentDto>>> GetAssessmentsByBatchId(Guid id,PaginationRequest request)
+        public async Task<BaseResponse<PaginationDto<AssessmentDto>>> GetAssessmentsByBatchId(Guid id, PaginationRequest request)
         {
             if (id == Guid.Empty)
             {
@@ -406,6 +407,7 @@ namespace Application.Services
                 Data = paginationDto
             };
         }
+        
         public async Task<BaseResponse<PaginationDto<BatchAssessmentsOverview>>> GetAssessmentsByBatchIdDetails(Guid id, PaginationRequest request)
         {
             if (id == Guid.Empty)
@@ -455,7 +457,7 @@ namespace Application.Services
 
         public async Task<BaseResponse<List<AssessmentPerformanceDto>>> GetTopAssessments()
         {
-            var assessments = await _assessmentRepository .GetAllAsync(x => x.AssessmentAssignments.Any(), new PaginationRequest { PageSize = 3, CurrentPage = 1 });
+            var assessments = await _assessmentRepository.GetAllAsync(x => x.AssessmentAssignments.Any(), new PaginationRequest { PageSize = 3, CurrentPage = 1 });
             if (assessments == null || !assessments.Items.Any())
             {
                 throw new ApiException("No assessments found", (int)HttpStatusCode.NotFound, "ASSESSMENTS_NOT_FOUND", null);
@@ -470,7 +472,7 @@ namespace Application.Services
             {
                 Status = true,
                 Message = "Top assessments retrieved successfully",
-               Data = assessmentPerformance
+                Data = assessmentPerformance
             };
         }
 
@@ -480,7 +482,7 @@ namespace Application.Services
                 x => x.AssessmentAssignments.Any(),
                 new PaginationRequest { PageSize = 3, CurrentPage = 1 }
             );
-            if(assessments == null || !assessments.Items.Any())
+            if (assessments == null || !assessments.Items.Any())
             {
                 throw new ApiException("No assessments found", (int)HttpStatusCode.NotFound, "ASSESSMENTS_NOT_FOUND", null);
             }
@@ -506,7 +508,7 @@ namespace Application.Services
         {
             var recentAssessments = await _assessmentRepository.GetAllAsync(
                 x => x.CreatedAt >= DateTime.UtcNow.AddDays(-7),
-                new PaginationRequest { PageSize = 5, CurrentPage = 1 } 
+                new PaginationRequest { PageSize = 5, CurrentPage = 1 }
             );
 
             if (recentAssessments == null || !recentAssessments.Items.Any())
@@ -543,12 +545,12 @@ namespace Application.Services
         public async Task<BaseResponse<List<AssessmentDto>>> GetInstructorRecentAssessment()
         {
             var userId = _currentUser.GetCurrentUserId();
-            if(userId == Guid.Empty)
+            if (userId == Guid.Empty)
             {
                 throw new ApiException("Current user ID is invalid", (int)HttpStatusCode.BadRequest, "INVALID_USER_ID", null);
             }
             var recentAssessments = await _assessmentRepository.GetAllAsync(
-                x => x.CreatedAt >= DateTime.UtcNow.AddDays(-7) && x.InstructorId == userId ,
+                x => x.CreatedAt >= DateTime.UtcNow.AddDays(-7) && x.InstructorId == userId,
                 new PaginationRequest { PageSize = 5, CurrentPage = 1 }
             );
 
@@ -620,7 +622,7 @@ namespace Application.Services
                 (!batchId.HasValue || x.BatchAssessment.Any(b => b.BatchId == batchId)) &&
                 (string.IsNullOrEmpty(status) ||
                     (status == "upcoming" && x.StartDate > now) ||
-                    (status == "past" && x.EndDate < now)),request);
+                    (status == "past" && x.EndDate < now)), request);
 
             var items = assessments.Items.Select(a => new InstructorAssessmentDto
             {
@@ -742,6 +744,133 @@ namespace Application.Services
             };
         }
 
+        public async Task<BaseResponse<AssessmentMetrics>> GetAssessmentMetrics(Guid id)
+        {
+            var assessment = await _assessmentRepository.GetAsync(id);
+            if (assessment is null)
+                throw new ApiException("Assessment Not Found", (int)HttpStatusCode.BadRequest, "ASSESSMENT_NOT_FOUND", null);
+            var totalSubmission = assessment.Submissions.Count;
+            var assignedStudent = assessment.AssessmentAssignments.Count;
+            var assessmentMetrics = new AssessmentMetrics()
+            {
+                AvgScore = totalSubmission > 0 ? Math.Round(assessment.Submissions.Average(x => x.TotalScore)) : 0,
+                PassRate = totalSubmission > 0 ? Math.Round((assessment.Submissions.Count(s => s.TotalScore >= assessment.PassingScore) * 100.0 / totalSubmission))
+                : 0,
+
+                TotalSubmissions = totalSubmission,
+                CompletionRate = assignedStudent > 0 ? Math.Round((totalSubmission * 100.0 / assignedStudent))
+                : 0
+            };
+            return new BaseResponse<AssessmentMetrics>
+            {
+                Message = "Assessment Metrics",
+                Status = true,
+                Data = assessmentMetrics
+            };
+        }
+
+        public async Task<BaseResponse<List<BatchPerformance>>> GetBatchPerformance(Guid assessmentId)
+        {
+            var assessment = await _assessmentRepository
+                .GetForBatchPerformanceAsync(assessmentId);
+
+            if (assessment == null)
+                throw new ApiException("Assessment Not Found", 400, "ASSESSMENT_NOT_FOUND", null);
+
+            // Group submissions by the student's batch
+            var batchPerformances = assessment.Submissions
+                .Where(s => s.Student != null && s.Student.BatchId != Guid.Empty)
+                .GroupBy(s => new { s.Student.BatchId, s.Student.Batch.Name })
+                .Select(g => new BatchPerformance
+                {
+                    BatchName = g.Key.Name,
+                    AverageScore = Math.Round(g.Average(s => s.TotalScore), 2)
+                })
+                .ToList();
+
+            return new BaseResponse<List<BatchPerformance>>()
+            {
+                Message = "Success",
+                Status = true,
+                Data = batchPerformances
+            };
+        }
+        public async Task<BaseResponse<PaginationDto<StudentAssessmeentPerformance>>> GetStudentAssessmentPerformance(Guid assessmentId, PaginationRequest request)
+        {
+            var assessment = await _assessmentRepository.GetForBatchPerformanceAsync(assessmentId);
+            if (assessment == null)
+                throw new ApiException("Assessment Not Found", 400, "ASSESSMENT_NOT_FOUND", null);
+
+            var studentIds = assessment.AssessmentAssignments.Select(x => x.StudentId).ToList();
+
+            var students = await _userRepository.GetSelectedIds(studentIds, request);
+
+            var submissionsDict = assessment.Submissions
+                .ToDictionary(x => x.StudentId, x => x);
+
+            var studentPerformance = students.Items.Select(student =>
+            {
+                var hasSubmission = submissionsDict.TryGetValue(student.Id, out var submission);
+
+                return new StudentAssessmeentPerformance
+                {
+                    StudentId = student.Id,
+                    Name = student.FullName,
+                    Batch = student.Batch != null ? $"{student.Batch.Name} {student.Batch.BatchNumber}" : "N/A",
+                    Score = hasSubmission ? submission.TotalScore : 0,
+                    SubmittedAt = hasSubmission ? submission.SubmittedAt : (DateTime?)null,
+                    Status = hasSubmission
+                        ? (submission.TotalScore >= assessment.PassingScore ? "Passed" : "Failed")
+                        : "Not Submitted"
+                };
+            }).ToList();
+            var paginationDto = new PaginationDto<StudentAssessmeentPerformance>()
+            {
+                Items = studentPerformance,
+                HasNextPage = students.HasNextPage,
+                HasPreviousPage = students.HasPreviousPage,
+                CurrentPage = students.CurrentPage,
+                TotalItems = students.TotalItems,
+                PageSize = students.PageSize
+            };
+
+            return new BaseResponse<PaginationDto<StudentAssessmeentPerformance>>
+            {
+                Message = "Success",
+                Status = true,
+                Data = paginationDto
+            };
+        }
+
+        public async Task<BaseResponse<List<AssessmentScoreDistribution>>> GetAssessmentScoreDistribution(Guid assessmentId)
+        {
+            var assessment = await _assessmentRepository.GetForBatchPerformanceAsync(assessmentId);
+            if (assessment == null)
+                throw new ApiException("Assessment Not Found", 400, "ASSESSMENT_NOT_FOUND", null);
+
+            var scores = assessment.Submissions.Select(x => x.TotalScore).ToList();
+
+            var caps = new List<AssessmentScoreDistribution>();
+
+            for (int lower = 0; lower <= 100; lower += 10)
+            {
+                int upper = lower + 9;
+                if (upper > 100) upper = 100;
+
+                caps.Add(new AssessmentScoreDistribution
+                {
+                    Cap = $"{lower}-{upper}",
+                    Count = scores.Count(x => x >= lower && x <= upper)
+                });
+            }
+
+            return new BaseResponse<List<AssessmentScoreDistribution>>()
+            {
+                Status = true,
+                Message = "Assessment Score Distribution",
+                Data = caps
+            };
+        }
 
     }
 

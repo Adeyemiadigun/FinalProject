@@ -16,4 +16,10 @@ namespace Infrastructure.Configurations
         public string AuthType { get; set; }
 
     }
+    public class OpenRouter
+    {
+        public string ApiKey { get; set; }
+        public string Url { get; set; }
+        public string HttpReferer { get; set; }
+    }
 }

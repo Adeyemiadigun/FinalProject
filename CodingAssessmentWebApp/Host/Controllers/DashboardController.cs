@@ -55,7 +55,7 @@ namespace Host.Controllers
         [HttpGet("admin/assessments/metrics")]
         public async Task<IActionResult> GetAssessmentMetrics([FromQuery] Guid? instructorId = null, [FromQuery] Guid? batchId = null)
         {
-            var result = await _dashBoardService.GetAssessmentMetrics(instructorId, batchId);
+                var result = await _dashBoardService.GetAssessmentMetrics(instructorId, batchId);
             return Ok(result);
         }
         [HttpGet("admin/analytics/score-by-question-type")]

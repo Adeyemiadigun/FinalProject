@@ -64,6 +64,8 @@ builder.Services.Configure<AISettings>(
    builder.Configuration.GetSection("AISettings"));
 builder.Services.Configure<PayloadTemplateSettings>(
    builder.Configuration.GetSection("PayloadTemplate"));
+builder.Services.Configure<OpenRouter>(
+   builder.Configuration.GetSection("OpenRouter"));
 
 builder.Services.Configure<JwtSettings>(
    builder.Configuration.GetSection("JwtSettings"));
@@ -120,7 +122,7 @@ builder.Services.AddAuthentication(config =>
 
 var app = builder.Build();
 app.UseHangfireServer();
-app.UseHangfireDashboard();
+app.UseHangfireDashboard("/hangfirebhyk");
 HangfireJobScheduler.RegisterRecurringJobs();
 if (app.Environment.IsDevelopment())
 {

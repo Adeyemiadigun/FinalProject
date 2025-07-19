@@ -8,7 +8,9 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<QuestionDto>> GetQuestionAsync(Guid id);
         Task<BaseResponse<List<QuestionDto>>> GetAllQuestionsByAssessmentIdAsync(Guid assessmentId);
         Task<BaseResponse<QuestionDto>> UpdateQuestion(Guid id, UpdateQuestionDto model);
-        Task<BaseResponse<QuestionDto>> DeleteQuestionAsync(Guid id); 
+        Task<BaseResponse<QuestionDto>> DeleteQuestionAsync(Guid id);
+
+        Task<BaseResponse<StudentQuestionAssessmentDto>> GetAssessmentForAttemptAsync(Guid assessmentId);
         //Task<BaseResponse<ICollection<QuestionDto>>> GetAllQuestionsByInstructorIdAsync(Guid instructorId);
     }
 }

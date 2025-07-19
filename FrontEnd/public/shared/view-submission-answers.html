@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" x-data="viewSubmissionPage()" x-init="init()">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>View Submission</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+
+<body class="bg-gray-100 text-gray-800">
+  <div id="sidebar-placeholder"></div>
+  <div class="md:ml-64 p-6 space-y-6">
+    <div id="navbar-placeholder"></div>
+
+    <div>
+      <h1 class="text-2xl font-bold mb-2">📄 Submission Details</h1>
+      <p class="text-gray-600">Assessment: <span x-text="submission.title"></span></p>
+      <p class="text-gray-600">Student: <span x-text="submission.studentName"></span></p>
+      <p class="text-gray-600">Submitted At: <span x-text="formatDate(submission.submittedAt)"></span></p>
+      <p class="text-gray-600">Total Score: <span x-text="submission.totalScore + '%' "></span></p>
+      <p class="text-gray-600">Feedback: <span x-text="submission.feedBack || 'N/A'"></span></p>
+    </div>
+
+    <div class="bg-white rounded shadow p-4">
+      <h2 class="text-lg font-semibold mb-4">📝 Answers</h2>
+      <template x-for="answer in submission.submittedAnswers" :key="answer.questionId">
+        <div class="mb-6 border-l-4 border-blue-500 pl-4">
+          <p class="font-bold mb-1" x-text="answer.order + '. ' + answer.questionText"></p>
+          <p class="text-sm italic mb-1">Type: <span x-text="getTypeLabel(answer.questionType)"></span></p>
+
+          <!-- MCQ -->
+          <template x-if="answer.questionType === 1">
+            <ul class="list-disc list-inside text-sm mb-2">
+              <template x-for="opt in answer.options" :key="opt.optionText">
+                <li>
+                  <span x-text="opt.optionText"></span>
+                  <span x-show="opt.isCorrect" class="text-green-600 font-semibold ml-2">(Correct)</span>
+                  <span x-show="answer.selectedOptions.some(o => o.optionText === opt.optionText)"
+                    class="text-blue-600 ml-2">(Selected)</span>
+                </li>
+              </template>
+            </ul>
+          </template>
+
+          <!-- Objective -->
+          <template x-if="answer.questionType === 2">
+            <p class="text-sm"><strong>Answer:</strong> <span x-text="answer.submittedAnswer"></span></p>
+          </template>
+
+          <!-- Coding -->
+          <template x-if="answer.questionType === 3">
+            <div class="space-y-1 text-sm">
+              <p><strong>Submitted Code:</strong></p>
+              <pre class="bg-gray-100 p-2 rounded text-xs overflow-auto" x-text="answer.submittedAnswer"></pre>
+              <div>
+                <p class="font-medium mb-1">Test Case Results:</p>
+                <template x-for="tc in answer.testCases" :key="tc.id">
+                  <div class="border-l-2 border-blue-300 pl-2 mb-1">
+                    <p><strong>Input:</strong> <span x-text="tc.input"></span></p>
+                    <p><strong>Expected:</strong> <span x-text="tc.expectedOutput"></span></p>
+                    <p><strong>Actual:</strong> <span x-text="tc.actualOutput"></span></p>
+                    <p><strong>Status:</strong> <span :class="tc.passed ? 'text-green-600' : 'text-red-600'"
+                        x-text="tc.passed ? 'Passed' : 'Failed'"></span></p>
+                    <p><strong>Weight:</strong> <span x-text="tc.earnedWeight"></span></p>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <p class="text-sm mt-2">✅ Score: <span x-text="answer.score"></span> | <span
+              :class="answer.isCorrect ? 'text-green-600' : 'text-red-600'"
+              x-text="answer.isCorrect ? 'Correct' : 'Incorrect'"></span></p>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <script src="/public/assets/js/shared/view-submission-answers.js">
+  </script>
+</body>
+
+</html>

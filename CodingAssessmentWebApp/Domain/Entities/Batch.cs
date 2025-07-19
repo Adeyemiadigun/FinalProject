@@ -12,7 +12,7 @@ namespace Domain.Entities
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public ICollection<User> Students { get; set; } = new List<User>();
-        public ICollection<BatchAssessment  > AssessmentAssignments { get; set; } = [];
+        public ICollection<BatchAssessment> AssessmentAssignments { get; set; } = [];
         public Batch()
         {
             CreatedAt = DateTime.UtcNow;

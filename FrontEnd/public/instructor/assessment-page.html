@@ -48,51 +48,56 @@
 
     <!-- Assessment List -->
     <div class="bg-white p-6 rounded shadow">
-      <template x-if="assessments.length > 0">
-        <div class="space-y-6">
-          <template x-for="assessment in assessments" :key="assessment.id">
-            <div class="border rounded p-4">
-              <div class="flex justify-between items-start">
-                <div>
-                  <h3 class="text-lg font-bold" x-text="assessment.title"></h3>
-                  <p class="text-sm text-gray-500" x-text="assessment.technologyStack"></p>
-                  <p class="text-sm text-gray-400"
-                    x-text="`🕒 ${assessment.durationInMinutes} mins | 📅 ${new Date(assessment.startDate).toLocaleString()} - ${new Date(assessment.endDate).toLocaleString()}`">
-                  </p>
-                </div>
-                <template x-if="canAddQuestions(assessment.startDate)">
-                  <a :href="`/public/instructor/assessment-questions.html?assessmentId=${assessment.id}`"
-                    class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">➕ Add Questions</a>
+      <template x-for="assessment in assessments" :key="assessment.id">
+        <a :href="`/public/assessments/assessment-details.html?assessmentId=${assessment.id}`"
+          class="block border rounded p-4 hover:shadow-lg transition">
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="text-lg font-bold" x-text="assessment.title"></h3>
+              <p class="text-sm text-gray-500" x-text="assessment.technologyStack"></p>
+              <p class="text-sm text-gray-400"
+                x-text="`🕒 ${assessment.durationInMinutes} mins | 📅 ${new Date(assessment.startDate).toLocaleString()} - ${new Date(assessment.endDate).toLocaleString()}`">
+              </p>
+            </div>
+            <template x-if="canAddQuestions(assessment.startDate)">
+              <a @click.stop :href="`/public/instructor/assessment-questions.html?assessmentId=${assessment.id}`"
+                class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">➕ Add Questions</a>
+            </template>
+          </div>
+      
+          <div class="mt-4">
+            <h4 class="text-sm font-medium mb-1">Batch Performance</h4>
+            <div class="relative h-40">
+              <canvas :id="`chart-${assessment.id}`" class="absolute inset-0 w-full h-full"></canvas>
+            </div>
+          </div>
+      
+          <div class="mt-4 overflow-x-auto">
+            <h4 class="text-sm font-medium mb-2">Student Scores</h4>
+            <table class="w-full text-sm">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="p-2 text-left">Name</th>
+                  <th class="p-2 text-left">Email</th>
+                  <th class="p-2 text-left">Batch</th>
+                  <th class="p-2 text-left">Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="student in assessment.students" :key="student.studentId">
+                  <tr class="border-t">
+                    <td class="p-2" x-text="student.name"></td>
+                    <td class="p-2" x-text="student.email"></td>
+                    <td class="p-2" x-text="student.batch"></td>
+                    <td class="p-2" x-text="`${student.score}%`"></td>
+                  </tr>
                 </template>
-              </div>
-
-              <div class="mt-4">
-                <h4 class="text-sm font-medium mb-1">Batch Performance</h4>
-                <div class="relative h-40">
-                  <canvas :id="`chart-${assessment.id}`" class="absolute inset-0 w-full h-full"></canvas>
-                </div>
-              </div>
-
-              <div class="mt-4 overflow-x-auto">
-                <h4 class="text-sm font-medium mb-2">Student Scores</h4>
-                <table class="w-full text-sm">
-                  <thead class="bg-gray-100">
-                    <tr>
-                      <th class="p-2 text-left">Name</th>
-                      <th class="p-2 text-left">Email</th>
-                      <th class="p-2 text-left">Batch</th>
-                      <th class="p-2 text-left">Score</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <template x-for="student in assessment.students" :key="student.studentId">
-                      <tr class="border-t">
-                        <td class="p-2" x-text="student.name"></td>
-                        <td class="p-2" x-text="student.email"></td>
-                        <td class="p-2" x-text="student.batch"></td>
-                        <td class="p-2" x-text="`${student.score}%`"></td>
-                      </tr>
-                    </template>
+              </tbody>
+            </table>
+          </div>
+        </a>
+      </template>
+      
                   </tbody>
                 </table>
               </div>
@@ -101,11 +106,11 @@
 
           <!-- Pagination -->
           <div class="flex justify-end space-x-2 mt-4">
-            <button @click="fetchPage(pagination.currentPage - 1)" :disabled="!pagination.hasPreviousPage"
+            <button @click="prevPage()" :disabled="!pagination.hasPreviousPage"
               class="px-4 py-2 bg-gray-200 rounded disabled:opacity-50">Prev</button>
             <span class="text-sm px-4 py-2">Page <span x-text="pagination.currentPage"></span> of <span
                 x-text="pagination.totalPages"></span></span>
-            <button @click="fetchPage(pagination.currentPage + 1)" :disabled="!pagination.hasNextPage"
+            <button @click="nextPage()" :disabled="!pagination.hasNextPage"
               class="px-4 py-2 bg-gray-200 rounded disabled:opacity-50">Next</button>
           </div>
         </div>

@@ -7,6 +7,7 @@ namespace Application.Interfaces.Repositories
     public interface IAssessmentRepository : IBaseRepository<Assessment>
     {
         Task<Assessment?> GetAsync(Guid id);
+        Task<Assessment?> GetForBatchPerformanceAsync(Guid id);
         Task<Assessment?> GetForSubmissionAsync(Guid id);
         Task<Assessment?> GetAsync(string name);
         Task<PaginationDto<Assessment>> GetAllAsync(PaginationRequest request);

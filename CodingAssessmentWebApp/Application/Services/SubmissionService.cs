@@ -49,6 +49,7 @@ namespace Application.Services
                 Student = student,
                 AssessmentId = assessmentId,
                 SubmittedAt = DateTime.UtcNow,
+                FeedBack = "Not Graded Yet"
             };
 
             var answerSubmissions = new List<AnswerSubmission>();
@@ -132,9 +133,10 @@ namespace Application.Services
 
 
 
-        public Task<PaginationDto<Submission>> GetAllAsync(Guid assessmentId, PaginationRequest request)
+        public async Task<PaginationDto<Submission>> GetAllAsync(Guid assessmentId, PaginationRequest request)
         {
             throw new NotImplementedException();
+
         }
 
         public Task<Submission> GetAsync(Guid id)
@@ -142,10 +144,44 @@ namespace Application.Services
             throw new NotImplementedException();
         }
 
-        public Task<PaginationDto<Submission>> GetStudentSubmissionsAsync(Guid studentId, PaginationRequest request)
+        public async Task<BaseResponse<PaginationDto<SubmissionDto>>> GetAssessmentSubmissions(Guid assessmentId, PaginationRequest request)
         {
-            throw new NotImplementedException();
-        }
+            var check = await _assessmentRepository.CheckAsync(x => x.Id == assessmentId);
+            if (!check)
+                throw new ApiException("Assessment not found", 404, "AssessmentNotFound", null);
+            var submssions = await _submissionRepository.GetAllAsync(assessmentId, request);
+            if (!submssions.Items.Any())
+                throw new ApiException("No Assessment Found", 400, "INVALID_QUESTION_TYPE", null);
+
+            var submissionDto = submssions.Items.Select(x => new SubmissionDto
+            {
+                Id = x.Id,
+                AssessmentId = x.AssessmentId,
+                Title = x.Assessment.Title,
+                SubmittedAt = x.SubmittedAt,
+                TotalScore = x.TotalScore,
+                FeedBack = x.FeedBack,
+                StudentId = x.StudentId,
+                StudentName = x.Student.FullName,
+            }).ToList();
+
+            var paginationDto = new PaginationDto<SubmissionDto>()
+            {
+                Items = submissionDto,
+                TotalItems = submssions.TotalItems,
+                TotalPages = submssions.TotalPages,
+                CurrentPage = submssions.CurrentPage,
+                HasNextPage = submssions.HasNextPage,
+                HasPreviousPage = submssions.HasPreviousPage,
+            };
+            return new BaseResponse<PaginationDto<SubmissionDto>>
+            {
+                Message = "Successfully Retrieved",
+                Data = paginationDto,
+                Status = true
+
+            };
+         }
 
         public Task<Submission> GetWithAnswersAsync(Guid id)
         {
@@ -224,6 +260,105 @@ namespace Application.Services
                 Message = "Submission fetched successfully",
                 Data = submissionDto
             };
+        }
+        public async Task<BaseResponse<PaginationDto<SubmissionDto>>> GetCurrentStudentSubmission(PaginationRequest request)
+        {
+            var userId = _currentUser.GetCurrentUserId();
+            if (userId == Guid.Empty)
+                throw new ApiException("No Assessment Found", 400, "INVALID_QUESTION_TYPE", null);
+            var submssions = await _submissionRepository.GetStudentSubmissionsAsync(userId, request);
+            if (!submssions.Items.Any())
+                throw new ApiException("No Assessment Found", 400, "INVALID_QUESTION_TYPE", null);
+
+            var submissionDto = submssions.Items.Select(x => new SubmissionDto
+            {
+                Id = x.Id,
+                AssessmentId = x.AssessmentId,
+                Title = x.Assessment.Title,
+                SubmittedAt = x.SubmittedAt,
+                TotalScore = x.TotalScore,
+                FeedBack = x.FeedBack,
+            });
+
+            var paginationDto = new PaginationDto<SubmissionDto>()
+            {
+                Items = submissionDto,
+                TotalItems = submssions.TotalItems,
+                TotalPages = submssions.TotalPages,
+                CurrentPage = submssions.CurrentPage,
+                HasNextPage = submssions.HasNextPage,
+                HasPreviousPage = submssions.HasPreviousPage,
+            };
+            return new BaseResponse<PaginationDto<SubmissionDto>>
+            {
+                Message = "Successfully Retrieved",
+                Data = paginationDto,
+                Status = true
+
+            };
+        }
+
+        public async Task<BaseResponse<SubmissionDto>> GetSubmissionByIdAsync(Guid submissionId)
+        {
+            var submission = await _submissionRepository.GetAsync(s => s.Id == submissionId);
+
+            if (submission == null)
+            {
+                return new BaseResponse<SubmissionDto>
+                {
+                    Status = false,
+                    Message = "Submission not found"
+                };
+            }
+
+            var submissionDto = new SubmissionDto
+            {
+                Id = submission.Id,
+                AssessmentId = submission.AssessmentId,
+                Title = submission.Assessment.Title,
+                SubmittedAt = submission.SubmittedAt,
+                TotalScore = submission.TotalScore,
+                FeedBack = submission.FeedBack,
+                StudentName = submission.Student.FullName,
+                SubmittedAnswers = submission.AnswerSubmissions.Select(a => new SubmittedAnswerDto
+                {
+                    QuestionId = a.QuestionId,
+                    QuestionText = a.Question.QuestionText,
+                    QuestionType = a.Question.QuestionType,
+                    SubmittedAnswer = a.SubmittedAnswer,
+                    Order = a.Question.Order,
+                    IsCorrect = a.IsCorrect,
+                    Score = a.Score,
+
+                    Options = a.Question.QuestionType == QuestionType.MCQ
+                        ? a.Question.Options.Select(o => new OptionDto
+                        {
+                            OptionText = o.OptionText,
+                            IsCorrect = o.IsCorrect
+                        }).ToList()
+                        : new(),
+                    SelectedOptions = a.SelectedOptions.Select(o => new OptionDto
+                    {
+                        OptionText = o.Option.OptionText,
+                        IsCorrect = o.Option.IsCorrect
+                    }).ToList(),
+                    TestCases = a.Question.QuestionType == QuestionType.Coding
+                        ? a.TestCaseResults.Select(t => new TestCaseResultDto
+                        {
+                            Id = t.Id,
+                            Input = t.Input,
+                            ExpectedOutput = t.ExpectedOutput,
+                            ActualOutput = t.ActualOutput,
+                            Passed = t.Passed,
+                            EarnedWeight = t.EarnedWeight
+                        }).ToList()
+                        : new()
+                }).OrderBy(x=>x.Order).ToList()
+            };
+
+
+            return new BaseResponse<SubmissionDto>() 
+            { Status = true, Data = submissionDto, Message = "Submission Answers Retrieved" };
         }
 
     }

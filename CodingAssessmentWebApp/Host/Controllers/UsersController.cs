@@ -1,5 +1,8 @@
 ﻿using Application.Dtos;
 using Application.Interfaces.Services;
+using Infrastructure.ExternalServices;
+using Microsoft.AspNetCore.Identity.Data;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
@@ -34,5 +37,7 @@ public class UsersController : ControllerBase
         var response = await _userService.DeleteAsync(id);
         return response.Status ? Ok(response) : NotFound(response);
     }
-   
+  
+
+
 }

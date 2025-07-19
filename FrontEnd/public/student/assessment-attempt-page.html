@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" x-data="attemptAssessment()" x-init="loadLayout(); init();">
+<html lang="en" x-data="attemptAssessment()" x-init="init()">
 
 <head>
   <meta charset="UTF-8" />
@@ -7,259 +7,103 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- Monaco Editor Config & Loader -->
   <script>
-    window.require = { paths: { vs: 'https://unpkg.com/monaco-editor@0.34.1/min/vs' } };
+    window.require = {
+      paths: {
+        vs: "https://unpkg.com/monaco-editor@0.34.1/min/vs",
+      },
+    };
   </script>
   <script src="https://unpkg.com/monaco-editor@0.34.1/min/vs/loader.js"></script>
 </head>
 
-<body class="bg-gray-100 text-gray-800">
-  <div id="sidebar-placeholder"
-    :class="sidebarOpen ? 'fixed inset-y-0 left-0 w-64 z-40' : 'hidden md:block fixed inset-y-0 left-0 w-64 z-40'">
+<body class="bg-gray-100 text-gray-800 font-sans antialiased">
+  <div class="flex">
+    <!-- Sidebar -->
+    <div id="sidebar-placeholder" class="hidden md:block w-64 fixed inset-y-0 left-0 z-40 bg-white border-r"></div>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 md:ml-64 min-h-screen flex flex-col">
+      <!-- Navbar -->
+      <div id="navbar-placeholder"></div>
+
+      <!-- Assessment Content -->
+      <main class="flex-grow w-full p-6 max-w-5xl mx-auto space-y-6" x-show="loaded">
+        <div class="flex justify-between items-center">
+          <h1 class="text-2xl font-bold">📝 Attempting: <span x-text="assessment.title"></span></h1>
+          <span class="text-sm text-gray-500" x-text="'Time Left: ' + timerDisplay"></span>
+        </div>
+
+        <!-- Question Navigation -->
+        <div class="flex gap-2 flex-wrap">
+          <template x-for="(q, index) in assessment.questions" :key="q.id">
+            <button @click="switchTo(index)"
+              :class="{'bg-blue-600 text-white': current === index, 'bg-white border': current !== index}"
+              class="px-3 py-1 rounded text-sm">
+              Q <span x-text="index+1"></span>
+            </button>
+          </template>
+        </div>
+
+        <!-- Question Panel -->
+        <div class="bg-white p-6 rounded shadow">
+          <template x-if="currentQuestion">
+            <div>
+              <h2 class="font-semibold text-lg mb-2" x-text="'Q' + (current + 1) + ': ' + currentQuestion.title"></h2>
+
+              <!-- MCQ -->
+              <template x-if="currentQuestion.type === 'MCQ'">
+                <div class="space-y-2">
+                  <template x-for="opt in currentQuestion.options" :key="opt.id">
+                    <label class="block">
+                      <input type="checkbox" :value="opt.id" @change="toggleMCQAnswer(currentQuestion.id, opt.id)"
+                        :checked="answers[currentQuestion.id]?.includes(opt.id)" class="mr-2">
+                      <span x-text="opt.text"></span>
+                    </label>
+                  </template>
+                </div>
+              </template>
+
+              <!-- Objective -->
+              <template x-if="currentQuestion.type === 'Objective'">
+                <input type="text" x-model="answers[currentQuestion.id]" class="w-full mt-2 px-3 py-2 border rounded"
+                  placeholder="Enter your answer here..." />
+              </template>
+
+              <!-- Coding -->
+              <div id="editor" class="border mt-4 rounded h-[400px] overflow-hidden"
+                x-show="currentQuestion.type === 'Coding'"
+                x-effect="if (currentQuestion.type === 'Coding' && !editor && !isMonacoInitializing) {
+                            $nextTick(() => requestAnimationFrame(() => initMonaco()));
+                          }"
+              ></div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="flex justify-between">
+          <button @click="prev" :disabled="current === 0"
+            class="bg-gray-200 px-4 py-2 rounded disabled:opacity-50">Previous</button>
+          <button @click="next" :disabled="current === assessment.questions.length - 1"
+            class="bg-gray-200 px-4 py-2 rounded disabled:opacity-50">Next</button>
+        </div>
+
+        <!-- Submit -->
+        <div class="text-right">
+          <button @click="submit" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">Submit
+            Assessment</button>
+        </div>
+      </main>
+    </div>
   </div>
-  <div class="md:ml-64 min-h-screen flex flex-col">
-    <div id="navbar-placeholder"></div>
-    <main class="flex-grow w-full p-6 max-w-5xl mx-auto space-y-6" x-show="loaded">
 
-      <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-bold">📝 Attempting: <span x-text="assessment.title"></span></h1>
-        <span class="text-sm text-gray-500" x-text="'Time Left: ' + timerDisplay"></span>
-      </div>
-
-      <div class="flex gap-2 flex-wrap">
-        <template x-for="(q, index) in assessment.questions" :key="q.id">
-          <button @click="switchTo(index)"
-            :class="{'bg-blue-600 text-white': current === index, 'bg-white border': current !== index}"
-            class="px-3 py-1 rounded text-sm">
-            Q{{ index + 1 }}
-          </button>
-        </template>
-      </div>
-
-      <div class="bg-white p-6 rounded shadow">
-        <template x-if="currentQuestion">
-          <div>
-            <h2 class="font-semibold text-lg mb-2" x-text="'Q' + (current + 1) + ': ' + currentQuestion.title"></h2>
-
-            <template x-if="currentQuestion.type === 'MCQ'">
-              <div class="space-y-2">
-                <template x-for="opt in currentQuestion.options" :key="opt.id">
-                  <label class="block">
-                    <input type="checkbox" :value="opt.id" @change="toggleMCQAnswer(currentQuestion.id, opt.id)"
-                      :checked="answers[currentQuestion.id]?.includes(opt.id)" class="mr-2">
-                    <span x-text="opt.text"></span>
-                  </label>
-                </template>
-              </div>
-            </template>
-
-            <template x-if="currentQuestion.type === 'Objective'">
-              <input type="text" x-model="answers[currentQuestion.id]" class="w-full mt-2 px-3 py-2 border rounded"
-                placeholder="Enter your answer" />
-            </template>
-
-            <template x-if="currentQuestion.type === 'Coding'">
-              <div id="editor" class="border mt-2 rounded h-[400px] overflow-hidden"></div>
-            </template>
-          </div>
-        </template>
-      </div>
-
-      <div class="flex justify-between">
-        <button @click="prev" :disabled="current === 0"
-          class="bg-gray-200 px-4 py-2 rounded disabled:opacity-50">Previous</button>
-        <button @click="next" :disabled="current === assessment.questions.length - 1"
-          class="bg-gray-200 px-4 py-2 rounded disabled:opacity-50">Next</button>
-      </div>
-
-      <div class="text-right">
-        <button @click="submit" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">Submit
-          Assessment</button>
-      </div>
-    </main>
-  </div>
-
-  <script type="module">
-    function loadLayout() {
-      fetch("/public/components/sidebar-student.html").then(res => res.text()).then(html => document.getElementById("sidebar-placeholder").innerHTML = html);
-      fetch("/public/components/navbar-student.html").then(res => res.text()).then(html => document.getElementById("navbar-placeholder").innerHTML = html);
-    }
-
-    function getToken() {
-      return localStorage.getItem("token");
-    }
-
-    function attemptAssessment() {
-      return {
-        sidebarOpen: false,
-        assessment: { title: "", questions: [] },
-        progress: {},
-        answers: {},
-        editor: null,
-        current: 0,
-        timer: 1200,
-        intervalId: null,
-        loaded: false,
-        sessionStart: new Date().toISOString(),
-
-        get currentQuestion() {
-          return this.assessment.questions[this.current];
-        },
-
-        get timerDisplay() {
-          const m = Math.floor(this.timer / 60);
-          const s = this.timer % 60;
-          return `${m}m ${s < 10 ? "0" + s : s}s`;
-        },
-
-        async init() {
-          const id = new URLSearchParams(window.location.search).get("id");
-          const token = getToken();
-          if (!id || !token) return alert("Invalid access");
-
-          window.addEventListener("beforeunload", () => this.saveProgress());
-
-          const res = await fetch(`/api/student/assessment-progress?id=${id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-
-          const data = await res.json();
-          this.assessment = data.assessment;
-          this.progress = data.progress;
-          this.timer = data.progress?.elapsedSeconds || 1200;
-
-          for (const q of this.assessment.questions) {
-            const ans = data.progress.answers.find(a => a.questionId === q.id);
-            if (q.type === "MCQ") this.answers[q.id] = ans ? ans.selectedOptionIds : [];
-            else this.answers[q.id] = ans ? ans.answerText : "";
-          }
-
-          this.loaded = true;
-          this.initTimer();
-          this.initMonaco();
-          setInterval(() => this.saveProgress(), 30000);
-        },
-
-        async saveProgress() {
-          const token = getToken();
-          const formatted = Object.entries(this.answers).map(([qid, val]) => ({
-            questionId: qid,
-            answerText: typeof val === 'string' ? val : null,
-            selectedOptionIds: Array.isArray(val) ? val : []
-          }));
-
-          await fetch('/api/student/students/progress/save', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              assessmentId: this.assessment.id,
-              answers: formatted,
-              currentSessionStart: this.sessionStart
-            })
-          });
-        },
-
-        async submit() {
-          const token = getToken();
-          const formatted = Object.entries(this.answers).map(([qid, val]) => ({
-            questionId: qid,
-            submittedAnswer: typeof val === 'string' ? val : "",
-            selectedOptionIds: Array.isArray(val) ? val : []
-          }));
-
-          const res = await fetch(`/api/student/${this.assessment.id}/submit`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify({ answers: formatted })
-          });
-
-          if (res.ok) {
-            clearInterval(this.intervalId);
-            alert("Assessment submitted successfully!");
-            window.location.href = "/public/students/view-result.html?id=" + this.assessment.id;
-          } else {
-            alert("Failed to submit assessment.");
-          }
-        },
-
-        initTimer() {
-          this.intervalId = setInterval(() => {
-            if (this.timer > 0) {
-              this.timer--;
-            } else {
-              clearInterval(this.intervalId);
-              this.submit();
-            }
-          }, 1000);
-        },
-
-        initMonaco() {
-          const self = this;
-          require(["vs/editor/editor.main"], function () {
-            self.editor = monaco.editor.create(document.getElementById("editor"), {
-              value: "",
-              language: "javascript",
-              theme: "vs-dark",
-              automaticLayout: true
-            });
-
-            self.editor.onDidChangeModelContent(() => {
-              const q = self.currentQuestion;
-              if (q?.type === "Coding") {
-                self.answers[q.id] = self.editor.getValue();
-              }
-            });
-
-            self.updateEditorContent();
-          });
-        },
-
-        updateEditorContent() {
-          const q = this.currentQuestion;
-          if (q?.type === "Coding" && this.editor) {
-            const value = this.answers[q.id] || "";
-            if (this.editor.getValue() !== value) {
-              this.editor.setValue(value);
-            }
-          }
-        },
-
-        switchTo(index) {
-          this.current = index;
-          this.updateEditorContent();
-        },
-
-        next() {
-          if (this.current < this.assessment.questions.length - 1) {
-            this.current++;
-            this.updateEditorContent();
-          }
-        },
-
-        prev() {
-          if (this.current > 0) {
-            this.current--;
-            this.updateEditorContent();
-          }
-        },
-
-        toggleMCQAnswer(qid, optionId) {
-          const selected = this.answers[qid] || [];
-          if (selected.includes(optionId)) {
-            this.answers[qid] = selected.filter(id => id !== optionId);
-          } else {
-            this.answers[qid].push(optionId);
-          }
-        }
-      };
-    }
-  </script>
+  <!-- Logic -->
+  <script src="/public/assets/js/shared/utils.js"></script>
+  <script src="/public/assets/js/student/assessment-attempt-page.js"></script>
 </body>
 
 </html>

@@ -32,6 +32,8 @@ namespace Infrastructure.Repositories
             var result =  _context.Set<Batch>()
                 .Include(x => x.Students)
                 .Include(x => x.AssessmentAssignments)
+                .ThenInclude(x => x.Assessment)
+                .ThenInclude(x =>x.Submissions)
                 .Where(exp);
             return await result.ToListAsync();
         }
@@ -46,7 +48,8 @@ namespace Infrastructure.Repositories
         {
             var query = _context.Set<Batch>()
                 .Include(x => x.Students)
-                .ThenInclude(x => x.Submissions);
+                .ThenInclude(x => x.Submissions)
+                .ThenInclude(x => x.Assessment);
 
 
             var totalRecord = query.Count();
@@ -73,6 +76,7 @@ namespace Infrastructure.Repositories
             var batch = await _context.Set<Batch>()
                 .Include(x => x.Students)
                 .Include(x => x.AssessmentAssignments)
+                .ThenInclude(x => x.Assessment)
                 .FirstOrDefaultAsync(x => x.Id == id);
                
             return batch; 

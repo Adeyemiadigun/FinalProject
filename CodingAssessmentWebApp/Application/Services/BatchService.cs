@@ -21,21 +21,24 @@ namespace Application.Services
             }
             // Retrieve the batch entity  
             var batch = await batchRepository.GetBatchByIdAsync(batchId);
+            var newStart = assessment.StartDate;
+            var newEnd = assessment.StartDate.AddMinutes(assessment.DurationInMinutes);
+
+            if (batch.AssessmentAssignments.Any(x =>
+            {
+                var existingStart = x.Assessment.StartDate;
+                var existingEnd = x.Assessment.StartDate.AddMinutes(x.Assessment.DurationInMinutes);
+
+                return newStart < existingEnd && newEnd > existingStart;
+            }))
+            {
+                throw new ApiException("Batch already has an assessment assigned in the same time frame.", 400, "BatchAlreadyHasAssessment", null);
+            }
+
             if (batch == null)
             {
                 throw new ApiException("Batch not found.", 404, "BatchNotFound", null);
             }
-            if (batch.AssessmentAssignments.Any())
-                throw new ApiException("Batch already has an assessment assigned.", 400, "BatchAlreadyHasAssessment", null);
-            if (batch == null)
-            {
-                throw new ApiException("Batch not found.", 404, "BatchNotFound", null);
-            }
-            var batchAssessment = new BatchAssessment()
-            {
-                BatchId = batchId,
-                AssessmentId = assessment.Id
-            };
             var studentAssessments = batch.Students.Select(x => new AssessmentAssignment()
             {
                 StudentId = x.Id,
@@ -44,12 +47,18 @@ namespace Application.Services
                 Assessment = assessment
             }
             );
+            foreach (var assignment in studentAssessments)
+            {
+                assignment.Student.AssessmentAssignments.Add(assignment);
+                assignment.Assessment.AssessmentAssignments.Add(assignment);
+            }
             var validStudent = batch.Students.Select(x => new UserDto()
             {
                 Id = x.Id,
                 Email = x.Email,
                 FullName = x.FullName
             }).ToList();
+            await unitOfwork.SaveChangesAsync();
             _backgroundService.Enqueue<IEmailService>(emailService => emailService.SendBulkEmailAsync(validStudent, "New Assessment", new AssessmentDto()
             {
                 Title = assessment.Title,
@@ -61,9 +70,6 @@ namespace Application.Services
                 PassingScore = assessment.PassingScore
             }));
             _leaderboardStore.Invalidate(batchId);
-            // Update the batch in the repository  
-            await batchRepository.UpdateAsync(batch);
-            await unitOfwork.SaveChangesAsync();
 
             // Return success response  
             return new BaseResponse<string>
@@ -400,52 +406,48 @@ namespace Application.Services
                 Data = batchDetails
             };
         }
+
         public async Task<BaseResponse<BatchPerformanceTrendDto>> GetBatchPerformanceTrend(Guid? batchId)
         {
-            // 1. Build predicate to apply filtering at DB-level
-            Expression<Func<Assessment, bool>> predicate = a => true;
-
             if (batchId.HasValue && batchId.Value != Guid.Empty)
             {
-                predicate = a => a.BatchAssessment.Any(ba => ba.BatchId == batchId.Value);
+                var batchExists = await batchRepository.CheckAsync(b => b.Id == batchId.Value);
+                if (!batchExists)
+                {
+                    throw new ApiException("Batch not found.", 404, "BatchNotFound", null);
+                }
             }
 
-            // 2. Query database with includes and filter
-            var assessments = await assessmentRepository.GetAllAsync(predicate);
+            var assessments = await assessmentRepository.GetAllAsync(
+                a => !batchId.HasValue || a.BatchAssessment.Any(ba => ba.BatchId == batchId.Value) 
+            );
 
             if (!assessments.Any())
             {
                 throw new ApiException("No assessments found.", 404, "NoAssessmentsFound", null);
             }
 
-            var submissions = assessments
-                .SelectMany(a => a.Submissions)
-                .Where(s => s.SubmittedAt != default(DateTime))
-                .ToList();
+            var labels = new List<string>();
+            var scores = new List<double>();
 
-            if (!submissions.Any())
+            foreach (var assessment in assessments)
             {
-                return new BaseResponse<BatchPerformanceTrendDto>
+                // 2. Correctly filter submissions for THIS assessment AND (if provided) THIS batch.
+                var relevantSubmissions = assessment.Submissions
+                    .Where(s => !batchId.HasValue || s.Student.BatchId == batchId.Value)
+                    .ToList();
+
+                if (relevantSubmissions.Any())
                 {
-                    Status = false,
-                    Message = "No submissions found to compute trend.",
-                    Data = null
-                };
+                    labels.Add(assessment.Title);
+                    scores.Add(Math.Round(relevantSubmissions.Average(s => s.TotalScore), 2));
+                }
             }
 
-            var grouped = submissions
-                .GroupBy(s => $"{s.SubmittedAt.Year}-W{CultureInfo.InvariantCulture.Calendar.GetWeekOfYear(
-                    s.SubmittedAt,
-                    CalendarWeekRule.FirstFourDayWeek,
-                    DayOfWeek.Monday)}")
-                .OrderBy(g => g.Key)
-                .ToList();
-
-            // 5. Create response DTO
             var dto = new BatchPerformanceTrendDto
             {
-                Labels = grouped.Select(g => g.Key).ToList(),
-                Scores = grouped.Select(g => Math.Round(g.Average(s => s.TotalScore), 2)).ToList()
+                Labels = labels,
+                Scores = scores
             };
 
             return new BaseResponse<BatchPerformanceTrendDto>
@@ -511,6 +513,57 @@ namespace Application.Services
                 Status = true,
                 Message = "Batch student counts retrieved successfully.",
                 Data = batchStudentCounts
+            };
+        }
+        public async Task<BaseResponse<List<SubmissionStatsDto>>> GetBatchSubmissionStats(Guid batchId)
+        {
+            
+            var batchExists = await batchRepository.CheckAsync(b => b.Id == batchId);
+            if (!batchExists)
+            {
+                throw new ApiException("Batch not found.", 404, "BatchNotFound", null);
+            }
+
+            
+            var assessmentsInBatch = await assessmentRepository.GetAllAsync(
+               a => a.BatchAssessment.Any(ba => ba.BatchId == batchId)
+            );
+
+
+            if (!assessmentsInBatch.Any())
+            {
+                return new BaseResponse<List<SubmissionStatsDto>>
+                {
+                    Status = true,
+                    Message = "No assessments were found for this batch.",
+                    Data = new List<SubmissionStatsDto>()
+                };
+            }
+
+           
+            var submissionStats = assessmentsInBatch.Select(assessment =>
+            {
+                
+                var assignedCount = assessment.AssessmentAssignments
+                    .Count(aa => aa.Student?.BatchId == batchId);
+
+                var submittedCount = assessment.Submissions
+                    .Count(s => s.Student?.BatchId == batchId);
+
+                return new SubmissionStatsDto
+                {
+                    AssessmentTitle = assessment.Title,
+                    TotalAssigned = assignedCount,
+                    TotalSubmitted = submittedCount
+                };
+            }).ToList();
+
+            
+            return new BaseResponse<List<SubmissionStatsDto>>
+            {
+                Status = true,
+                Message = "Submission stats retrieved successfully.",
+                Data = submissionStats
             };
         }
     }

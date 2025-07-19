@@ -13,50 +13,52 @@ function instructorDashboard() {
     async loadData() {
       const token = localStorage.getItem("accessToken");
       console.log("Token:", token);
-    
+
       const headers = {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       };
-    try{
-      this.summary = await fetch(
-        "https://localhost:7157/api/v1/Dashboard/instructor/metrics/overview",
-        {
-          method: "GET",
-          headers: headers,
-        }
-      ).then((r) => r.json());
-    
-      this.batches = await fetch(
-        "https://localhost:7157/api/v1/Dashboard/batch-distribution",
-        {
-          method: "GET",
-          headers: headers,
-        }
-      ).then((r) => r.json());
-    
-      this.recentAssessments = await fetch(
-        "https://localhost:7157/api/v1/Instructors/assessment/recents",
-        {
-          method: "GET",
-          headers: headers,
-        }
-      ).then((r) => r.json());
-    
-      this.assessmentScoreTrends = await fetch(
-        "https://localhost:7157/api/v1/Assessments/assessment-scores",
-        {
-          method: "GET",
-          headers: headers,
-        }
-      ).then((r) => r.json());
-    
-      this.drawCharts();
-    }
-    catch (error) {
-      console.error("Error loading data:", error);
-      alert("Failed to load data. Please try again later.");
-    }
+      try {
+        let metrics = await fetch(
+          "https://localhost:7157/api/v1/Dashboard/instructor/metrics/overview",
+          {
+            method: "GET",
+            headers: headers,
+          }
+        ).then((r) => r.json());
+        this.summary = metrics.data;
+        console.log(this.summary)
+        const batchData= await fetch(
+          "https://localhost:7157/api/v1/Dashboard/batch-distribution",
+          {
+            method: "GET",
+            headers: headers,
+          }
+        ).then((r) => r.json());
+        this.batches = batchData.data
+       const data = await fetch(
+          "https://localhost:7157/api/v1/Instructors/assessment/recents",
+          {
+            method: "GET",
+            headers: headers,
+          }
+        ).then((r) => r.json());
+        this.recentAssessments = data.data
+        console.log(this.recentAssessments)
+        const scoreTrend = await fetch(
+          "https://localhost:7157/api/v1/Assessments/assessment-scores",
+          {
+            method: "GET",
+            headers: headers,
+          }
+        ).then((r) => r.json());
+        
+        this.assessmentScoreTrends = scoreTrend.data
+        this.drawCharts();
+      } catch (error) {
+        console.error("Error loading data:", error);
+        alert("Failed to load data. Please try again later.");
+      }
     },
 
     drawCharts() {
@@ -86,6 +88,11 @@ function instructorDashboard() {
           ],
         },
       });
+    },
+    logOut() {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("userRole");
+      window.location.href = "/public/auth/login.html";
     },
   };
 }

@@ -19,6 +19,15 @@ namespace Infrastructure.Repositories
                 .Include(x => x.Submissions)
                 .FirstOrDefaultAsync(x => x.Id == id);
         } 
+        public async Task<Assessment?> GetForBatchPerformanceAsync(Guid id)
+        {
+           return await _context.Set<Assessment>()
+                .Include(a => a.Submissions)
+                .ThenInclude(s => s.Student)
+                .ThenInclude(st => st.Batch)
+                .Include(x => x.AssessmentAssignments)
+                .FirstOrDefaultAsync(x => x.Id == id);
+        }    
         public async Task<Assessment?> GetWithQuestionsAndOptionsAsync(Guid id)
         {
             return await _context.Assessments
@@ -48,8 +57,8 @@ namespace Infrastructure.Repositories
                 TotalPages = totalPages,
                 TotalItems = totalRecord,
                 Items = result,
-                HasNextPage = totalPages / request.CurrentPage == 1 ? false : true,
-                HasPreviousPage = request.CurrentPage - 1 == 0 ? false : true,
+                HasNextPage = request.CurrentPage < totalPages,
+                HasPreviousPage = request.CurrentPage > 1,
                 PageSize = request.PageSize,
                   CurrentPage = request.CurrentPage
 
@@ -69,8 +78,8 @@ namespace Infrastructure.Repositories
                 TotalPages = totalPages,
                 TotalItems = totalRecord,
                 Items = result,
-                HasNextPage = totalPages / request.CurrentPage == 1 ? false : true,
-                HasPreviousPage = request.CurrentPage - 1 == 0 ? false : true,
+                HasNextPage = request.CurrentPage < totalPages,
+                HasPreviousPage = request.CurrentPage > 1,
                 PageSize = request.PageSize,
                 CurrentPage = request.CurrentPage
 
@@ -88,6 +97,9 @@ namespace Infrastructure.Repositories
             var query = _context.Set<Assessment>()
                 .Include(x => x.AssessmentAssignments)
                 .Include(x => x.Submissions)
+                .ThenInclude(x => x.Student)
+                .ThenInclude(x => x.Batch)
+                .Include(x => x.Instructor)
                 .Where(exp);
             var totalRecord = query.Count();
             var totalPages = (int)Math.Ceiling((double)totalRecord / request.PageSize);
@@ -98,8 +110,8 @@ namespace Infrastructure.Repositories
                 TotalPages = totalPages,
                 TotalItems = totalRecord,
                 Items = result,
-                HasNextPage = totalPages / request.CurrentPage == 1 ? false : true,
-                HasPreviousPage = request.CurrentPage - 1 == 0 ? false : true,
+                HasNextPage = request.CurrentPage < totalPages,
+                HasPreviousPage = request.CurrentPage > 1,
                 PageSize = request.PageSize,
                 CurrentPage = request.CurrentPage
 
@@ -110,7 +122,10 @@ namespace Infrastructure.Repositories
         {
             var query = _context.Set<Assessment>()
                 .Include(x => x.AssessmentAssignments)
+                .ThenInclude(x => x.Student)    
                 .Include(x => x.Submissions)
+                .ThenInclude(x => x.Student)
+                .Include(x => x.Questions)
                 .Where(exp);
             return await query.ToListAsync();
            

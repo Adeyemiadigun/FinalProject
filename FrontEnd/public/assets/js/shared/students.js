@@ -17,6 +17,7 @@ function studentsPage() {
       confirmPassword: "",
       batchId: "",
     },
+    sidebarOpen: true,
 
     async init() {
       await this.loadSidebarAndNavbar();
@@ -27,8 +28,10 @@ function studentsPage() {
 
     async loadBatches() {
       try {
-        const res = await fetch("http://localhost:5162/api/v1/batches/all", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        const res = await fetch("https://localhost:7157/api/v1/batches/all", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
         });
         const data = await res.json();
         if (data.status) this.batches = data.data;
@@ -47,26 +50,27 @@ function studentsPage() {
       params.append("pageSize", this.pageSize);
       params.append("currentPage", this.currentPage);
 
-      const url = `http://localhost:5162/api/v1/Students/search?${params.toString()}`;
+      const url = `https://localhost:7157/api/v1/Students/search?${params.toString()}`;
       console.log("Fetching students with URL:", url);
 
       try {
         const res = await fetch(url, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         });
         const data = await res.json();
 
         if (data.status) {
-          this.students = data.data.items;
+          this.students = data.data.items || [];
           this.pagination = data.data;
-          console.log(this.pagination)
+          console.log(this.pagination);
         } else {
-          this.students = []; 
+          this.students = [];
           this.pagination = {};
         }
       } catch (err) {
+        this.students = [];
         console.error("Failed to fetch students:", err);
       }
     },
@@ -117,14 +121,15 @@ function studentsPage() {
       console.log(this.newStudent);
       this.users.push(this.newStudent);
       const bulkStudent = {
-        users: this.users,}
+        users: this.users,
+      };
       console.log("Users to be created:", JSON.stringify(bulkStudent));
       try {
-        const res = await fetch("http://localhost:5162/api/v1/Students", {
+        const res = await fetch("https://localhost:7157/api/v1/Students", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
           body: JSON.stringify(bulkStudent),
         });
@@ -136,7 +141,6 @@ function studentsPage() {
         } else {
           alert(data.errors.users.Email);
         }
-     
       } catch (err) {
         console.error(err);
         alert("Failed to create student.");
@@ -145,7 +149,6 @@ function studentsPage() {
 
     disableForInstructor() {
       try {
-       
         const role = localStorage.getItem("userRole");
         if (role?.toLowerCase() === "instructor") {
           document.getElementById("addStudentBtn").disabled = true;
@@ -168,6 +171,12 @@ function studentsPage() {
 
       await loadComponent("sidebar-placeholder", sidebar);
       await loadComponent("navbar-placeholder", navbar);
+    },
+
+    logOut() {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("userRole");
+      window.location.href = "/public/auth/login.html";
     },
   };
 }

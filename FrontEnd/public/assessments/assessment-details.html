@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" x-data="assessmentDetailsPage()" x-init="loadComponent('sidebar-placeholder', '../components/sidebar.html'); loadComponent('navbar-placeholder', '../components/nav.html'); loadAssessmentDetails()">
+<html lang="en" x-data="assessmentDetailsPage()" x-init="init()">
 
 <head>
   <meta charset="UTF-8" />
@@ -7,23 +7,31 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body class="bg-gray-100 text-gray-800">
   <div id="sidebar-placeholder"></div>
+
   <div class="md:ml-64 p-6 space-y-6" x-cloak>
     <div id="navbar-placeholder"></div>
 
     <div class="flex justify-between items-center">
       <h2 class="text-2xl font-bold">Assessment Details</h2>
+      <!-- Button to View Submissions -->
+      <a :href="`/public/shared/assessment-submission.html?id=${assessment.id}`"
+        class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded">
+        View Submissions
+      </a>
     </div>
 
     <!-- Metadata -->
     <div class="bg-white p-6 rounded shadow space-y-2">
       <h3 class="text-xl font-semibold mb-4">📄 Metadata</h3>
       <p><strong>Title:</strong> <span x-text="assessment.title"></span></p>
-      <p><strong>Technology Stack:</strong> <span x-text="assessment.techStack"></span></p>
-      <p><strong>Duration:</strong> <span x-text="assessment.duration + ' mins'"></span></p>
+      <p><strong>Technology Stack:</strong> <span x-text="assessment.technologyStack"></span></p>
+      <p><strong>Duration:</strong> <span x-text="assessment.durationInMinutes + ' mins'"></span></p>
       <p><strong>Passing Score:</strong> <span x-text="assessment.passingScore + '%'"></span></p>
       <p><strong>Start Date:</strong> <span x-text="assessment.startDate"></span></p>
       <p><strong>End Date:</strong> <span x-text="assessment.endDate"></span></p>
@@ -76,13 +84,13 @@
             </tr>
           </thead>
           <tbody>
-            <template x-for="student in paginatedStudents" :key="student.id">
+            <template x-for="student in students" :key="student.studentId">
               <tr class="border-t">
                 <td class="p-2" x-text="student.name"></td>
                 <td class="p-2" x-text="student.batch"></td>
                 <td class="p-2" x-text="student.score + '%'"></td>
                 <td class="p-2" x-text="student.status"></td>
-                <td class="p-2" x-text="student.submittedAt"></td>
+                <td class="p-2" x-text="student.submittedAt ?? '—'"></td>
               </tr>
             </template>
           </tbody>
@@ -91,111 +99,17 @@
 
       <!-- Pagination -->
       <div class="mt-4 flex justify-between items-center">
-        <button @click="prevPage" class="px-3 py-1 text-sm bg-gray-200 rounded" :disabled="page === 1">Previous</button>
+        <button @click="prevPage" class="px-3 py-1 text-sm bg-gray-200 rounded"
+          :disabled="!hasPreviousPage">Previous</button>
         <span class="text-sm">Page <span x-text="page"></span> of <span x-text="totalPages"></span></span>
-        <button @click="nextPage" class="px-3 py-1 text-sm bg-gray-200 rounded" :disabled="page === totalPages">Next</button>
+        <button @click="nextPage" class="px-3 py-1 text-sm bg-gray-200 rounded" :disabled="!hasNextPage">Next</button>
       </div>
     </div>
   </div>
 
-  <script>
-    function assessmentDetailsPage() {
-      return {
-        page: 1,
-        perPage: 5,
-
-        assessment: {
-          title: "Advanced LINQ Challenge",
-          techStack: "C# / .NET",
-          duration: 60,
-          passingScore: 70,
-          startDate: "2025-07-10",
-          endDate: "2025-07-12",
-        },
-
-        metrics: {
-          avgScore: 75,
-          passRate: 82,
-          totalSubmissions: 24,
-          completionRate: 92
-        },
-
-        students: [
-          { id: 1, name: "Grace Hill", batch: "Batch Alpha", score: 78, status: "Passed", submittedAt: "2025-07-10" },
-          { id: 2, name: "David Green", batch: "Batch Beta", score: 65, status: "Failed", submittedAt: "2025-07-10" },
-          { id: 3, name: "Musa Bello", batch: "Batch Alpha", score: 84, status: "Passed", submittedAt: "2025-07-11" },
-          { id: 4, name: "Sarah Johnson", batch: "Batch Gamma", score: 52, status: "Failed", submittedAt: "2025-07-12" },
-          { id: 5, name: "John Doe", batch: "Batch Alpha", score: 80, status: "Passed", submittedAt: "2025-07-11" },
-          { id: 6, name: "Amina Yusuf", batch: "Batch Beta", score: 73, status: "Passed", submittedAt: "2025-07-12" }
-        ],
-
-        get totalPages() {
-          return Math.ceil(this.students.length / this.perPage);
-        },
-
-        get paginatedStudents() {
-          const start = (this.page - 1) * this.perPage;
-          return this.students.slice(start, start + this.perPage);
-        },
-
-        prevPage() {
-          if (this.page > 1) this.page--;
-        },
-
-        nextPage() {
-          if (this.page < this.totalPages) this.page++;
-        },
-
-        loadAssessmentDetails() {
-          this.renderCharts();
-        },
-
-        renderCharts() {
-          const scores = this.students.map(s => s.score);
-
-          new Chart(document.getElementById("scoreDistChart"), {
-            type: 'bar',
-            data: {
-              labels: this.students.map(s => s.name),
-              datasets: [{
-                label: 'Score (%)',
-                data: scores,
-                backgroundColor: '#3b82f6'
-              }]
-            }
-          });
-
-          const batchScores = {};
-          this.students.forEach(s => {
-            if (!batchScores[s.batch]) batchScores[s.batch] = [];
-            batchScores[s.batch].push(s.score);
-          });
-
-          const batchLabels = Object.keys(batchScores);
-          const batchAvgScores = batchLabels.map(batch => {
-            const scores = batchScores[batch];
-            return scores.reduce((a, b) => a + b, 0) / scores.length;
-          });
-
-          new Chart(document.getElementById("batchPerfChart"), {
-            type: 'doughnut',
-            data: {
-              labels: batchLabels,
-              datasets: [{
-                data: batchAvgScores,
-                backgroundColor: ['#3b82f6', '#f59e0b', '#10b981']
-              }]
-            }
-          });
-        }
-      };
-    }
-
-    async function loadComponent(id, path) {
-      const res = await fetch(path);
-      const html = await res.text();
-      document.getElementById(id).innerHTML = html;
-    }
+  <script src="/public/assets/js/assessments/assessment-details.js">
+ 
   </script>
 </body>
+
 </html>

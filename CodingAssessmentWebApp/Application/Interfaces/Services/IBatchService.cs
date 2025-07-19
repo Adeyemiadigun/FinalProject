@@ -19,5 +19,6 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<List<BatchStudentCountDto>>> GetBatchStudentCountsAsync();
         Task<BaseResponse<BatchDetails>> GetBatchDetails(Guid batchId);
         Task<BaseResponse<string>> AssignAssessmentToBatchAsync(Guid batchId, Guid assessmentId);
+        Task<BaseResponse<List<SubmissionStatsDto>>> GetBatchSubmissionStats(Guid batchId);
     }
 }

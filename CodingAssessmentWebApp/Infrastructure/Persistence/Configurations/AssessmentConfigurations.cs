@@ -15,8 +15,16 @@ namespace Infrastructure.Persistence.Configurations
                 .HasMaxLength(500);
             builder.Property(x => x.TechnologyStack).IsRequired();
             builder.Property(x => x.DurationInMinutes).IsRequired();
-            builder.Property(x => x.StartDate).IsRequired();
-            builder.Property(x => x.EndDate).IsRequired();
+            builder.Property(x => x.StartDate).IsRequired()
+                    .HasConversion(
+                    v => v.ToUniversalTime(),
+                    v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+
+            builder.Property(x => x.EndDate)
+                .IsRequired()
+                .HasConversion(
+                        v => v.ToUniversalTime(),
+                        v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
             builder.Property(x => x.CreatedAt);
             builder.Property(x => x.PassingScore).IsRequired();
             builder.Property(x => x.InstructorId).IsRequired();

@@ -10,11 +10,10 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
-<body class="bg-gray-100 text-gray-800" x-data="{ sidebarOpen: false }" x-init="initLayout()">
+<body class="bg-gray-100 text-gray-800" >
 
   <!-- Sidebar -->
-  <div id="sidebar-placeholder"
-    :class="sidebarOpen ? 'fixed inset-y-0 left-0 w-64 z-40' : 'hidden md:block fixed inset-y-0 left-0 w-64 z-40'">
+  <div id="sidebar-placeholder">
   </div>
 
   <!-- Main Content -->
@@ -114,109 +113,7 @@
   </div>
 
   <!-- JavaScript Logic -->
-  <script>
-    async function loadComponent(id, path) {
-      const res = await fetch(path);
-      const html = await res.text();
-      document.getElementById(id).innerHTML = html;
-    }
-
-    function initLayout() {
-      loadComponent('sidebar-placeholder', '/public/components/sidebar-student.html');
-      loadComponent('navbar-placeholder', '/public/components/navbar-student.html');
-    }
-
-    function dashboardApp() {
-      return {
-        student: { name: '', batch: '' },
-        summaryCards: {},
-        ongoing: [],
-        upcoming: [],
-        history: [],
-        scoreTrend: [],
-
-        async initDashboard() {
-          const token = localStorage.getItem('accessToken');
-          const headers = { Authorization: `Bearer ${token}` };
-
-          await Promise.all([
-            this.fetchStudentInfo(headers),
-            this.fetchSummary(headers),
-            this.fetchOngoing(headers),
-            this.fetchUpcoming(headers),
-            this.fetchHistory(headers),
-            this.fetchTrend(headers)
-          ]);
-        },
-
-        async fetchStudentInfo(headers) {
-          // optional: if you have a separate endpoint for student profile
-          this.student.name = localStorage.getItem('userFullName') || "Student";
-          this.student.batch = localStorage.getItem('userBatch') || "—";
-        },
-
-        async fetchSummary(headers) {
-          const res = await fetch('/api/v1/student/dashboard', { headers });
-          const data = await res.json();
-          const d = data.data;
-          this.summaryCards = {
-            "Total Assessments": d.totalAssessments,
-            "Avg Score": `${Math.round(d.averageScore)}%`,
-            "Completion Rate": `${Math.round(d.completionRate)}%`,
-            "Completed": d.completedAssessments
-          };
-        },
-
-        async fetchOngoing(headers) {
-          const res = await fetch('/api/v1/student/ongoing', { headers });
-          const data = await res.json();
-          this.ongoing = data.data || [];
-        },
-
-        async fetchUpcoming(headers) {
-          const res = await fetch('/api/v1/student/upcoming', { headers });
-          const data = await res.json();
-          this.upcoming = data.data || [];
-        },
-
-        async fetchHistory(headers) {
-          const res = await fetch('/api/v1/student/history', { headers });
-          const data = await res.json();
-          this.history = data.data || [];
-        },
-
-        async fetchTrend(headers) {
-          const res = await fetch('/api/v1/student/performance-trend', { headers });
-          const data = await res.json();
-          const labels = data.data.map(x => x.labels);
-          const scores = data.data.map(x => x.scores);
-          new Chart(document.getElementById("performanceChart"), {
-            type: 'line',
-            data: {
-              labels: labels,
-              datasets: [{
-                label: 'Score %',
-                data: scores,
-                borderColor: '#6366f1',
-                tension: 0.4,
-                fill: false
-              }]
-            },
-            options: {
-              responsive: true,
-              scales: { y: { beginAtZero: true, max: 100 } }
-            }
-          });
-        },
-
-        formatDate(dateStr) {
-          const d = new Date(dateStr);
-          return d.toLocaleDateString('en-US', {
-            year: 'numeric', month: 'short', day: 'numeric'
-          });
-        }
-      };
-    }
+  <script src="/public/assets/js/student/student-dashboard.js">
   </script>
 </body>
 

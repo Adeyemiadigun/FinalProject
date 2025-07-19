@@ -23,6 +23,8 @@
       <h2 class="text-2xl font-bold">Questions for Assessment: <span x-text="assessmentTitle"></span></h2>
       <button @click="showCreateModal = true" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">➕ Add
         Question</button>
+        <button @click="showAIModal = true" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">🤖 Generate Ai 
+          Question</button>
     </div>
 
     <!-- Question List -->
@@ -43,9 +45,43 @@
             <tr class="border-t align-top">
               <td class="p-2" x-text="index + 1"></td>
               <td class="p-2">
-                <div class="font-semibold" x-text="q.questionText"></div>
+                <div class="font-semibold mb-2" x-text="q.questionText"></div>
+              
+                <!-- MCQ Options -->
+                <template x-if="q.questionType === 1">
+                  <ul class="list-disc list-inside text-sm space-y-1">
+                    <template x-for="opt in q.options" :key="opt.optionText">
+                      <li>
+                        <span x-text="opt.optionText"></span>
+                        <span x-show="opt.isCorrect" class="text-green-600 font-semibold ml-2">(Correct)</span>
+                      </li>
+                    </template>
+                  </ul>
+                </template>
+              
+                <!-- Objective Answer -->
+                <template x-if="q.questionType === 2">
+                  <div class="text-sm mt-1">
+                    <span class="font-medium">Answer:</span>
+                    <span x-text="q.answer?.answerText || 'N/A'"></span>
+                  </div>
+                </template>
+              
+                <!-- Coding Test Cases -->
+                <template x-if="q.questionType === 3">
+                  <div class="text-sm mt-1">
+                    <div class="font-medium mb-1">Test Cases:</div>
+                    <template x-for="(test, i) in q.testCases" :key="i">
+                      <div class="mb-1 border-l-2 border-blue-300 pl-2">
+                        <div><span class="font-semibold">Input:</span> <span x-text="test.input"></span></div>
+                        <div><span class="font-semibold">Expected:</span> <span x-text="test.expectedOutput"></span></div>
+                        <div><span class="font-semibold">Weight:</span> <span x-text="test.weight"></span></div>
+                      </div>
+                    </template>
+                  </div>
+                </template>
               </td>
-              <td class="p-2" x-text="q.questionType"></td>
+              <td class="p-2" x-text="getQuestionTypeLabel(q.questionType)"></td>
               <td class="p-2" x-text="q.marks"></td>
               <td class="p-2" x-text="q.order"></td>
               <td class="p-2 space-x-2">
@@ -58,18 +94,18 @@
       </table>
     </div>
 
-    <!-- Modal for Create/Edit -->
+    <!-- Create/Edit Modal -->
     <div x-show="showCreateModal || showEditModal" x-transition
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.outside="closeModals()"
       style="display: none;">
-      <div class="bg-white w-full max-w-2xl p-6 rounded shadow">
+      <div class="bg-white w-full max-w-2xl p-6 rounded shadow overflow-y-auto max-h-[90vh]">
         <h3 class="text-xl font-bold mb-4" x-text="showCreateModal ? 'Create Question' : 'Edit Question'"></h3>
-
+    
         <div class="mb-4">
           <label class="font-semibold block">Question Text</label>
           <textarea x-model="questionForm.questionText" class="w-full border rounded px-4 py-2" rows="3"></textarea>
         </div>
-
+    
         <div class="grid grid-cols-3 gap-4 mb-4">
           <div>
             <label class="font-semibold block">Marks</label>
@@ -81,129 +117,181 @@
           </div>
           <div>
             <label class="font-semibold block">Type</label>
-            <select x-model="questionForm.questionType" class="w-full border rounded px-2 py-1"
-              :disabled="showEditModal">
+            <select x-model.number="questionForm.questionType" class="w-full border rounded px-2 py-1" :disabled="showEditModal">
               <option value="">Select</option>
-              <option value="MCQ">MCQ</option>
-              <option value="Objective">Objective</option>
-              <option value="Coding">Coding</option>
+              <option value="1">MCQ</option>
+              <option value="2">Objective</option>
+              <option value="3">Coding</option>
             </select>
           </div>
         </div>
-
+    
+        <!-- MCQ Options -->
+        <template x-if="questionForm.questionType === 1">
+          <div class="space-y-2 mb-4">
+            <label class="font-semibold">Options</label>
+            <template x-for="(opt, idx) in questionForm.options" :key="idx">
+              <div class="flex items-center gap-2">
+                <input type="text" x-model="opt.optionText" class="flex-1 border px-2 py-1 rounded"
+                  placeholder="Option text" />
+                <label class="inline-flex items-center gap-1">
+                  <input type="checkbox" x-model="opt.isCorrect" /> Correct
+                </label>
+                <button @click="questionForm.options.splice(idx, 1)" class="text-red-600 text-sm">✕</button>
+              </div>
+            </template>
+            <button @click="questionForm.options.push({ optionText: '', isCorrect: false })" class="text-blue-600 text-sm">+
+              Add Option</button>
+          </div>
+        </template>
+    
+        <!-- Objective -->
+        <template x-if="questionForm.questionType === 2">
+          <div class="mb-4">
+            <label class="font-semibold block">Expected Answer</label>
+            <input type="text" x-model="questionForm.answer.answerText" class="w-full border rounded px-2 py-1" />
+          </div>
+        </template>
+    
+        <!-- Coding -->
+        <template x-if="questionForm.questionType === 3">
+          <div class="space-y-3 mb-4">
+            <div>
+              <label class="font-semibold">Expected Code</label>
+              <textarea x-model="questionForm.answer.answerText" class="w-full border rounded px-4 py-2"
+                rows="3"></textarea>
+            </div>
+            <div>
+              <label class="font-semibold">Test Cases</label>
+              <template x-for="(test, i) in questionForm.testCases" :key="i">
+                <div class="grid grid-cols-3 gap-2 items-center mb-2">
+                  <input type="text" x-model="test.input" placeholder="Input" class="border px-2 py-1 rounded" />
+                  <input type="text" x-model="test.expectedOutput" placeholder="Expected Output"
+                    class="border px-2 py-1 rounded" />
+                  <input type="number" x-model="test.weight" placeholder="Weight" class="border px-2 py-1 rounded" />
+                  <button @click="questionForm.testCases.splice(i, 1)" class="text-red-600 text-sm">✕</button>
+                </div>
+              </template>
+              <button @click="questionForm.testCases.push({ input: '', expectedOutput: '', weight: 1 })"
+                class="text-blue-600 text-sm">+ Add Test Case</button>
+            </div>
+          </div>
+        </template>
+    
         <div class="text-right space-x-2">
-          <button @click="closeModals"
-            class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">Cancel</button>
-          <button @click="submitQuestion"
-            class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Submit</button>
+          <button @click="closeModals" class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">❌
+            Cancel</button>
+          <button @click="submitQuestion" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">✅
+            Submit</button>
         </div>
       </div>
     </div>
+<!-- AI Generation Modal -->
+<div x-show="showAIModal" x-transition
+  class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+  @click.outside="showAIModal = false" style="display: none;" x-cloak>
+  <div class="bg-white w-full max-w-2xl p-6 rounded shadow">
+    <h3 class="text-xl font-bold mb-4">Generate AI Question</h3>
+
+    <div class="grid grid-cols-2 gap-4 mb-4">
+      <div>
+        <label class="font-semibold block">Technology Stack</label>
+        <select x-model="aiForm.technologyStack" class="w-full border rounded px-2 py-1">
+          <option value="">Select</option>
+          <option>JavaScript</option>
+          <option>Python</option>
+          <option>C#</option>
+          <option>Java</option>
+          <option>SQL</option>
+        </select>
+      </div>
+      <div>
+        <label class="font-semibold block">Difficulty</label>
+        <select x-model="aiForm.difficulty" class="w-full border rounded px-2 py-1">
+          <option value="">Select</option>
+          <option>Easy</option>
+          <option>Medium</option>
+          <option>Hard</option>
+        </select>
+      </div>
+      <div>
+        <label class="font-semibold block">Question Type</label>
+        <select x-model.number="aiForm.questionType" class="w-full border rounded px-2 py-1">
+          <option value="">Select</option>
+          <option value="1">MCQ</option>
+          <option value="2">Objective</option>
+          <option value="3">Coding</option>
+        </select>
+      </div>
+      <div>
+        <label class="font-semibold block">Topic</label>
+        <input type="text" x-model="aiForm.topic" placeholder="e.g. Loops" class="w-full border rounded px-2 py-1" />
+      </div>
+    </div>
+
+    <div class="text-right space-x-2">
+      <button @click="showAIModal = false"
+        class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">Cancel</button>
+      <button @click="generateAIQuestion"
+        class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Generate</button>
+    </div>
   </div>
+</div>
+<!-- AI Preview Modal -->
+<div x-show="showAIPreviewModal" x-transition
+  class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+  @click.outside="showAIPreviewModal = false" x-cloak>
+  <div class="bg-white w-full max-w-2xl p-6 rounded shadow overflow-y-auto max-h-[90vh]">
+    <h3 class="text-xl font-bold mb-4">🧠 AI Generated Question Preview</h3>
 
-  <script>
-    function questionsPage() {
-      return {
-        assessmentId: null,
-        assessmentTitle: '',
-        questions: [],
-        showCreateModal: false,
-        showEditModal: false,
-        editIndex: null,
-        questionForm: {
-          questionText: '',
-          questionType: '',
-          marks: 1,
-          order: 1,
-          options: [],
-          testCases: [],
-          answer: { answerText: '' }
-        },
+    <div class="mb-4">
+      <div class="font-semibold mb-2" x-text="aiPreviewData.questionText || 'No preview available'"></div>
 
-        async init() {
-          const params = new URLSearchParams(window.location.search);
-          this.assessmentId = params.get('assessmentId');
-          this.assessmentTitle = `Assessment #${this.assessmentId ?? 'N/A'}`;
-          await this.loadQuestions();
-        },
+      <!-- MCQ -->
+      <template x-if="aiPreviewData.questionType === 1">
+        <ul class="list-disc list-inside text-sm space-y-1">
+          <template x-for="(opt, i) in aiPreviewData.options" :key="i">
+            <li>
+              <span x-text="opt.optionText || 'Empty option'"></span>
+              <span x-show="opt.isCorrect" class="text-green-600 font-semibold ml-2">(Correct)</span>
+            </li>
+          </template>
+        </ul>
+      </template>
 
-        async loadQuestions() {
-          const res = await fetch(`/api/instructor/assessment/${this.assessmentId}/questions`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-          });
-          const data = await res.json();
-          this.questions = data?.data || [];
-        },
+      <!-- Objective -->
+      <template x-if="aiPreviewData.questionType === 2">
+        <div class="text-sm mt-1">
+          <span class="font-medium">Answer:</span>
+          <span x-text="aiPreviewData.answer?.answerText || aiPreviewData.answerText || 'N/A'"></span>
+        </div>
+      </template>
 
-        openEditModal(index) {
-          this.editIndex = index;
-          this.questionForm = JSON.parse(JSON.stringify(this.questions[index]));
-          this.showEditModal = true;
-        },
+      <!-- Coding -->
+      <template x-if="aiPreviewData.questionType === 3">
+        <div class="text-sm mt-1">
+          <div class="font-medium mb-1">Test Cases:</div>
+          <template x-for="(test, i) in aiPreviewData.testCases" :key="i">
+            <div class="mb-1 border-l-2 border-blue-300 pl-2">
+              <div><span class="font-semibold">Input:</span> <span x-text="test.input"></span></div>
+              <div><span class="font-semibold">Expected:</span> <span x-text="test.expectedOutput"></span></div>
+              <div><span class="font-semibold">Weight:</span> <span x-text="test.weight"></span></div>
+            </div>
+          </template>
+        </div>
+      </template>
+    </div>
 
-        async submitQuestion() {
-          const payload = {
-            questionText: this.questionForm.questionText,
-            questionType: this.questionForm.questionType,
-            marks: this.questionForm.marks,
-            order: this.questionForm.order,
-            options: this.questionForm.options,
-            testCases: this.questionForm.testCases,
-            answer: this.questionForm.answer
-          };
+    <div class="text-right space-x-2">
+      <button @click="showAIPreviewModal = false"
+        class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">Cancel</button>
+      <button @click="useAIPreviewQuestion" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">✅ Use
+        This Question</button>
+    </div>
+  </div>
+</div>
 
-          const url = this.showEditModal
-            ? `/api/v/questions/${this.questions[this.editIndex].id}`
-            : `/api/instructor/assessment/${this.assessmentId}/questions`;
 
-          const method = this.showEditModal ? 'PUT' : 'POST';
-
-          const res = await fetch(url, {
-            method,
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify(this.showEditModal ? payload : [payload])
-          });
-
-          if (res.ok) {
-            await this.loadQuestions();
-            this.closeModals();
-          } else {
-            alert('Failed to submit question');
-          }
-        },
-
-        async deleteQuestion(questionId) {
-          if (!confirm('Are you sure you want to delete this question?')) return;
-          const res = await fetch(`/api/v/questions/${questionId}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-          });
-          if (res.ok) {
-            this.questions = this.questions.filter(q => q.id !== questionId);
-          } else {
-            alert('Failed to delete question');
-          }
-        },
-
-        closeModals() {
-          this.showCreateModal = false;
-          this.showEditModal = false;
-          this.questionForm = {
-            questionText: '',
-            questionType: '',
-            marks: 1,
-            order: 1,
-            options: [],
-            testCases: [],
-            answer: { answerText: '' }
-          };
-        }
-      };
-    }
-  </script>
+  <script src = "/public/assets/js/instructor/assessment-questions.js"></script>
 </body>
-
 </html>

@@ -21,5 +21,19 @@ namespace Host.Controllers
             var result = await _authService.RefreshTokenAsync(request.RefreshToken);
             return result.Status ? Ok(result) : Unauthorized("Invalid or expired refresh token");
         }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] string Email)
+        {
+            var response = await _authService.ForgetPassword(Email);
+
+            return response.Status? Ok(response) : Ok();
+        }
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ResetPasswordDto model)
+        {
+            var response = await _authService.ResetPassword(model);
+            return response.Status? Ok(response) : Ok();
+        }
     }
 }

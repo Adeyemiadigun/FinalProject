@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" x-data="submissionPage()" x-init="init()">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>My Submissions</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+
+<body class="bg-gray-100 text-gray-800">
+
+  <!-- Sidebar (fixed position) -->
+  <div id="sidebar-placeholder" class="fixed top-0 left-0 w-64 h-full bg-white shadow z-50"></div>
+
+  <!-- Main Content -->
+  <div class="ml-64 min-h-screen p-6 space-y-6">
+    <!-- Navbar -->
+    <div id="navbar-placeholder"></div>
+
+    <!-- Page Title -->
+    <div class="flex justify-between items-center">
+      <h1 class="text-2xl font-bold">📄 My Submissions</h1>
+    </div>
+
+    <!-- Submission Table -->
+    <div class="bg-white rounded shadow p-4">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm table-auto">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="text-left p-2">Title</th>
+              <th class="text-left p-2">Score</th>
+              <th class="text-left p-2">Submitted At</th>
+              <th class="text-left p-2">Feedback</th>
+              <th class="text-left p-2">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="submission in submissions" :key="submission.id">
+              <tr class="border-t hover:bg-gray-50">
+                <td class="p-2" x-text="submission.title"></td>
+                <td class="p-2" x-text="submission.totalScore + '%'"></td>
+                <td class="p-2" x-text="formatDate(submission.submittedAt)"></td>
+                <td class="p-2" x-text="submission.feedBack || 'N/A'"></td>
+                <td class="p-2">
+                  <a :href="`/public/student/view-assessment-result.html?id=${submission.assessmentId}`"
+                    class="text-indigo-600 hover:underline text-sm">View Result</a>
+                </td>
+              </tr>
+            </template>
+
+            <tr x-show="submissions.length === 0">
+              <td colspan="5" class="p-4 text-center text-gray-500">No submissions found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination Controls -->
+      <div class="flex justify-between items-center mt-4">
+        <button @click="prevPage" :disabled="!pagination.hasPreviousPage"
+          class="px-3 py-1 bg-gray-200 rounded text-sm disabled:opacity-50">Previous</button>
+        <span class="text-sm">Page <span x-text="pagination.currentPage"></span> of <span
+            x-text="pagination.totalPages"></span></span>
+        <button @click="nextPage" :disabled="!pagination.hasNextPage"
+          class="px-3 py-1 bg-gray-200 rounded text-sm disabled:opacity-50">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AlpineJS Logic -->
+  <script src="/public/assets/js/student/student-submission.js"></script>
+</body>
+
+</html>

@@ -24,7 +24,7 @@
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-2xl font-bold">Batches</h2>
       <div class="flex gap-4">
-        <select class="px-3 py-2 rounded border bg-white text-sm" x-model="selectedBatchId" @change="fetchMetrics">
+        <select class="px-3 py-2 rounded border bg-white text-sm" x-model="selectedBatchId" @change="fetchMetrics(); fetchTrend()">
           <option value="">All Batches</option>
           <template x-for="batch in batchOptions" :key="batch.id">
             <option :value="batch.id" x-text="batch.name + ' ' + batch.batchNumber"></option>

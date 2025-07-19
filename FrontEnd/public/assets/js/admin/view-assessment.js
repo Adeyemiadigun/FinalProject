@@ -1,4 +1,3 @@
-
 async function loadComponent(id, path) {
   const res = await fetch(path);
   const html = await res.text();
@@ -11,9 +10,9 @@ function assessmentDashboard() {
     selectedInstructor: "",
     batches: [],
     instructors: [],
-
+    sidebarOpen: true,
     async init() {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("accessToken");
       this.headers = { Authorization: `Bearer ${token}` };
 
       await loadComponent("sidebar-placeholder", "../components/sidebar.html");
@@ -24,53 +23,88 @@ function assessmentDashboard() {
     },
 
     async loadDropdowns() {
-      const [batchRes, instructorRes] = await Promise.all([
-        fetch("http://localhost:5162/api/v1/Batches/all", {
-          headers: this.headers,
-        }),
-        fetch("http://localhost:5162/api/v1/Instructors", {
-          headers: this.headers,
-        }),
-      ]);
+      try {
+        const batchRes = await fetch(
+          "https://localhost:7157/api/v1/Batches/all",
+          {
+            headers: this.headers,
+          }
+        );
+        let batch = await batchRes.json();
+        this.batches = batch.data;
 
-      this.batches = await batchRes.json();
-      this.instructors = await instructorRes.json();
+        const instructorRes = await fetch(
+          "https://localhost:7157/api/v1/Instructors",
+          {
+            headers: this.headers,
+          }
+        );
+        let data = await instructorRes.json();
+        this.instructors = data.data;
+      } catch (err) {
+        console.error("Failed to load dropdown data:", err);
+      }
     },
 
     async reloadData() {
       const query = new URLSearchParams();
-
       if (this.selectedInstructor)
         query.append("instructorId", this.selectedInstructor);
       if (this.selectedBatch) query.append("batchId", this.selectedBatch);
 
-      const [metrics, scoreTrends, createdTrends, recents] = await Promise.all([
-        fetch(
-          `http://localhost:5162/api/v1/dashboard/admin/assessments/metrics?${query}`,
+      try {
+        const metricsRes = await fetch(
+          `https://localhost:7157/api/v1/dashboard/admin/assessments/metrics?${query}`,
           {
             headers: this.headers,
           }
-        ).then((res) => res.json()),
-        fetch(
-          `http://localhost:5162/api/v1/Dashboard/admin/analytics/assessments/score-trends?${query}`,
-          {
-            headers: this.headers,
-          }
-        ).then((res) => res.json()),
-        fetch(
-          `http://localhost:5162/api/v1/Dashboard/admin/analytics/assessments/created-trend?${query}`,
-          {
-            headers: this.headers,
-          }
-        ).then((res) => res.json()),
-        fetch(`http://localhost:5162/api/v1/Assessments/recents?${query}`, {
-          headers: this.headers,
-        }).then((res) => res.json()),
-      ]);
+        );
+        const metrics = await metricsRes.json();
+        console.log(metrics);
+        this.renderMetrics(metrics.data);
+      } catch (err) {
+        console.error("Failed to fetch metrics:", err);
+      }
 
-      this.renderMetrics(metrics);
-      this.renderCharts(scoreTrends, createdTrends);
-      this.renderAssessments(recents.data);
+      try {
+        const scoreRes = await fetch(
+          `https://localhost:7157/api/v1/Dashboard/admin/analytics/assessments/score-trends?${query}`,
+          {
+            headers: this.headers,
+          }
+        );
+        const scoreTrend = await scoreRes.json();
+        this.renderScoreChart(scoreTrend.data);
+      } catch (err) {
+        console.error("Failed to fetch score trends:", err);
+      }
+
+      try {
+        const createdRes = await fetch(
+          `https://localhost:7157/api/v1/Dashboard/admin/analytics/assessments/created-trend?${query}`,
+          {
+            headers: this.headers,
+          }
+        );
+        const createdTrend = await createdRes.json();
+        this.renderCreatedChart(createdTrend.data);
+      } catch (err) {
+        console.error("Failed to fetch created trend:", err);
+      }
+
+      try {
+        const recentsRes = await fetch(
+          `https://localhost:7157/api/v1/Assessments/recents?${query}`,
+          {
+            headers: this.headers,
+          }
+        );
+        const recents = await recentsRes.json();
+        console.log(recents);
+        this.renderAssessments(recents.data);
+      } catch (err) {
+        console.error("Failed to fetch recent assessments:", err);
+      }
     },
 
     renderMetrics(metrics) {
@@ -83,8 +117,7 @@ function assessmentDashboard() {
           <div class="bg-white p-4 rounded shadow">Completion: ${metrics.completionRate}%</div>
         </div>`;
     },
-
-    renderCharts(scoreTrend, createdTrend) {
+    renderScoreChart(scoreTrend) {
       new Chart(document.getElementById("scoreTrendsChart"), {
         type: "line",
         data: {
@@ -100,7 +133,9 @@ function assessmentDashboard() {
         },
         options: { responsive: true, scales: { y: { beginAtZero: true } } },
       });
+    },
 
+    renderCreatedChart(createdTrend) {
       new Chart(document.getElementById("createdOverTimeChart"), {
         type: "line",
         data: {
@@ -117,31 +152,33 @@ function assessmentDashboard() {
         options: { responsive: true, scales: { y: { beginAtZero: true } } },
       });
     },
-    logOut() {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("userRole");
-      window.location.href = "/public/auth/login.html";
-    },
+
     renderAssessments(data) {
       const tbody = document.getElementById("assessment-table-body");
       tbody.innerHTML = data
         .map(
           (x) => `
-        <tr class="border-t">
-          <td class="p-2">${x.title}</td>
-          <td class="p-2">${x.type ?? "N/A"}</td>
-          <td class="p-2">${x.instructor ?? "N/A"}</td>
-          <td class="p-2">${x.batch ?? "N/A"}</td>
-          <td class="p-2 text-green-600 font-medium">${x.status ?? "N/A"}</td>
-          <td class="p-2 space-x-2">
-            <button class="text-blue-600 hover:underline">View</button>
-            <button class="text-yellow-600 hover:underline">Edit</button>
-            <button class="text-red-600 hover:underline">Delete</button>
-          </td>
-        </tr>
-      `
+          <tr class="border-t">
+            <td class="p-2">${x.title}</td>
+            <td class="p-2">${x.type ?? "N/A"}</td>
+            <td class="p-2">${x.instructorName ?? "N/A"}</td>
+            <td class="p-2 text-green-600 font-medium">${x.status ?? "N/A"}</td>
+            <td class="p-2 space-x-2">
+              <a href="/public/assessments/assessment-details.html?assessmentId=${
+                x.id
+              }" class="text-blue-600 hover:underline">
+                View
+              </a>
+            </td>
+          </tr>`
         )
         .join("");
+    },
+
+    logOut() {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("userRole");
+      window.location.href = "/public/auth/login.html";
     },
   };
 }

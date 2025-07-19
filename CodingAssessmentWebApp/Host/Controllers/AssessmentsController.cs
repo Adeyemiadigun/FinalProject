@@ -45,10 +45,16 @@ public class AssessmentsController(IAssessmentService assessmentService, IQuesti
         var response = await questionService.CreateQuestionsAsync(questions, assessmentId);
         return response ? Ok(response) : BadRequest(response);
     }
-    [HttpGet("{assessmentId:guid}/questions")]
+    [HttpGet("{assessmentId:guid}/questions/answers")]
     public async Task<IActionResult> GetQuestionsByAssessmentId(Guid assessmentId)
     {
         var response = await questionService.GetAllQuestionsByAssessmentIdAsync(assessmentId);
+        return response.Status ? Ok(response) : NotFound(response);
+    }
+    [HttpGet("{assessmentId:guid}/questions")]
+    public async Task<IActionResult> GetQuestionsForAssessment(Guid assessmentId)
+    {
+        var response = await questionService.GetAssessmentForAttemptAsync(assessmentId);
         return response.Status ? Ok(response) : NotFound(response);
     }
 
@@ -59,7 +65,20 @@ public class AssessmentsController(IAssessmentService assessmentService, IQuesti
         return response.Status ? Ok(response) : BadRequest(response);
     }
     [HttpGet("{assessmentId:guid}/submissions")]
+    public async Task<IActionResult> GetAssessmentSubmission(Guid assessmentId, [FromQuery] PaginationRequest request)
+    {
+        var response = await _submissionService.GetAssessmentSubmissions(assessmentId, request);
+        return Ok(response);
+    }
+
+    [HttpGet("{assessmentId:guid}/submission")]    
     public async Task<IActionResult> GetMySubmission(Guid assessmentId)
+    {
+        var response = await _submissionService.GetCurrentStudentSubmission(assessmentId);
+        return response.Status ? Ok(response) : NotFound(response);
+    }
+    [HttpGet("{assessmentId:guid}/student/submission")]
+    public async Task<IActionResult> GetAssessmentSubmission(Guid assessmentId)
     {
         var response = await _submissionService.GetCurrentStudentSubmission(assessmentId);
         return response.Status ? Ok(response) : NotFound(response);
@@ -81,6 +100,31 @@ public class AssessmentsController(IAssessmentService assessmentService, IQuesti
     public async Task<IActionResult> GetInstructorAssessmentScores()
     {
         var result = await assessmentService.GetInstructorAssessmentScoresAsync();
+        return Ok(result);
+    }
+    [HttpGet("{assessmentId:guid}/metrics")]
+    public async Task<IActionResult> GetAssessmentMetrics(Guid assessmentId)
+    {
+        var result = await assessmentService.GetAssessmentMetrics(assessmentId);
+
+        return Ok(result);
+    }
+    [HttpGet("{assessmentId:guid}/batch-performance")]
+    public async Task<IActionResult> GetBatchPerformance(Guid assessmentId)
+    {
+        var result = await assessmentService.GetBatchPerformance(assessmentId); 
+        return Ok(result);
+    } 
+    [HttpGet("{assessmentId:guid}/students")]
+    public async Task<IActionResult> GetStudentAssessmentPerformance(Guid assessmentId, [FromQuery] PaginationRequest request)
+    {
+        var result = await assessmentService.GetStudentAssessmentPerformance(assessmentId,request); 
+        return Ok(result);
+    }
+    [HttpGet("{assessmentId:guid}/score-distribution")]
+    public async Task<IActionResult> GetScoreDistribution(Guid assessmentId)
+    {
+        var result = await assessmentService.GetAssessmentScoreDistribution(assessmentId); 
         return Ok(result);
     }
     

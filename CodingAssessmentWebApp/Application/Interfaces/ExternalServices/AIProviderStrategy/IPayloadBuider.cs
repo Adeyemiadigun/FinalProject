@@ -2,6 +2,6 @@
 {
     public interface IPayloadBuider
     {
-        string BuildPayload(string name, string prompt);
+        string BuildPayload(string prompt, string payloadType);
     }
 }

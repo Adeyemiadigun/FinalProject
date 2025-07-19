@@ -14,5 +14,7 @@ namespace Application.Interfaces.Repositories
         Task<PaginationDto<User>> GetAllAsync(Expression<Func<User, bool>> exp, PaginationRequest request);
         Task<PaginationDto<User>> GetAllWithRelationshipAsync(Expression<Func<User, bool>> exp, PaginationRequest request);
         Task<User?> GetForInstructorAsync(Guid id);
+        Task<PaginationDto<User>> GetSelectedIds(ICollection<Guid> ids, PaginationRequest request);
+        Task<List<User>> CheckEmails(ICollection<string> emails);
     }
 }

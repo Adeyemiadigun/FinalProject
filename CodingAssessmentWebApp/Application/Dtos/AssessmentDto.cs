@@ -1,7 +1,4 @@
-﻿using Domain.Entitties;
-using Domain.Enum;
-
-namespace Application.Dtos
+﻿namespace Application.Dtos
 {
     public class AssessmentDto
     {
@@ -27,6 +24,19 @@ namespace Application.Dtos
         public DateTime? SubmittedDate { get; set; } // Nullable for not submitted assessments
 
     }
+    public class AssessmentMetrics
+    {
+        public double  AvgScore { get; set; }
+        public double PassRate { get; set; }
+        public int TotalSubmissions { get; set; }
+        public double CompletionRate { get; set; }
+
+    }
+    public class BatchPerformance
+    {
+        public string BatchName { get; set; }
+        public double AverageScore { get; set; } 
+    }
     public class BatchAssessmentsOverview
     {
         public Guid Id { get; init; } 
@@ -36,7 +46,6 @@ namespace Application.Dtos
         public int TotalStudents { get; set; }
         public int Submissions { get; set; }
         public double AvgScore { get; set; }
-
 }
     public class CreateAssessmentRequestModel
     {
@@ -84,6 +93,21 @@ namespace Application.Dtos
         public string Email { get; set; }
         public string Batch { get; set; }
         public double Score { get; set; }
+    }
+    public class AssessmentScoreDistribution
+    {
+        public string Cap { get;set; }
+        public int Count { get; set; }
+
+    }
+    public class StudentAssessmeentPerformance
+    {
+        public Guid StudentId { get; set; }
+        public string Name { get; set; }
+        public string Batch { get; set; }
+        public double Score { get; set; }
+        public DateTime? SubmittedAt { get; set; }
+        public string Status { get; set; }
     }
 
     public class BatchPerformanceDto

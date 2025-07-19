@@ -13,7 +13,6 @@ using Application.Services.AuthService;
 using Application.Validation;
 using FluentValidation;
 using FluentValidation.AspNetCore;
-using Infrastructure.Persistence;
 
 namespace Host.Configurations
 {
@@ -37,9 +36,14 @@ namespace Host.Configurations
             builder.AddHttpClient();
             builder.AddHttpContextAccessor();
             builder.AddSingleton<IRefreshTokenStore, InMemoryRefreshTokenStore>();
-            builder.AddSingleton<ILeaderboardStore, LeaderboardStore>();
+            builder.AddScoped<ILeaderboardStore, LeaderboardStore>();
             builder.AddMemoryCache();
-
+            builder.AddScoped<ICodeWrapper, CodeWrapper>();
+            builder.AddScoped<IExtractMethodName, MethodNameExtractor>();
+            builder.AddScoped<ILlmGradingService,ModelGradingImplementation>();
+            builder.AddScoped<IMissedSubmissionScoringService, MissedSubmissionScoringService>();
+            builder.AddSingleton<IPasswordResetService, PasswordResetService>();
+                
             //FluentValidation
             builder.AddFluentValidationAutoValidation();
             builder.AddValidatorsFromAssemblyContaining<RegisterUserRequestModelValidator>();
@@ -72,7 +76,13 @@ namespace Host.Configurations
             {
                 builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
             }));
+
+
+
+   
+
             return builder;
+
         }
     }
 }

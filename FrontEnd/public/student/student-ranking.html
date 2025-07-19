@@ -76,69 +76,7 @@
     </main>
   </div>
 
-  <script>
-    function loadLayout() {
-      fetch("/public/components/sidebar-student.html")
-        .then(res => res.text())
-        .then(html => document.getElementById("sidebar-placeholder").innerHTML = html);
-
-      fetch("/public/components/navbar-student.html")
-        .then(res => res.text())
-        .then(html => document.getElementById("navbar-placeholder").innerHTML = html);
-    }
-
-    function studentRanking() {
-      return {
-        viewMode: 'my-batch',
-        currentStudentId: 'user-123', // Should be from auth token
-        currentBatchId: 'batch-1',
-        rankings: [],
-        currentPage: 1,
-        pageSize: 10,
-
-        get filteredRankings() {
-          return this.rankings
-            .filter(s => this.viewMode === 'all' || s.batchId === this.currentBatchId)
-            .sort((a, b) => b.score - a.score);
-        },
-
-        get paginatedRankings() {
-          const start = (this.currentPage - 1) * this.pageSize;
-          return this.filteredRankings.slice(start, start + this.pageSize);
-        },
-
-        nextPage() {
-          if (this.currentPage * this.pageSize < this.filteredRankings.length) {
-            this.currentPage++;
-          }
-        },
-
-        prevPage() {
-          if (this.currentPage > 1) {
-            this.currentPage--;
-          }
-        },
-
-        init() {
-          // Example Data (Replace with API fetch)
-          this.rankings = [
-            { id: 'user-123', name: 'You', score: 92, completed: 5, batchId: 'batch-1', batch: 'Batch A', isCurrentUser: true },
-            { id: 'u2', name: 'Bob', score: 88, completed: 4, batchId: 'batch-2', batch: 'Batch B' },
-            { id: 'u3', name: 'Alice', score: 95, completed: 6, batchId: 'batch-1', batch: 'Batch A' },
-            { id: 'u4', name: 'Diana', score: 85, completed: 5, batchId: 'batch-1', batch: 'Batch A' },
-            { id: 'u5', name: 'Tom', score: 78, completed: 3, batchId: 'batch-2', batch: 'Batch B' },
-            { id: 'u6', name: 'Lena', score: 83, completed: 4, batchId: 'batch-1', batch: 'Batch A' },
-            { id: 'u7', name: 'Sam', score: 91, completed: 5, batchId: 'batch-2', batch: 'Batch B' },
-            { id: 'u8', name: 'Jude', score: 74, completed: 2, batchId: 'batch-1', batch: 'Batch A' },
-            { id: 'u9', name: 'Tina', score: 81, completed: 4, batchId: 'batch-1', batch: 'Batch A' },
-            { id: 'u10', name: 'Leo', score: 69, completed: 2, batchId: 'batch-2', batch: 'Batch B' },
-            { id: 'u11', name: 'Grace', score: 88, completed: 4, batchId: 'batch-1', batch: 'Batch A' },
-            { id: 'u12', name: 'Ken', score: 79, completed: 3, batchId: 'batch-1', batch: 'Batch A' }
-          ];
-        }
-      }
-    }
-  </script>
+  <script src="/public/assets/js/student/student-ranking.js"></script>
 </body>
 
 </html>

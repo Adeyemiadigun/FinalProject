@@ -21,7 +21,7 @@ namespace Application.Services
                 throw new ApiException("No assessments found for the instructor.", (int)HttpStatusCode.NotFound, "NoAssessmentsFound", null);
 
             var assessmentIds = assessments.Select(a => a.Id).ToList();
-            var submissions = await _submissionRepository.GetSelectedIds(assessmentIds);
+            var submissions = await _submissionRepository.GetAllAsync(x => assessmentIds.Contains(x.AssessmentId));
             if (submissions?.Any() != true)
                 throw new ApiException("No submissions found for the assessments.", (int)HttpStatusCode.NotFound, "NoSubmissionsFound", null);
 
@@ -81,20 +81,20 @@ namespace Application.Services
         {
             ICollection<Assessment> assessmentsQuery = new List<Assessment>(); // Fixed initialization
 
-            if (instructorId != Guid.Empty && batchId == Guid.Empty)
+            if (instructorId is not null && batchId is null)
             {
                 assessmentsQuery = await _assessmentRepository.GetAllAsync(x => x.InstructorId == instructorId);
             }
 
-            if (batchId != Guid.Empty && instructorId == Guid.Empty)
+            if (batchId is not null && instructorId is null)
             {
                 assessmentsQuery = await _assessmentRepository.GetAllAsync(x => x.BatchAssessment.Any(ba => ba.BatchId == batchId));
             }
-            if (instructorId != Guid.Empty && batchId != Guid.Empty)
+            if (instructorId is not null && batchId is not null)
             {
                 assessmentsQuery = await _assessmentRepository.GetAllAsync(x => x.InstructorId == instructorId && x.BatchAssessment.Any(ba => ba.BatchId == batchId));
             }
-            if (instructorId == Guid.Empty && batchId == Guid.Empty)
+            if (instructorId is null && batchId is null)
             {
                 assessmentsQuery = await _assessmentRepository.GetAllAsync(x => x != null);
             }

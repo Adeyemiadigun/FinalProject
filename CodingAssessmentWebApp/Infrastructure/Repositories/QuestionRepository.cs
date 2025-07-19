@@ -16,7 +16,7 @@ namespace Infrastructure.Repositories
                 .Include(x => x.Options)
                 .Include(x => x.Tests)
                 .Include(x => x.AnswerSubmissions)
-                .Where(x => x.AssessmentId == assessmentId).ToListAsync();
+                .Where(x => x.AssessmentId == assessmentId).OrderBy(x => x.Order).ToListAsync();
            
         }
 

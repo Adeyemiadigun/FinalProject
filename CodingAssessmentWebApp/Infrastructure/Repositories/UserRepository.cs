@@ -4,6 +4,7 @@ using Application.Interfaces.Repositories;
 using Domain.Entitties;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace Infrastructure.Repositories
 {
@@ -34,6 +35,7 @@ namespace Infrastructure.Repositories
             return await _context.Set<User>()
                 .Include(x => x.Assessments)
                 .Include(x => x.Submissions)
+                .ThenInclude(x => x.Assessment)
                 .Include(x => x.AssessmentAssignments)
                 .FirstOrDefaultAsync(exp);
         }
@@ -76,8 +78,8 @@ namespace Infrastructure.Repositories
                 TotalPages = totalPages,
                 TotalItems = totalRecord,
                 Items = result,
-                HasNextPage = totalPages / request.CurrentPage == 1 ? false : true,
-                HasPreviousPage = request.CurrentPage - 1 == 0 ? false : true,
+                HasNextPage = request.CurrentPage < totalPages,
+                HasPreviousPage = request.CurrentPage > 1,
                 PageSize = request.PageSize,
                 CurrentPage = request.CurrentPage
 
@@ -100,12 +102,38 @@ namespace Infrastructure.Repositories
                 TotalPages = totalPages,
                 TotalItems = totalRecord,
                 Items = result,
-                HasNextPage = totalPages / request.CurrentPage == 1 ? false : true,
-                HasPreviousPage = request.CurrentPage - 1 == 0 ? false : true,
+                HasNextPage = request.CurrentPage < totalPages,
+                HasPreviousPage = request.CurrentPage > 1,
                 PageSize = request.PageSize,
                 CurrentPage = request.CurrentPage
 
             };
+
+        }
+        public async Task<PaginationDto<User>> GetSelectedIds(ICollection<Guid> ids, PaginationRequest request)
+        {
+            var res = _context.Set<User>().Include(x => x.AssessmentAssignments).Include(x => x.Submissions)
+                .Where(x => ids.Contains(x.Id));
+            var totalRecord = res.Count();
+            var totalPages = (int)Math.Ceiling((double)totalRecord / request.PageSize);
+            var result = await res.Skip((request.CurrentPage - 1) * request.PageSize).Take(request.PageSize)
+               .ToListAsync();
+            return new PaginationDto<User>
+            {
+                TotalPages = totalPages,
+                TotalItems = totalRecord,
+                Items = result,
+                HasNextPage = request.CurrentPage < totalPages,
+                HasPreviousPage = request.CurrentPage > 1,
+                PageSize = request.PageSize,
+                CurrentPage = request.CurrentPage
+
+            };
+        }
+        public async Task<List<User>> CheckEmails(ICollection<string> emails)
+        {
+            var res =  _context.Users.Where(x => emails.Contains(x.Email));
+            return await res.ToListAsync();
 
         }
     }
