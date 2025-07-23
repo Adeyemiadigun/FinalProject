@@ -1,32 +1,40 @@
 <!DOCTYPE html>
-<html lang="en" x-data="assessmentDashboard()" x-init="init()">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Assessments | Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    [x-cloak] {
+      display: none !important;
+    }
+  </style>
 </head>
 
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-gray-100 text-gray-800" x-data="assessmentsPage()" x-init="init()">
   <div id="sidebar-placeholder"></div>
-  <div class="md:ml-64 p-6 space-y-6">
+  <div class="md:ml-64 p-6 space-y-6" x-cloak>
     <div id="navbar-placeholder"></div>
 
     <!-- Page title & filters -->
     <div class="flex flex-wrap justify-between items-center">
       <h2 class="text-2xl font-bold">Assessments Overview</h2>
-      <div class="flex gap-2 mt-2 md:mt-0">
-        <select x-model="selectedBatch" @change="reloadData()" class="px-3 py-2 rounded border bg-white shadow-sm text-sm">
+      <div class="flex gap-2 mt-2 md:mt-0" x-show="!isLoading.initial">
+        <select x-model="filters.batchId" @change="loadData()"
+          class="px-3 py-2 rounded border bg-white shadow-sm text-sm">
           <option value="">All Batches</option>
           <template x-for="batch in batches" :key="batch.id">
             <option :value="batch.id" x-text="batch.name"></option>
           </template>
         </select>
 
-        <select x-model="selectedInstructor" @change="reloadData()" class="px-3 py-2 rounded border bg-white shadow-sm text-sm">
+        <select x-model="filters.instructorId" @change="loadData()"
+          class="px-3 py-2 rounded border bg-white shadow-sm text-sm">
           <option value="">All Instructors</option>
           <template x-for="instructor in instructors" :key="instructor.id">
             <option :value="instructor.id" x-text="instructor.name"></option>
@@ -36,34 +44,114 @@
     </div>
 
     <!-- Key Metrics -->
-    <div id="metrics-cards"></div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- Skeleton Loaders -->
+      <template x-if="isLoading.metrics">
+        <template x-for="i in 5">
+          <div class="bg-white p-4 rounded shadow animate-pulse">
+            <div class="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+            <div class="h-8 bg-gray-300 rounded w-1/2"></div>
+          </div>
+        </template>
+      </template>
+      <!-- Actual Data -->
+      <template x-if="!isLoading.metrics">
+        <template x-for="metric in metrics" :key="metric.label">
+          <div class="bg-white p-4 rounded shadow">
+            <div class="text-sm text-gray-500" x-text="metric.label"></div>
+            <div class="text-2xl font-bold" x-text="metric.value"></div>
+          </div>
+        </template>
+      </template>
+    </div>
 
     <!-- Chart Section -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="charts-section">
-      <canvas id="scoreTrendsChart"></canvas>
-      <canvas id="createdOverTimeChart"></canvas>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-white p-4 rounded shadow">
+        <h3 class="font-medium mb-2">📈 Score Trend</h3>
+        <div class="relative h-64 flex items-center justify-center">
+          <div x-show="isLoading.charts" class="absolute inset-0 bg-gray-200 rounded animate-pulse"></div>
+          <p x-show="!isLoading.charts && (!chartConfigs.scoreTrendsChart || chartConfigs.scoreTrendsChart.datasets[0].data.length === 0)" class="text-gray-500">No score trend data available.</p>
+          <canvas id="scoreTrendsChart"
+            x-show="!isLoading.charts && chartConfigs.scoreTrendsChart?.datasets[0]?.data.length > 0"></canvas>
+        </div>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <h3 class="font-medium mb-2">📅 Assessments Created Over Time</h3>
+        <div class="relative h-64 flex items-center justify-center">
+          <div x-show="isLoading.charts" class="absolute inset-0 bg-gray-200 rounded animate-pulse"></div>
+          <p x-show="!isLoading.charts && (!chartConfigs.createdOverTimeChart || chartConfigs.createdOverTimeChart.datasets[0].data.length === 0)" class="text-gray-500">No creation trend data available.</p>
+          <canvas id="createdOverTimeChart"
+            x-show="!isLoading.charts && chartConfigs.createdOverTimeChart?.datasets[0]?.data.length > 0"></canvas>
+        </div>
+      </div>
     </div>
 
     <!-- Assessment Table -->
     <div class="bg-white rounded shadow p-4">
       <h3 class="font-medium mb-2 text-lg">Recent Assessments</h3>
       <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="w-full text-sm table-auto">
           <thead class="bg-gray-50 text-left">
             <tr>
               <th class="p-2">Title</th>
-              <th class="p-2">Type</th>
+              <th class="p-2">Stack</th>
               <th class="p-2">Instructor</th>
               <th class="p-2">Status</th>
+              <th class="p-2">Passing Score</th>
               <th class="p-2">Actions</th>
             </tr>
           </thead>
-          <tbody id="assessment-table-body"></tbody>
+          <tbody>
+            <!-- Skeleton Loaders -->
+            <template x-if="isLoading.assessments">
+              <template x-for="i in 5">
+                <tr class="border-t animate-pulse">
+                  <td class="p-2">
+                    <div class="h-4 bg-gray-300 rounded w-full"></div>
+                  </td>
+                  <td class="p-2">
+                    <div class="h-4 bg-gray-300 rounded w-full"></div>
+                  </td>
+                  <td class="p-2">
+                    <div class="h-4 bg-gray-300 rounded w-full"></div>
+                  </td>
+                  <td class="p-2">
+                    <div class="h-4 bg-gray-300 rounded w-full"></div>
+                  </td>
+                  <td class="p-2">
+                    <div class="h-4 bg-gray-300 rounded w-full"></div>
+                  </td>
+                  <td class="p-2">
+                    <div class="h-4 bg-gray-300 rounded w-20"></div>
+                  </td>
+                </tr>
+              </template>
+            </template>
+            <!-- Actual Data -->
+            <template x-if="!isLoading.assessments">
+              <template x-for="assessment in assessments" :key="assessment.id">
+                <tr class="border-t hover:bg-gray-50">
+                  <td class="p-2 font-medium" x-text="assessment.title"></td>
+                  <td class="p-2" x-text="assessment.technologyStack"></td>
+                  <td class="p-2" x-text="assessment.instructorName"></td>
+                  <td class="p-2"><span class="px-2 py-1 text-xs rounded-full" :class="assessment.statusClass"
+                      x-text="assessment.status"></span></td>
+                  <td class="p-2" x-text="assessment.passingScore + '%'"></td>
+                  <td class="p-2"><a :href="`/public/admin/assessment-details.html?assessmentId=${assessment.id}`"
+                      class="text-indigo-600 hover:underline">Details</a></td>
+                </tr>
+              </template>
+            </template>
+            <tr x-show="!isLoading.assessments && assessments.length === 0">
+              <td colspan="6" class="text-center p-4 text-gray-500">No assessments found for the selected filters.</td>
+            </tr>
+          </tbody>
         </table>
       </div>
     </div>
   </div>
   <script src="/public/assets/js/admin/view-assessment.js"></script>
-  </body>
+</body>
 
 </html>

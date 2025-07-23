@@ -6,6 +6,7 @@ using MimeKit;
 using MailKit.Net.Smtp;
 using Domain.Entitties;
 using Application.Exceptions;
+using Application.Interfaces.Services;
 
 namespace Infrastructure.ExternalServices
 {
@@ -15,14 +16,16 @@ namespace Infrastructure.ExternalServices
         private readonly ILogger<EmailService> _logger;
         private readonly string Email;
         private readonly string Password;
-        public EmailService(IConfiguration config, ILogger<EmailService> logger)
+        private readonly ITemplateService templateService;
+        public EmailService(IConfiguration config, ILogger<EmailService> logger, ITemplateService tempService)
         {
             _config = config;
             Email = _config["SMTP:email"]!;
             Password = _config["SMTP:password"]!;
             _logger = logger;
+            templateService = tempService;
         }
-        public async Task<bool> SendBulkEmailAsync(ICollection<UserDto> to, string subject, AssessmentDto assessment)
+        public async Task<bool> SendAssessmentEmail(ICollection<UserDto> to, string subject, AssessmentDto assessment)
         {
             if (to == null || to.Any(x => string.IsNullOrWhiteSpace(x.Email)))
             {
@@ -44,7 +47,48 @@ namespace Infrastructure.ExternalServices
                     emailMessage.Subject = subject;
                     emailMessage.Body = new TextPart("html")
                     {
-                        Text = Template(item, assessment)
+                        Text = templateService.NewAssessmentTemplate(item, assessment)
+                    };
+                    _logger.LogInformation($"Sending email to {item.Email}...");
+                    await smtpClient.SendAsync(emailMessage);
+                }
+                _logger.LogInformation($"Bulk email sent to {to.Count} recipients.");
+                _logger.LogInformation("Bulk email sent successfully.");
+
+                await smtpClient.DisconnectAsync(true); // Fixed: Changed from `smtpClient.Disconnect` to `smtpClient.DisconnectAsync`
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to send bulk email: {ex.Message}", ex);
+                return false;
+            }
+
+            return true;
+        }
+
+        public async Task<bool> SendBulkEmailAsync(ICollection<UserDto> to, string subject, string template)
+        {
+            if (to == null || to.Any(x => string.IsNullOrWhiteSpace(x.Email)))
+            {
+                _logger.LogError("One or more recipient emails are missing.");
+                return false;
+            }
+
+
+            try
+            {
+                using var smtpClient = new SmtpClient();
+                await smtpClient.ConnectAsync("smtp.gmail.com", 465, MailKit.Security.SecureSocketOptions.SslOnConnect);
+                await smtpClient.AuthenticateAsync(Email, Password);
+                foreach (var item in to)
+                {
+                    var emailMessage = new MimeMessage();
+                    emailMessage.From.Add(new MailboxAddress("CLH", Email));
+                    emailMessage.To.Add(new MailboxAddress(item.FullName, item.Email));
+                    emailMessage.Subject = subject;
+                    emailMessage.Body = new TextPart("html")
+                    {
+                        Text = template
                     };
                     _logger.LogInformation($"Sending email to {item.Email}...");
                     await smtpClient.SendAsync(emailMessage);
@@ -114,7 +158,7 @@ namespace Infrastructure.ExternalServices
                     emailMessage.Subject = "Assessment Result";
                     emailMessage.Body = new TextPart("html")
                     {
-                        Text = ResultTemplate(user, submission)
+                        Text = templateService.ResultTemplate(user, submission)
                     };
                     _logger.LogInformation($"Sending email to {user.Email}...");
                     await smtpClient.SendAsync(emailMessage);
@@ -132,66 +176,6 @@ namespace Infrastructure.ExternalServices
             return true;
         }
 
-        public string Template(UserDto user, AssessmentDto assessment)
-        {
-            string template = $@"
-                <html>
-                  <body style='font-family: Arial, sans-serif; color: #333;'>
-                    <h2>You're Invited to an Assessment</h2>
-                    <p>Hi <strong>{user.FullName}</strong>,</p>
-                    <p>
-                      You have been invited to participate in the assessment <strong>{assessment.Title}</strong> on <strong>{assessment.TechnologyStack}</strong>.
-                    </p>
-                    <h4>Assessment Details:</h4>
-                    <ul>
-                      <li><strong>Start Date:</strong> {assessment.StartDate}</li>
-                      <li><strong>End Date:</strong> {assessment.EndDate}</li>
-                      <li><strong>Duration:</strong> {assessment.DurationInMinutes} minutes</li>
-                    </ul>
-                    <p>
-                      Please click the link below to access the assessment:
-                    </p>
-                    <p>
-                      <a href='assessmentLink' style='background-color: #4A90E2; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 4px;'>Start Assessment</a>
-                    </p>
-                    <br/>
-                    <p>If you have any questions, feel free to reply to this email.</p>
-                    <p>Good luck!</p>
-                    <p>The Assessment Team</p>
-                    <hr style='margin-top:30px;' />
-                    <small style='color: gray;'>This is an automated message. Please do not reply directly to this email.</small>
-                  </body>
-                </html>";
-            return template;
-        }
-        public string ResultTemplate(UserDto user , Submission submission)
-        {
-            string template = $@"
-                <html>
-                  <body style='font-family: Arial, sans-serif; color: #333;'>
-                    <h2>Assessment Result</h2>
-                    <p>Hi <strong>{user.FullName}</strong>,</p>
-                    <p>
-                      Your assessment submission has been evaluated. Here are your results:
-                    </p>
-                      <p>
-                          Thank you for completing the assessment <strong>{submission.Assessment.Title}</strong> on <strong>{submission.Assessment.TechnologyStack}</strong>.
-                       </p>
-                    <h4>Submission Details:</h4>
-                    <ul>
-                      <li><strong>Assessment ID:</strong> {submission.AssessmentId}</li>
-                      <li><strong>Submitted At:</strong> {submission.SubmittedAt}</li>
-                      <li><strong>Total Score:</strong> {submission.TotalScore}</li>
-                      <li><strong>Feedback:</strong> {submission.FeedBack}</li>
-                    </ul>
-                    <p>If you have any questions or need further clarification, feel free to reach out.</p>
-                    <p>Best regards,</p>
-                    <p>The Assessment Team</p>
-                    <hr style='margin-top:30px;' />
-                    <small style='color: gray;'>This is an automated message. Please do not reply directly to this email.</small>
-                  </body>
-                </html>";
-            return template;
-        }
+       
     }
 }

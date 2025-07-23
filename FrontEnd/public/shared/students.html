@@ -8,6 +8,7 @@
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/jwt-decode@3.1.2/build/jwt-decode.min.js"></script>
   <style>
     [x-cloak] {
@@ -72,16 +73,29 @@
             </tr>
           </thead>
           <tbody>
-            <template x-for="student in students" :key="student.id">
-              <tr class="border-t hover:bg-gray-50 cursor-pointer" @click="goToDetail(student.id)">
-                <td class="p-2 text-blue-600 hover:underline" x-text="student.fullName"></td>
-                <td class="p-2" x-text="student.email"></td>
-                <td class="p-2" x-text="student.status ? 'Active' : 'Inactive'"></td>
+            <!-- Skeleton Loader -->
+            <template x-if="isLoading">
+              <template x-for="i in 5">
+                <tr class="border-t animate-pulse">
+                  <td class="p-2"><div class="h-4 bg-gray-300 rounded w-3/4"></div></td>
+                  <td class="p-2"><div class="h-4 bg-gray-300 rounded w-full"></div></td>
+                  <td class="p-2"><div class="h-4 bg-gray-300 rounded w-1/2"></div></td>
+                </tr>
+              </template>
+            </template>
+            <!-- Actual Data -->
+            <template x-if="!isLoading">
+              <template x-for="student in students" :key="student.id">
+                <tr class="border-t hover:bg-gray-50 cursor-pointer" @click="goToDetail(student.id)">
+                  <td class="p-2 text-blue-600 hover:underline" x-text="student.fullName"></td>
+                  <td class="p-2" x-text="student.email"></td>
+                  <td class="p-2" x-text="student.status ? 'Active' : 'Inactive'"></td>
+                </tr>
+              </template>
+              <tr x-show="!isLoading && students.length === 0">
+                <td colspan="3" class="p-4 text-center text-gray-500">No students found.</td>
               </tr>
             </template>
-            <tr x-show="students.length === 0">
-              <td colspan="3" class="p-4 text-center text-gray-500">No students found.</td>
-            </tr>
           </tbody>
         </table>
       </div>
@@ -121,7 +135,10 @@
         </div>
         <div class="flex justify-end mt-4 space-x-2">
           <button type="button" @click="closeCreateModal" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
-          <button type="submit" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded hover:bg-indigo-700">Create</button>
+          <button type="submit" :disabled="isSubmitting" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded hover:bg-indigo-700 disabled:opacity-50 w-24 text-center">
+            <span x-show="!isSubmitting">Create</span>
+            <span x-show="isSubmitting">Creating...</span>
+          </button>
         </div>
       </form>
     </div>

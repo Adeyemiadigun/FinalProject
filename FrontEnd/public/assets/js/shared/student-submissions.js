@@ -32,6 +32,7 @@ function adminStudentSubmissions() {
       );
       const json = await res.json();
       this.submissions = json.data || [];
+      console.log(this.submissions);
       this.studentName = this.submissions[0].studentName;
     },
 

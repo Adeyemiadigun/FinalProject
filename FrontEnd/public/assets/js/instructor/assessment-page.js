@@ -163,7 +163,7 @@ function instructorAssessmentsPage() {
       const start = new Date(startDate);
       const now = new Date();
       const diffMinutes = (start - now) / (1000 * 60);
-      return diffMinutes > 10;
+      return diffMinutes >= 0;
     },
   };
 }

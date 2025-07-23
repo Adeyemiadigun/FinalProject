@@ -242,7 +242,7 @@ namespace Application.Services
                 Id = q.Id,
                 Title = q.QuestionText,
                 Type = q.QuestionType.ToString(),
-                TechStack = q.QuestionType.ToString(),
+                TechStack = q.TechnologyStack.ToString(),
                 Options = q.Options?.Select(o => new StudentOptionDto
                 {
                     Id = o.Id,

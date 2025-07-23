@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <title>View Assessment Result</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Alpine.js -->
@@ -13,7 +13,7 @@
 </head>
 
 <body class="bg-gray-100 text-gray-800" x-data="{ sidebarOpen: false }" x-init="loadLayout()">
-
+  <div x-show="!resultLoaded" class="fixed inset-0 bg-gray-200 bg-opacity-75 flex items-center justify-center z-50">Loading...</div>
   <!-- Sidebar -->
   <div id="sidebar-placeholder"
     :class="sidebarOpen ? 'fixed inset-y-0 left-0 w-64 z-40 bg-white shadow' : 'hidden md:block fixed inset-y-0 left-0 w-64 z-40 bg-white shadow'">

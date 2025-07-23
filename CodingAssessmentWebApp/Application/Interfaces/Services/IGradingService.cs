@@ -10,6 +10,6 @@ namespace Application.Interfaces.Services
 {
     public interface IGradingService
     {
-        Task GradeSubmissionAndNotifyAsync(Guid submissionEntityId,Guid  studentId);
+        Task GradeSubmissionAndNotifyAsync(Guid submissionId, Guid  studentId);
     }
 }

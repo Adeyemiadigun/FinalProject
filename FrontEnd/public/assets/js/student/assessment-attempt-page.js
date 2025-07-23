@@ -1,285 +1,424 @@
-function attemptAssessment() {
-  return {
-    sidebarOpen: false,
-    assessment: { title: "", questions: [] },
-    answers: {},
-    assessmentId: "",
-    editor: null,
-    current: 0,
-    timer: 1200,
-    intervalId: null,
-    autoSaveId: null,
-    loaded: false,
-    submitted: false,
-    sessionStart: new Date().toISOString(),
-    isSaving: false,
-    isMonacoInitializing: false, // The "lock" to prevent re-initialization
+document.addEventListener("alpine:init", () => {
+  Alpine.data("attemptAssessment", () => {
+    // These are private variables for the component instance, not reactive.
+    const editorContentStore = {};
+    let remainingSeconds = 0;
+    let resizeObserver = null;
 
-    get currentQuestion() {
-      return this.assessment.questions[this.current];
-    },
+    function debounce(func, wait) {
+      let timeout;
+      return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+      };
+    }
 
-    get timerDisplay() {
-      const m = Math.floor(this.timer / 60);
-      const s = this.timer % 60;
-      return `${m}m ${s < 10 ? "0" + s : s}s`;
-    },
+    // This is the public, reactive object for Alpine.
+    return {
+      assessmentId: null,
+      assessment: null,
+      questions: [],
+      editor: null,
+      isEditorLoading: false,
+      isSaving: false,
+      timerText: "",
+      timerInterval: null,
+      currentQuestionIndex: 0,
+      questionNavigator: [], // Memoized navigator
 
-    async init() {
-      // First, ensure the entire page layout is loaded and stable.
-      await this.loadLayout();
-      this.assessmentId = new URLSearchParams(window.location.search).get("id");
-      if (!this.assessmentId) return alert("Invalid access");
+      get currentQuestion() {
+        return this.questions[this.currentQuestionIndex] || null;
+      },
 
-      const res = await api.get(`/Assessments/${this.assessmentId}/questions`);
-      const data = await res.json();
+      async init() {
+        // Preload Monaco Editor in parallel with other setup
+        this.preloadMonaco();
 
-      if (!res.ok) {
-        const code = data?.errorCode;
-        let title = "Assessment Unavailable";
+        // Load components
+        await Promise.all([
+          this.loadComponent(
+            "sidebar-placeholder",
+            "/public/components/sidebar-student.html"
+          ),
+          this.loadComponent(
+            "navbar-placeholder",
+            "/public/components/navbar-student.html"
+          ),
+        ]);
 
-        if (code === "ASSESMENT_NOT_STARTED")
-          title = "Assessment Has Not Started Yet";
-        else if (code === "ASSESMENT_ENDED") title = "Assessment Has Ended";
+        this.assessmentId = new URLSearchParams(window.location.search).get(
+          "id"
+        );
+        const token = localStorage.getItem("accessToken");
+        if (!this.assessmentId || !token) {
+          localStorage.removeItem("accessToken");
+          window.location.href = "/public/auth/login.html";
+          return;
+        }
 
-        Swal.fire({
-          icon: "error",
-          title: title,
-          text: data?.message || "Please check with your instructor.",
-          confirmButtonText: "Back to Dashboard",
-        }).then(() => {
-          window.location.href = "/public/student/student-assessment.html";
+        await this.fetchQuestions(token);
+        await this.loadProgress(token);
+        this.updateNavigator(); // Initial navigator state
+
+        if (this.assessment) {
+          this.startTimer(this.assessment.durationInMinutes * 60);
+        }
+
+        await this.switchTo(0);
+
+        window.addEventListener("beforeunload", () => this.destroy());
+        document.addEventListener("visibilitychange", () =>
+          this.handleVisibilityChange()
+        );
+      },
+
+      async preloadMonaco() {
+        if (!window.MonacoEnvironment) {
+          window.MonacoEnvironment = {
+            getWorkerUrl: function () {
+              return `data:text/javascript;charset=utf-8,${encodeURIComponent(`
+                  self.MonacoEnvironment = { baseUrl: 'https://unpkg.com/monaco-editor@0.47.0/min/' };
+                  importScripts('https://unpkg.com/monaco-editor@0.47.0/min/vs/base/worker/workerMain.js');
+                `)}`;
+            },
+          };
+        }
+
+        return new Promise((resolve) => {
+          require.config({
+            paths: { vs: "https://unpkg.com/monaco-editor@0.47.0/min/vs" },
+          });
+          require(["vs/editor/editor.main"], resolve);
         });
-        return;
-      }
+      },
 
-      this.assessment = data.data;
-      for (const q of this.assessment.questions) {
-        this.answers[q.id] = q.type === "MCQ" ? [] : "";
-      }
+      async fetchQuestions(token) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-      const progressRes = await api.get(`/AssessmentProgress/load?assessmentId=${this.assessmentId}`);
+        try {
+          const res = await fetch(
+            `https://localhost:7157/api/v1/Assessments/${this.assessmentId}/questions`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+              signal: controller.signal,
+            }
+          );
+          if (!res.ok) throw new Error("Failed to fetch questions");
+          const data = await res.json();
+          this.assessment = data.data;
+          this.questions = (data.data.questions || []).map((q) => ({
+            id: q.id,
+            title: q.title,
+            type: q.type,
+            techStack: q.technologyStack || "javascript",
+            options: q.options || [],
+            testCases: q.testCases || [],
+            answerText: "",
+            selectedOptionIds: [],
+          }));
+        } catch (err) {
+          console.error("Fetch questions error:", err);
+          Swal.fire("Error", "Failed to load assessment", "error");
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      },
 
-      if (progressRes.ok) {
-        const progressData = await progressRes.json();
-        if (progressData?.data?.answers) {
-          for (const ans of progressData.data.answers) {
-            if (ans.selectedOptionIds?.length) {
-              this.answers[ans.questionId] = ans.selectedOptionIds;
-            } else {
-              this.answers[ans.questionId] = ans.answerText || "";
+      async loadProgress(token) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        try {
+          const res = await fetch(
+            `https://localhost:7157/api/v1/AssessmentProgress/load?assessmentId=${this.assessmentId}`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+              signal: controller.signal,
+            }
+          );
+          if (!res.ok) return;
+          const progress = await res.json();
+          if (!progress.data || !progress.data.answers) return;
+
+          for (const ans of progress.data.answers) {
+            const q = this.questions.find((q) => q.id === ans.questionId);
+            if (!q) continue;
+            q.answerText = ans.answerText || q.answerText;
+            q.selectedOptionIds = ans.selectedOptionIds || [];
+            if (q.type === "Coding") {
+              editorContentStore[q.id] = ans.answerText || "";
             }
           }
+        } catch (err) {
+          console.error("Load progress error:", err);
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      },
+
+      toggleOption(question, optionId) {
+        const idx = question.selectedOptionIds.indexOf(optionId);
+        idx === -1
+          ? question.selectedOptionIds.push(optionId)
+          : question.selectedOptionIds.splice(idx, 1);
+        this.updateNavigator();
+      },
+
+      updateNavigator() {
+        this.questionNavigator = this.questions.map((q, i) => ({
+          id: q.id,
+          index: i,
+          isCurrent: i === this.currentQuestionIndex,
+          isAnswered: this.isAnswered(q),
+        }));
+      },
+
+      isAnswered(question) {
+        if (!question) return false;
+        if (question.type === "Coding")
+          return (editorContentStore[question.id] || "").trim().length > 0;
+        if (question.type === "Objective")
+          return (question.answerText || "").trim().length > 0;
+        if (question.type === "MCQ" || question.type === "Mcq")
+          return question.selectedOptionIds.length > 0;
+        return false;
+      },
+
+      async switchTo(index) {
+        if (index < 0 || index >= this.questions.length) return;
+
+        // Destroy the old editor instance before switching
+        if (this.editor) {
+          this.editor.dispose();
+          this.editor = null;
+        }
+        if (resizeObserver) {
+          resizeObserver.disconnect();
+          resizeObserver = null;
         }
 
-        if (progressData.data.elapsedTime) {
-          const secondsUsed = Math.floor(
-            progressData.data.elapsedTime.totalSeconds || 0
-          );
-          const totalSeconds = this.assessment.durationInMinutes * 60;
-          this.timer = Math.max(0, totalSeconds - secondsUsed);
+        this.currentQuestionIndex = index;
+        await this.createEditor();
+      },
+
+      async createEditor() {
+        await this.$nextTick();
+        const container = document.getElementById("editor-container");
+
+        if (
+          !this.currentQuestion ||
+          this.currentQuestion.type !== "Coding" ||
+          !container
+        ) {
+          return;
         }
-      }
 
-      this.loaded = true;
-      this.initTimer();
+        this.isEditorLoading = true;
 
-      this.autoSaveId = setInterval(() => this.saveProgress(), 300000);
-
-      document.addEventListener("visibilitychange", () => {
-        if (document.hidden) this.saveProgress();
-      });
-    },
-
-    async loadLayout() {
-      try {
-        await loadComponent("sidebar-placeholder", "/public/components/sidebar-student.html");
-        await loadComponent("navbar-placeholder", "/public/components/navbar-student.html");
-      } catch (error) {
-        console.error("Failed to load layout components:", error);
-      }
-    },
-
-    async saveProgress() {
-      if (this.submitted || this.isSaving) return;
-      this.isSaving = true;
-
-      const formatted = Object.entries(this.answers).map(([qid, val]) => ({
-        questionId: qid,
-        answerText: typeof val === "string" ? val : null,
-        selectedOptionIds: Array.isArray(val) ? val : [],
-      }));
-
-      try {
-        await api.post("/AssessmentProgress/students/progress/save", {
-          assessmentId: this.assessmentId,
-          answers: formatted,
-          currentSessionStart: this.sessionStart,
-        });
-      } catch (e) {
-        console.error("Autosave failed:", e);
-      } finally {
-        this.isSaving = false;
-      }
-    },
-
-    async submit() {
-      if (this.submitted) return;
-
-      const confirm = await Swal.fire({
-        title: "Are you sure?",
-        text: "Once submitted, you cannot make changes.",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonText: "Yes, submit it!",
-        cancelButtonText: "Cancel",
-      });
-
-      if (!confirm.isConfirmed) return;
-      this.submitted = true;
-      clearInterval(this.intervalId);
-      clearInterval(this.autoSaveId);
-      await this.saveProgress();
-
-      const formatted = Object.entries(this.answers)
-        .map(([qid, val]) => ({
-          questionId: qid,
-          submittedAnswer: typeof val === "string" ? val.trim() : "",
-          selectedOptionIds: Array.isArray(val) ? val : [],
-        }))
-        .filter(
-          (ans) =>
-            ans.selectedOptionIds.length > 0 ||
-            (typeof ans.submittedAnswer === "string" &&
-              ans.submittedAnswer.trim() !== "")
-        );
-
-      try {
-        const res = await api.post(`/Assessments/${this.assessmentId}/submit`, { answers: formatted });
-
-        if (res.ok) {
-          await Swal.fire({
-            icon: "success",
-            title: "Submitted!",
-            text: "Your assessment has been successfully submitted.",
-          });
-          window.location.href = "/public/student/student-assessment.html";
-        } else throw new Error("Submission failed.");
-      } catch (error) {
-        console.error(error);
-        Swal.fire({
-          icon: "error",
-          title: "Oops...",
-          text: "Something went wrong during submission.",
-        });
-      }
-    },
-
-    initTimer() {
-      this.intervalId = setInterval(() => {
-        if (this.timer > 0) {
-          this.timer--;
-        } else {
-          clearInterval(this.intervalId);
-          this.submit();
-        }
-      }, 1000);
-    },
-
-    initMonaco() {
-      const self = this;
-      // If the editor exists or we are already in the process of creating it, do nothing.
-      if (this.editor || this.isMonacoInitializing) {
-        return;
-      }
-      this.isMonacoInitializing = true; // Set the lock
-
-      if (typeof require === "undefined") {
-        console.error("Monaco loader is not ready yet.");
-        this.isMonacoInitializing = false; // Release the lock on error
-        return;
-      }
-      require(["vs/editor/editor.main"], function () {
-        self.editor = monaco.editor.create(document.getElementById("editor"), {
-          value: "",
-          language: self.getMonacoLanguage(
-            self.currentQuestion?.technologyStack
-          ),
+        this.editor = monaco.editor.create(container, {
+          value: editorContentStore[this.currentQuestion.id] || "",
+          language: this.currentQuestion.techStack.toLowerCase(),
           theme: "vs-dark",
-          automaticLayout: true,
+          automaticLayout: false, // We manage layout with ResizeObserver
+          minimap: { enabled: false },
+          fontSize: 14,
+          scrollBeyondLastLine: false,
         });
 
-        self.editor.onDidChangeModelContent(() => {
-          const q = self.currentQuestion;
-          if (q?.type === "Coding") {
-            self.answers[q.id] = self.editor.getValue();
+        const debouncedUpdate = debounce(() => {
+          if (this.currentQuestion) {
+            editorContentStore[this.currentQuestion.id] =
+              this.editor.getValue();
+            this.updateNavigator();
           }
+        }, 300);
+        this.editor.onDidChangeModelContent(debouncedUpdate);
+
+        resizeObserver = new ResizeObserver(() => {
+          requestAnimationFrame(() => this.editor?.layout());
         });
+        resizeObserver.observe(container);
 
-        self.updateEditorContent();
-        self.isMonacoInitializing = false; // Release the lock on success
-      });
-    },
+        requestAnimationFrame(() => this.editor?.layout());
+        this.isEditorLoading = false;
+      },
 
-    updateEditorContent() {
-      const q = this.currentQuestion;
-      if (q?.type === "Coding" && this.editor) {
-        const value = this.answers[q.id] || "";
-        const lang = this.getMonacoLanguage(q.technologyStack);
-        if (this.editor.getValue() !== value) {
-          this.editor.setValue(value);
+      saveProgress: debounce(async function () {
+        this.isSaving = true;
+        const token = localStorage.getItem("accessToken");
+        const payload = {
+          assessmentId: this.assessmentId,
+          answers: this.questions.map((q) => ({
+            questionId: q.id,
+            answerText:
+              q.type === "Coding"
+                ? editorContentStore[q.id] || ""
+                : q.answerText || "",
+            selectedOptionIds: q.selectedOptionIds,
+          })),
+          currentSessionStart: new Date().toISOString(),
+        };
+
+        try {
+          const res = await fetch(
+            "https://localhost:7157/api/v1/AssessmentProgress/students/progress/save",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify(payload),
+            }
+          );
+          if (res.ok) {
+            Swal.fire("Saved", "Progress saved successfully", "success");
+          } else {
+            Swal.fire("Error", "Failed to save progress", "error");
+          }
+        } catch (err) {
+          console.error("Save progress error:", err);
+          Swal.fire(
+            "Error",
+            "An error occurred while saving progress",
+            "error"
+          );
+        } finally {
+          this.isSaving = false;
         }
-        monaco.editor.setModelLanguage(this.editor.getModel(), lang);
-      }
-    },
+      }, 1000),
 
-    getMonacoLanguage(stack) {
-      if (!stack) return "plaintext";
-      switch (stack.toLowerCase()) {
-        case "c#":
-        case "csharp":
-          return "csharp";
-        case "javascript":
-        case "js":
-          return "javascript";
-        case "typescript":
-        case "ts":
-          return "typescript";
-        case "python":
-          return "python";
-        case "java":
-          return "java";
-        case "cpp":
-        case "c++":
-          return "cpp";
-        case "html":
-          return "html";
-        case "json":
-          return "json";
-        default:
-          return "plaintext";
-      }
-    },
+      async submitAssessment() {
+        this.isSaving = true;
+        if (this.editor && this.currentQuestion?.type === "Coding") {
+          editorContentStore[this.currentQuestion.id] = this.editor.getValue();
+        }
 
-    switchTo(i) {
-      this.current = i;
-      // The x-effect directive on the editor div will handle initialization.
-      // We just need to ensure content is updated for subsequent views.
-      this.$nextTick(() => this.updateEditorContent());
-    },
-    next() {
-      if (this.current < this.assessment.questions.length - 1)
-        this.switchTo(this.current + 1);
-    },
-    prev() {
-      if (this.current > 0) this.switchTo(this.current - 1);
-    },
+        const token = localStorage.getItem("accessToken");
+        const filtered = this.questions
+          .map((q) => ({
+            questionId: q.id,
+            submittedAnswer:
+              q.type === "Coding"
+                ? editorContentStore[q.id] || ""
+                : q.answerText || "",
+            selectedOptionIds: q.selectedOptionIds,
+          }))
+          .filter(
+            (ans) =>
+              (ans.submittedAnswer && ans.submittedAnswer.trim() !== "") ||
+              (ans.selectedOptionIds && ans.selectedOptionIds.length > 0)
+          );
 
-    toggleMCQAnswer(qid, optId) {
-      const selected = this.answers[qid] || [];
-      this.answers[qid] = selected.includes(optId)
-        ? selected.filter((id) => id !== optId)
-        : [...selected, optId];
-    },
-  };
-}
+        if (!filtered.length) {
+          Swal.fire(
+            "Empty",
+            "You must attempt at least one question",
+            "warning"
+          );
+          this.isSaving = false;
+          return;
+        }
+
+        try {
+          const res = await fetch(
+            `https://localhost:7157/api/v1/Assessments/${this.assessmentId}/submit`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ answers: filtered }),
+            }
+          );
+
+          if (res.ok) {
+            Swal.fire(
+              "Submitted",
+              "Assessment submitted successfully",
+              "success"
+            ).then(() => {
+              window.location.href = "/public/student/student-dashboard.html";
+            });
+          } else {
+            Swal.fire("Error", "Failed to submit assessment", "error");
+          }
+        } catch (err) {
+          console.error("Submission error:", err);
+          Swal.fire(
+            "Error",
+            "An error occurred while submitting the assessment",
+            "error"
+          );
+        } finally {
+          this.isSaving = false;
+        }
+      },
+
+      async loadComponent(id, path) {
+        try {
+          const res = await fetch(path);
+          if (!res.ok) throw new Error(`Component load failed: ${path}`);
+          document.getElementById(id).innerHTML = await res.text();
+        } catch (err) {
+          console.error("Load component error:", err);
+        }
+      },
+
+      startTimer(durationInSeconds) {
+        remainingSeconds = durationInSeconds;
+        this.updateTimerText(remainingSeconds);
+
+        this.timerInterval = setInterval(() => {
+          remainingSeconds--;
+          this.updateTimerText(remainingSeconds);
+          if (remainingSeconds <= 0) {
+            clearInterval(this.timerInterval);
+            Swal.fire(
+              "Time's Up!",
+              "Your assessment will be submitted automatically.",
+              "warning"
+            );
+            this.submitAssessment();
+          }
+        }, 1000); // Corrected to 1 second
+      },
+
+      updateTimerText(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        this.timerText = `${String(mins).padStart(2, "0")}:${String(
+          secs
+        ).padStart(2, "0")}`;
+      },
+
+      handleVisibilityChange() {
+        if (document.hidden) {
+          if (this.timerInterval) clearInterval(this.timerInterval);
+        } else {
+          if (remainingSeconds > 0) {
+            this.startTimer(remainingSeconds);
+          }
+        }
+      },
+
+      destroy() {
+        if (this.editor) {
+          this.editor.dispose();
+          this.editor = null;
+        }
+        if (this.timerInterval) {
+          clearInterval(this.timerInterval);
+        }
+        if (resizeObserver) {
+          resizeObserver.disconnect();
+        }
+        document.removeEventListener(
+          "visibilitychange",
+          this.handleVisibilityChange
+        );
+      },
+    };
+  });
+});

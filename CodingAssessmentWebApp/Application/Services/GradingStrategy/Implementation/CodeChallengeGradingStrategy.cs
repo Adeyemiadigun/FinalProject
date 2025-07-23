@@ -18,18 +18,21 @@ namespace Application.Services.GradingStrategy.Implementation
         {
             Judge0LanguageDto stack = null;
             var techStack = (TechnologyStack)Enum.Parse(typeof(TechnologyStack), answerSubmission.Question.TechnologyStack.ToString());
-            if(techStack == TechnologyStack.CSharp)
+            if(techStack != TechnologyStack.CSharp)
             {
-               stack  = await _store.GetLanguageByName("C#");
+
+                stack = await _store.GetLanguageByName(techStack.ToString());
             }
 
-            stack = await _store.GetLanguageByName(techStack.ToString());
+            stack = await _store.GetLanguageByName("C#");
 
             if (stack is null)
             {
                 var languages = await _judge.GetSupportedLanguagesAsync();
                 await _store.SaveLanguages(languages);
-                stack = await _store.GetLanguageByName(techStack.ToString());
+                if(techStack != TechnologyStack.CSharp)
+                    stack = await _store.GetLanguageByName(techStack.ToString());
+                stack = await _store.GetLanguageByName("C#");
                 if (stack is null)
                     throw new ApiException("Code execution failed", 500, "ExecutionError", null);
             }

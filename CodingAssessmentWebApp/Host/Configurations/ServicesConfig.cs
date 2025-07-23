@@ -43,6 +43,7 @@ namespace Host.Configurations
             builder.AddScoped<ILlmGradingService,ModelGradingImplementation>();
             builder.AddScoped<IMissedSubmissionScoringService, MissedSubmissionScoringService>();
             builder.AddSingleton<IPasswordResetService, PasswordResetService>();
+            builder.AddScoped<ITemplateService, TemplateService>();
                 
             //FluentValidation
             builder.AddFluentValidationAutoValidation();

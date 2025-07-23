@@ -7,10 +7,14 @@ namespace Infrastructure.ExternalServices
     public class Judge0LanguageStore : IJudge0LanguageStore
     {
         private readonly ConcurrentDictionary<string, Judge0LanguageDto> _store = new();
-        public async Task<Judge0LanguageDto> GetLanguageByName(string languageName)
+        public async Task<Judge0LanguageDto?> GetLanguageByName(string languageName)
         {
-            var language =  _store.Keys.Contains(languageName) ? _store[languageName] : null;
-            return language;
+            var match = _store
+                .FirstOrDefault(x => x.Key.Contains(languageName, StringComparison.OrdinalIgnoreCase));
+
+            return match.Equals(default(KeyValuePair<string, Judge0LanguageDto>))
+                ? null
+                : match.Value;
         }
 
         public async Task SaveLanguages(List<Judge0LanguageDto> languages)

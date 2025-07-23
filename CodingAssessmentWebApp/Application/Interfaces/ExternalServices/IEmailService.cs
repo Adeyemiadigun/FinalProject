@@ -12,7 +12,8 @@ namespace Application.Interfaces.ExternalServices
     {
         Task SendEmailAsync(UserDto to, string subject, string body);
         Task<bool> SendResultEmailAsync(Submission submission, UserDto user);
+        Task<bool> SendBulkEmailAsync(ICollection<UserDto> to, string subject, string template);
 
-        Task<bool> SendBulkEmailAsync(ICollection<UserDto> to, string subject, AssessmentDto assessment);
+        Task<bool> SendAssessmentEmail(ICollection<UserDto> to, string subject, AssessmentDto assessment);
     }
 }

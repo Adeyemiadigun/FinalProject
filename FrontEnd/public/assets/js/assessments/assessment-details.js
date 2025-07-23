@@ -119,8 +119,8 @@ function assessmentDetailsPage() {
       );
       const data = await res.json();
       console.log(data);
-      const paginated = data;
-      this.students = paginated;
+      const paginated = data.data;
+      this.students = paginated.items;
       console.log(paginated);
       console.log(paginated.items);
       console.log(this.students);

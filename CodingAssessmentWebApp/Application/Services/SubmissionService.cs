@@ -9,7 +9,7 @@ using Domain.Enum;
 
 namespace Application.Services
 {
-    public class SubmissionService(IAssessmentRepository _assessmentRepository, ICurrentUser _currentUser, ISubmissionRepository _submissionRepository, IUnitOfWork _unitOfWork, IQuestionRepository _questionRepository, IUserRepository _userRepository, IBackgroundService _backgroundService,ILeaderboardStore _leaderboardStore) : ISubmissionService
+    public class SubmissionService(IAssessmentRepository _assessmentRepository, ICurrentUser _currentUser, ISubmissionRepository _submissionRepository, IUnitOfWork _unitOfWork, IQuestionRepository _questionRepository, IUserRepository _userRepository, IBackgroundService _backgroundService,ILeaderboardStore _leaderboardStore,IGradingService gradingService) : ISubmissionService
     {
         public async Task<BaseResponse<SubmissionDto>> SubmitAssessment(Guid assessmentId, AnswerSubmissionDto submission)
         {
@@ -119,6 +119,7 @@ namespace Application.Services
             submissionEntity.AnswerSubmissions = answerSubmissions;
 
             await _submissionRepository.CreateAsync(submissionEntity);
+            //await gradingService.GradeSubmissionAndNotifyAsync(submissionEntity, studentId);
             await _unitOfWork.SaveChangesAsync();
             _leaderboardStore.Invalidate(student.Batch!.Id);
             _backgroundService.Enqueue<IGradingService>(g =>

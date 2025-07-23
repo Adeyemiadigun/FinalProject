@@ -1,184 +1,246 @@
-async function loadComponent(id, path) {
-  const res = await fetch(path);
-  const html = await res.text();
-  document.getElementById(id).innerHTML = html;
-}
-
-function assessmentDashboard() {
+function assessmentsPage() {
   return {
-    selectedBatch: "",
-    selectedInstructor: "",
+    // Data properties
+    assessments: [],
+    metrics: [],
     batches: [],
     instructors: [],
-    sidebarOpen: true,
-    async init() {
-      const token = localStorage.getItem("accessToken");
-      this.headers = { Authorization: `Bearer ${token}` };
+    charts: {
+      scoreTrendsChart: null,
+      createdOverTimeChart: null,
+    },
+    chartConfigs: {
+      scoreTrendsChart: null,
+      createdOverTimeChart: null,
+    },
 
+    // State properties
+    filters: {
+      instructorId: "",
+      batchId: "",
+    },
+    isLoading: {
+      initial: true,
+      metrics: true,
+      charts: true,
+      assessments: true,
+    },
+
+    // Initialization
+    async init() {
+      await this.loadLayout();
+      await this.loadFilters();
+      await this.loadData();
+      this.isLoading.initial = false;
+    },
+
+    async loadLayout() {
+      // Assuming loadComponent is a global helper
       await loadComponent("sidebar-placeholder", "../components/sidebar.html");
       await loadComponent("navbar-placeholder", "../components/nav.html");
-
-      await this.loadDropdowns();
-      await this.reloadData();
     },
 
-    async loadDropdowns() {
+    async loadFilters() {
       try {
-        const batchRes = await fetch(
-          "https://localhost:7157/api/v1/Batches/all",
-          {
-            headers: this.headers,
-          }
-        );
-        let batch = await batchRes.json();
-        this.batches = batch.data;
+        const token = localStorage.getItem("accessToken");
+        const headers = { Authorization: `Bearer ${token}` };
 
-        const instructorRes = await fetch(
-          "https://localhost:7157/api/v1/Instructors",
-          {
-            headers: this.headers,
-          }
-        );
-        let data = await instructorRes.json();
-        this.instructors = data.data;
-      } catch (err) {
-        console.error("Failed to load dropdown data:", err);
-      }
-    },
+        const [batchesRes, instructorsRes] = await Promise.all([
+          fetch("https://localhost:7157/api/v1/Batches/all", { headers }),
+          fetch("https://localhost:7157/api/v1/Instructors", { headers }),
+        ]);
 
-    async reloadData() {
-      const query = new URLSearchParams();
-      if (this.selectedInstructor)
-        query.append("instructorId", this.selectedInstructor);
-      if (this.selectedBatch) query.append("batchId", this.selectedBatch);
+        if (!batchesRes.ok || !instructorsRes.ok) {
+          throw new Error("Failed to load filter options.");
+        }
 
-      try {
-        const metricsRes = await fetch(
-          `https://localhost:7157/api/v1/dashboard/admin/assessments/metrics?${query}`,
-          {
-            headers: this.headers,
-          }
-        );
-        const metrics = await metricsRes.json();
-        console.log(metrics);
-        this.renderMetrics(metrics.data);
-      } catch (err) {
-        console.error("Failed to fetch metrics:", err);
-      }
+        const batchesData = await batchesRes.json();
+        const instructorsData = await instructorsRes.json();
 
-      try {
-        const scoreRes = await fetch(
-          `https://localhost:7157/api/v1/Dashboard/admin/analytics/assessments/score-trends?${query}`,
-          {
-            headers: this.headers,
-          }
-        );
-        const scoreTrend = await scoreRes.json();
-        this.renderScoreChart(scoreTrend.data);
-      } catch (err) {
-        console.error("Failed to fetch score trends:", err);
-      }
-
-      try {
-        const createdRes = await fetch(
-          `https://localhost:7157/api/v1/Dashboard/admin/analytics/assessments/created-trend?${query}`,
-          {
-            headers: this.headers,
-          }
-        );
-        const createdTrend = await createdRes.json();
-        this.renderCreatedChart(createdTrend.data);
-      } catch (err) {
-        console.error("Failed to fetch created trend:", err);
-      }
-
-      try {
-        const recentsRes = await fetch(
-          `https://localhost:7157/api/v1/Assessments/recents?${query}`,
-          {
-            headers: this.headers,
-          }
-        );
-        const recents = await recentsRes.json();
-        console.log(recents);
-        this.renderAssessments(recents.data);
-      } catch (err) {
-        console.error("Failed to fetch recent assessments:", err);
+        this.batches = batchesData.data;
+        this.instructors = instructorsData.data.map((i) => ({
+          id: i.id,
+          name: i.fullName,
+        }));
+      } catch (error) {
+        console.error("Filter loading error:", error);
+        Swal.fire({
+          icon: "error",
+          title: "Oops...",
+          text: "Could not load filter options. The page may not function correctly.",
+        });
       }
     },
 
-    renderMetrics(metrics) {
-      document.getElementById("metrics-cards").innerHTML = `
-        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <div class="bg-white p-4 rounded shadow">Total: ${metrics.totalAssessments}</div>
-          <div class="bg-white p-4 rounded shadow">Active: ${metrics.activeAssessments}</div>
-          <div class="bg-white p-4 rounded shadow">Avg Score: ${metrics.averageScore}%</div>
-          <div class="bg-white p-4 rounded shadow">Pass Rate: ${metrics.passRate}%</div>
-          <div class="bg-white p-4 rounded shadow">Completion: ${metrics.completionRate}%</div>
-        </div>`;
-    },
-    renderScoreChart(scoreTrend) {
-      new Chart(document.getElementById("scoreTrendsChart"), {
-        type: "line",
-        data: {
-          labels: scoreTrend.map((d) => d.label),
+    async loadData() {
+      this.isLoading.metrics = true;
+      this.isLoading.charts = true;
+      this.isLoading.assessments = true;
+
+      try {
+        const token = localStorage.getItem("accessToken");
+        const headers = { Authorization: `Bearer ${token}` };
+        const params = new URLSearchParams(this.filters).toString();
+
+        // Fetch all data in parallel
+        const [metricsRes, assessmentsRes, scoreTrendRes, createdTrendRes] =
+          await Promise.all([
+            fetch(
+              `https://localhost:7157/api/v1/dashboard/admin/assessments/metrics?${params}`,
+              { headers }
+            ),
+            fetch(
+              `https://localhost:7157/api/v1/Assessments/recents?${params}`,
+              { headers }
+            ),
+            fetch(
+              `https://localhost:7157/api/v1/Dashboard/admin/analytics/assessments/score-trends?${params}`,
+              { headers }
+            ),
+            fetch(
+              `https://localhost:7157/api/v1/Dashboard/admin/analytics/assessments/created-trend?${params}`,
+              { headers }
+            ),
+          ]);
+
+        if (
+          !metricsRes.ok ||
+          !assessmentsRes.ok ||
+          !scoreTrendRes.ok ||
+          !createdTrendRes.ok
+        ) {
+          throw new Error("Failed to fetch assessment data.");
+        }
+
+        const metricsData = await metricsRes.json();
+        const assessmentsData = await assessmentsRes.json();
+        const scoreTrendData = await scoreTrendRes.json();
+        const createdTrendData = await createdTrendRes.json();
+
+        // Process and set data
+        const metricsSource = metricsData.data;
+        this.metrics = [
+            { label: 'Total Assessments', value: metricsSource.totalAssessments },
+            { label: 'Active Assessments', value: metricsSource.activeAssessments },
+            { label: 'Average Score', value: `${metricsSource.averageScore}%` },
+            { label: 'Pass Rate', value: `${metricsSource.passRate}%` },
+            { label: 'Completion Rate', value: `${metricsSource.completionRate}%` }
+        ];
+        this.assessments = assessmentsData.data.map((a) => ({
+          ...a,
+          statusClass: this.getStatusClass(a.status),
+        }));
+        console.log(this.assessments)
+
+        // Store chart configurations to be drawn after the canvas is visible
+        this.chartConfigs.scoreTrendsChart = {
+          type: "line",
+          labels: scoreTrendData.data.map((d) => d.label || d.Label),
           datasets: [
             {
               label: "Avg. Score",
-              data: scoreTrend.map((d) => d.averageScore),
+              data: scoreTrendData.data.map(
+                (d) => d.averageScore ?? d.AverageScore
+              ),
               borderColor: "#4f46e5",
               tension: 0.4,
             },
           ],
-        },
-        options: { responsive: true, scales: { y: { beginAtZero: true } } },
-      });
-    },
-
-    renderCreatedChart(createdTrend) {
-      new Chart(document.getElementById("createdOverTimeChart"), {
-        type: "line",
-        data: {
-          labels: createdTrend.map((d) => d.label),
+        };
+        this.chartConfigs.createdOverTimeChart = {
+          type: "line",
+          labels: createdTrendData.data.map((d) => d.label || d.Label),
           datasets: [
             {
               label: "Assessments Created",
-              data: createdTrend.map((d) => d.count),
+              data: createdTrendData.data.map((d) => d.count ?? d.Count),
               borderColor: "#10b981",
               tension: 0.4,
             },
           ],
+        };
+      } catch (error) {
+        console.error("Data loading error:", error);
+        Swal.fire({
+          icon: "error",
+          title: "Failed to Load Data",
+          text: "Could not retrieve assessment data. Please try again later.",
+        });
+      } finally {
+        // Ensure all loaders are turned off
+        this.isLoading.metrics = false;
+        this.isLoading.charts = false;
+        this.isLoading.assessments = false;
+
+        // Wait for Alpine to update the DOM and make the canvas visible
+        await this.$nextTick();
+
+        // Now, draw the charts on the visible canvases
+        if (this.chartConfigs.scoreTrendsChart) {
+          this.drawChart(
+            "scoreTrendsChart",
+            this.chartConfigs.scoreTrendsChart
+          );
+        }
+        if (this.chartConfigs.createdOverTimeChart) {
+          this.drawChart(
+            "createdOverTimeChart",
+            this.chartConfigs.createdOverTimeChart
+          );
+        }
+      }
+    },
+
+    getStatusClass(status) {
+      // Use optional chaining (?.) to prevent error if status is null or undefined
+      switch (status?.toLowerCase()) {
+        case "upcoming":
+          return "bg-blue-100 text-blue-800";
+        case "active":
+          return "bg-green-100 text-green-800";
+        case "completed":
+          return "bg-gray-100 text-gray-800";
+        default:
+          return "bg-yellow-100 text-yellow-800";
+      }
+    },
+
+    drawChart(canvasId, chartData) {
+      const ctx = document.getElementById(canvasId)?.getContext("2d");
+      if (!ctx) return;
+
+      // Destroy existing chart instance if it exists
+      if (this.charts[canvasId]) {
+        this.charts[canvasId].destroy();
+      }
+
+      this.charts[canvasId] = new Chart(ctx, {
+        type: chartData.type,
+        data: {
+          labels: chartData.labels,
+          datasets: chartData.datasets,
         },
-        options: { responsive: true, scales: { y: { beginAtZero: true } } },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { y: { beginAtZero: true } },
+        },
       });
     },
-
-    renderAssessments(data) {
-      const tbody = document.getElementById("assessment-table-body");
-      tbody.innerHTML = data
-        .map(
-          (x) => `
-          <tr class="border-t">
-            <td class="p-2">${x.title}</td>
-            <td class="p-2">${x.type ?? "N/A"}</td>
-            <td class="p-2">${x.instructorName ?? "N/A"}</td>
-            <td class="p-2 text-green-600 font-medium">${x.status ?? "N/A"}</td>
-            <td class="p-2 space-x-2">
-              <a href="/public/assessments/assessment-details.html?assessmentId=${
-                x.id
-              }" class="text-blue-600 hover:underline">
-                View
-              </a>
-            </td>
-          </tr>`
-        )
-        .join("");
-    },
-
-    logOut() {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("userRole");
-      window.location.href = "/public/auth/login.html";
-    },
   };
+}
+
+// This global helper function is assumed to exist from other files like dashboard.js
+async function loadComponent(id, path) {
+  try {
+    const res = await fetch(path);
+    if (!res.ok) throw new Error(`Failed to load component: ${path}`);
+    const html = await res.text();
+    const element = document.getElementById(id);
+    if (element) {
+      element.innerHTML = html;
+    }
+  } catch (error) {
+    console.error(error);
+  }
 }

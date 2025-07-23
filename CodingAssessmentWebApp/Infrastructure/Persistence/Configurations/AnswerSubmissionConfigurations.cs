@@ -15,7 +15,7 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(x => x.QuestionId)
                 .IsRequired();
             builder.Property(x => x.SubmittedAnswer)
-                .HasMaxLength(200)
+                .HasMaxLength(5000)
                 .IsRequired();
             builder.Property(x => x.Score)
                 .IsRequired();

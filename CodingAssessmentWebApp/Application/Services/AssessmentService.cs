@@ -9,10 +9,11 @@ using Application.Interfaces.Services;
 using Domain.Entities;
 using Domain.Entitties;
 using Domain.Enum;
+using Hangfire;
 
 namespace Application.Services
 {
-    public class AssessmentService(IUnitOfWork _unitOfWork, IAssessmentRepository _assessmentRepository, IUserRepository _userRepository, IBackgroundService _backgroundService, ICurrentUser _currentUser, IBatchRepository _batchRepository, IBatchService batchService) : IAssessmentService
+    public class AssessmentService(IUnitOfWork _unitOfWork, IAssessmentRepository _assessmentRepository, IUserRepository _userRepository, IBackgroundService _backgroundService, ICurrentUser _currentUser, IBatchRepository _batchRepository, IBatchService batchService,IReminderService reminderService) : IAssessmentService
     {
         //case 400: // Bad Request
         //   case 401: // Unauthorized
@@ -20,75 +21,66 @@ namespace Application.Services
         //   case 404: // Not Found
         //   case 409: // Conflict
         //   case 422: // Unprocessable Entity
-        public async Task<BaseResponse<AssessmentDto>> AssignStudents(Guid id, AssignStudentsModel model)
-        {
-            if (id == Guid.Empty || model.StudentIds == null || model.StudentIds.Count == 0)
-            {
-                throw new ApiException("Invalid input data", (int)HttpStatusCode.BadRequest, "INVALID_INPUT_DATA", null);
-            }
-            var assessment = await _assessmentRepository.GetAsync(id);
-            if (assessment == null)
-            {
-                throw new ApiException("Assessment not found", (int)HttpStatusCode.NotFound, "ASSESSMENT_NOT_FOUND", null);
-            }
-            var validStudentIds = await _userRepository.GetAllAsync(x => model.StudentIds.Contains(x.Id) && x.Role == Role.Student);
-            if (validStudentIds.Count != model.StudentIds.Count)
-            {
-                throw new ApiException("Some student IDs are invalid or not students.", (int)HttpStatusCode.BadRequest, "INVALID_STUDENT_IDS", null);
-            }
-            var alreadyAssignedStudentIds = assessment.AssessmentAssignments.Select(a => a.StudentId).ToHashSet();
-            var newAssignments = validStudentIds
-                .Where(student => !alreadyAssignedStudentIds.Contains(student.Id))
-                .Select(student => new AssessmentAssignment
-                {
-                    StudentId = student.Id,
-                    Student = student,
-                    AssessmentId = assessment.Id,
-                    Assessment = assessment,
-                })
-                .ToList();
-            foreach (var assignment in newAssignments)
-            {
-                assessment.AssessmentAssignments.Add(assignment);
-            }
-            _assessmentRepository.Update(assessment);
-            var validstudentDto = validStudentIds.Select(x => new UserDto
-            {
-                Email = x.Email,
-                FullName = x.FullName
-            }).ToList();
-            _backgroundService.Enqueue<IEmailService>(emailService => emailService.SendBulkEmailAsync(validstudentDto, "New Assessment", new AssessmentDto()
-            {
-                Title = assessment.Title,
-                Description = assessment.Description,
-                TechnologyStack = assessment.TechnologyStack,
-                DurationInMinutes = assessment.DurationInMinutes,
-                StartDate = assessment.StartDate,
-                EndDate = assessment.EndDate,
-                PassingScore = assessment.PassingScore
-            }));
-            var reminderTime = assessment.StartDate.AddMinutes(-30);
-            var delay = reminderTime - DateTime.UtcNow;
-            if (delay > TimeSpan.Zero)
-            {
-                _backgroundService.Schedule<IEmailService>((emailService => emailService.SendBulkEmailAsync(validstudentDto, "Assessment Reminder", new AssessmentDto()
-                {
-                    Title = assessment.Title,
-                    Description = assessment.Description,
-                    TechnologyStack = assessment.TechnologyStack,
-                    DurationInMinutes = assessment.DurationInMinutes,
-                    StartDate = assessment.StartDate,
-                    EndDate = assessment.EndDate,
-                    PassingScore = assessment.PassingScore
-                })), delay);
-            }
-            await _unitOfWork.SaveChangesAsync();
-            return new BaseResponse<AssessmentDto>()
-            {
-                Status = true,
-                Message = "All Students have been assigned."
-            };
-        }
+        //public async Task<BaseResponse<AssessmentDto>> AssignStudents(Guid id, AssignStudentsModel model)
+        //{
+        //    if (id == Guid.Empty || model.StudentIds == null || model.StudentIds.Count == 0)
+        //    {
+        //        throw new ApiException("Invalid input data", (int)HttpStatusCode.BadRequest, "INVALID_INPUT_DATA", null);
+        //    }
+        //    var assessment = await _assessmentRepository.GetAsync(id);
+        //    if (assessment == null)
+        //    {
+        //        throw new ApiException("Assessment not found", (int)HttpStatusCode.NotFound, "ASSESSMENT_NOT_FOUND", null);
+        //    }
+        //    var validStudentIds = await _userRepository.GetAllAsync(x => model.StudentIds.Contains(x.Id) && x.Role == Role.Student);
+        //    if (validStudentIds.Count != model.StudentIds.Count)
+        //    {
+        //        throw new ApiException("Some student IDs are invalid or not students.", (int)HttpStatusCode.BadRequest, "INVALID_STUDENT_IDS", null);
+        //    }
+        //    var alreadyAssignedStudentIds = assessment.AssessmentAssignments.Select(a => a.StudentId).ToHashSet();
+        //    var newAssignments = validStudentIds
+        //        .Where(student => !alreadyAssignedStudentIds.Contains(student.Id))
+        //        .Select(student => new AssessmentAssignment
+        //        {
+        //            StudentId = student.Id,
+        //            Student = student,
+        //            AssessmentId = assessment.Id,
+        //            Assessment = assessment,
+        //        })
+        //        .ToList();
+        //    foreach (var assignment in newAssignments)
+        //    {
+        //        assessment.AssessmentAssignments.Add(assignment);
+        //    }
+        //    _assessmentRepository.Update(assessment);
+        //    var validstudentDto = validStudentIds.Select(x => new UserDto
+        //    {
+        //        Email = x.Email,
+        //        FullName = x.FullName
+        //    }).ToList();
+        //    _backgroundService.Enqueue<IEmailService>(emailService => emailService.SendAssessmentEmail(validstudentDto, "New Assessment", new AssessmentDto()
+        //    {
+        //        Title = assessment.Title,
+        //        Description = assessment.Description,
+        //        TechnologyStack = assessment.TechnologyStack,
+        //        DurationInMinutes = assessment.DurationInMinutes,
+        //        StartDate = assessment.StartDate,
+        //        EndDate = assessment.EndDate,
+        //        PassingScore = assessment.PassingScore
+        //    }));
+        //    var reminderTime = assessment.StartDate.AddMinutes(-30);
+        //    var delay = reminderTime - DateTime.UtcNow;
+        //    if (delay > TimeSpan.Zero)
+        //    {
+        //        _backgroundService.Schedule<IEmailService>((emailService => emailService.SendBulkEmailAsync(validstudentDto, "Assessment Reminder"), delay);
+        //    }
+        //    await _unitOfWork.SaveChangesAsync();
+        //    return new BaseResponse<AssessmentDto>()
+        //    {
+        //        Status = true,
+        //        Message = "All Students have been assigned."
+        //    };
+        //}
 
         public async Task<BaseResponse<AssessmentDto>> CreateAssessmentAsync(CreateAssessmentRequestModel model)
         {
@@ -133,7 +125,11 @@ namespace Application.Services
 
                 await batchService.AssignAssessmentToBatchAsync(batch.Id, assessment);
             }
-
+            BackgroundJob.Schedule<IMissedSubmissionScoringService>(
+                service => service.ScoreZeroForUnsubmittedAsync(assessment.Id),
+                assessment.EndDate
+            );
+           
             await _unitOfWork.SaveChangesAsync();
 
 
@@ -212,7 +208,7 @@ namespace Application.Services
                     string.IsNullOrWhiteSpace(status) ||
                     (status.ToLower() == "upcoming" && x.StartDate > now) ||
                     (status.ToLower() == "inprogress" && x.StartDate <= now && x.EndDate >= now) ||
-                    (status.ToLower() == "completed" && x.EndDate < now) && x.Questions.Count() > 0
+                    (status.ToLower() == "completed" && x.EndDate < now) && x.Questions.Count() > 0 && x.Questions.Count > 0
                 );
 
             var assessments = await _assessmentRepository.GetAllAsync(filter, request);
@@ -229,7 +225,7 @@ namespace Application.Services
                     StartDate = x.StartDate,
                     EndDate = x.EndDate,
                     PassingScore = x.PassingScore,
-                    Submitted = x.Submissions.Any()
+                    Submitted = x.Submissions.Any(x => x.StudentId == userId)
                 }).ToList(),
                 TotalItems = assessments.TotalItems,
                 CurrentPage = assessments.CurrentPage,
@@ -746,7 +742,7 @@ namespace Application.Services
 
         public async Task<BaseResponse<AssessmentMetrics>> GetAssessmentMetrics(Guid id)
         {
-            var assessment = await _assessmentRepository.GetAsync(id);
+            var assessment = await _assessmentRepository.GetAsync(x => x.Id == id);
             if (assessment is null)
                 throw new ApiException("Assessment Not Found", (int)HttpStatusCode.BadRequest, "ASSESSMENT_NOT_FOUND", null);
             var totalSubmission = assessment.Submissions.Count;
@@ -831,7 +827,8 @@ namespace Application.Services
                 HasPreviousPage = students.HasPreviousPage,
                 CurrentPage = students.CurrentPage,
                 TotalItems = students.TotalItems,
-                PageSize = students.PageSize
+                PageSize = students.PageSize,
+                TotalPages = students.TotalPages
             };
 
             return new BaseResponse<PaginationDto<StudentAssessmeentPerformance>>

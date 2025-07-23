@@ -3,6 +3,7 @@ using System;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(ClhAssessmentAppDpContext))]
-    partial class ClhAssessmentAppDpContextModelSnapshot : ModelSnapshot
+    [Migration("20250721105417_AnswerSubUpdate")]
+    partial class AnswerSubUpdate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -262,8 +265,8 @@ namespace Infrastructure.Migrations
 
                     b.Property<string>("SubmittedAnswer")
                         .IsRequired()
-                        .HasMaxLength(5000)
-                        .HasColumnType("character varying(5000)");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.HasKey("Id");
 
@@ -420,9 +423,6 @@ namespace Infrastructure.Migrations
                     b.Property<string>("FeedBack")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<bool>("IsAutoSubmitted")
-                        .HasColumnType("boolean");
 
                     b.Property<Guid>("StudentId")
                         .HasColumnType("uuid");

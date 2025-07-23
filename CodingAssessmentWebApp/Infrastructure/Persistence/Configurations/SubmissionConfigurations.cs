@@ -15,6 +15,7 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(x => x.SubmittedAt).IsRequired();
             builder.Property(x => x.TotalScore).IsRequired();
             builder.Property(x => x.FeedBack);
+            builder.Property(x => x.IsAutoSubmitted);
             builder.HasOne(x =>x.Assessment)
                 .WithMany(a => a.Submissions)
                 .HasForeignKey(x => x.AssessmentId);

@@ -17,6 +17,8 @@ function studentsPage() {
       confirmPassword: "",
       batchId: "",
     },
+    isLoading: true,
+    isSubmitting: false,
     sidebarOpen: true,
 
     async init() {
@@ -37,11 +39,13 @@ function studentsPage() {
         if (data.status) this.batches = data.data;
       } catch (err) {
         console.error("Failed to load batches:", err);
+        Swal.fire('Error', 'Could not load batch options.', 'error');
       }
     },
 
     async fetchStudents() {
       const params = new URLSearchParams();
+      this.isLoading = true;
 
       if (this.selectedBatch) params.append("batchId", this.selectedBatch);
       if (this.searchQuery) params.append("query", this.searchQuery);
@@ -68,10 +72,14 @@ function studentsPage() {
         } else {
           this.students = [];
           this.pagination = {};
+          Swal.fire('Error', data.message || 'Failed to fetch students.', 'error');
         }
       } catch (err) {
         this.students = [];
         console.error("Failed to fetch students:", err);
+        Swal.fire('Error', 'An error occurred while fetching students.', 'error');
+      } finally {
+        this.isLoading = false;
       }
     },
 
@@ -118,12 +126,19 @@ function studentsPage() {
     },
 
     async submitStudent() {
+      if (this.newStudent.password !== this.newStudent.confirmPassword) {
+        Swal.fire('Error', 'Passwords do not match.', 'error');
+        return;
+      }
+
+      this.isSubmitting = true;
       console.log(this.newStudent);
-      this.users.push(this.newStudent);
+      // Create a fresh user array for the request
+      const usersToCreate = [this.newStudent];
       const bulkStudent = {
-        users: this.users,
+        users: usersToCreate,
       };
-      console.log("Users to be created:", JSON.stringify(bulkStudent));
+
       try {
         const res = await fetch("https://localhost:7157/api/v1/Students", {
           method: "POST",
@@ -135,15 +150,18 @@ function studentsPage() {
         });
         const data = await res.json();
         if (data.status) {
-          alert("Student created successfully!");
+          Swal.fire('Success!', 'Student created successfully!', 'success');
           this.closeCreateModal();
           this.resetAndFetch();
         } else {
-          alert(data.errors.users.Email);
+          const errorMessage = data.errors?.users?.Email || data.message || 'An unknown error occurred.';
+          Swal.fire('Error', errorMessage, 'error');
         }
       } catch (err) {
         console.error(err);
-        alert("Failed to create student.");
+        Swal.fire('Error', 'Failed to create student.', 'error');
+      } finally {
+        this.isSubmitting = false;
       }
     },
 

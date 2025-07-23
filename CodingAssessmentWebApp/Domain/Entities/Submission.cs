@@ -10,6 +10,7 @@
         public DateTime SubmittedAt { get; set; } = DateTime.UtcNow;
         public short TotalScore { get; set; }
         public string FeedBack {  get; set; }
+        public bool IsAutoSubmitted { get; set; }
         public ICollection<AnswerSubmission> AnswerSubmissions { get; set; } = [];
     }
 }

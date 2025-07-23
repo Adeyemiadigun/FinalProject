@@ -29,8 +29,10 @@ namespace Application.Services
             int activeAssessments = assessments.Count(a => a.EndDate >= DateTime.UtcNow && a.StartDate <= DateTime.UtcNow);
             int totalStudents = submissions.Select(s => s.StudentId).Distinct().Count();
 
-            double averageScore = submissions.Average(s => s.TotalScore);
-            double completionRate = (double)submissions.Select(s => s.AssessmentId).Distinct().Count() / totalAssessments * 100;
+            double averageScore = Math.Round(submissions.Average(s => s.TotalScore), 2);
+            double completionRate = Math.Round(
+                (double)submissions.Select(s => s.AssessmentId).Distinct().Count() / totalAssessments * 100, 2);
+
 
             var topStudents = submissions
                 .GroupBy(s => s.StudentId)
@@ -117,13 +119,23 @@ namespace Application.Services
                 : 0;
 
             var assignedStudentCount = assessmentsQuery
-     .SelectMany(x => x.AssessmentAssignments)
-     .Select(aa => aa.StudentId)
-     .Distinct()
-     .Count();
+                 .SelectMany(x => x.AssessmentAssignments)
+                 .Select(aa => aa.StudentId)
+                 .Distinct()
+                 .Count();
+            double totalAssigned = 0;
+            double totalCompleted = 0;
+            foreach (var assessment in assessmentsQuery)
+            {
+                var assigned = assessment.AssessmentAssignments.Select(x => x.StudentId).Distinct().Count();
+                var submitted = assessment.Submissions.Select(x => x.StudentId).Distinct().Count();
 
-            double completionRate = assignedStudentCount > 0
-                ? (totalSubmissions * 100.0 / assignedStudentCount)
+                totalAssigned += assigned;
+                totalCompleted += submitted;
+            }
+
+            double completionRate = totalAssigned > 0
+                ? (totalCompleted * 100.0 / totalAssigned)
                 : 0;
 
             var dto = new AssessmentMetricsDto()

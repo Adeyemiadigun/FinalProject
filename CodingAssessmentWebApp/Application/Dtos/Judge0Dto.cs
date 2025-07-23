@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Application.Dtos
@@ -11,11 +12,16 @@ namespace Application.Dtos
     }
     public class Judge0Result
     {
+        [JsonPropertyName("stdout")]
         public string StdOut { get; set; }
+        [JsonPropertyName("stdErr")]
         public string StdErr { get; set; }
+        [JsonPropertyName("status")]
         public Judge0Status Status { get; set; }
+        [JsonPropertyName("time")]
         public string Time {  get; set; }
-        public string Memory { get; set; }
+        [JsonPropertyName("memory")]
+        public int? Memory { get; set; }
     }
     public class Judge0Status
     {
@@ -24,8 +30,11 @@ namespace Application.Dtos
     }
     public class Judge0LanguageDto
     {
+        [JsonPropertyName("id")]
         public int Id { get; set; }
+        [JsonPropertyName("name")]
         public string Name { get; set; }
+        [JsonPropertyName("extensions")]
         public List<string> Extensions { get; set; }
     }
     public class Judge0CodeExecutionRequest

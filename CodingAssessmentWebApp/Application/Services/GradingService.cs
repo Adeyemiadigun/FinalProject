@@ -4,6 +4,7 @@ using Application.Interfaces.ExternalServices;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Application.Interfaces.Services.GradingStrategyInterfaces.Interfaces;
+using Domain.Entitties;
 
 namespace Application.Services
 {

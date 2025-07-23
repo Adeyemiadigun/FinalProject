@@ -16,6 +16,7 @@ namespace Infrastructure.Repositories
         {
            return await _context.Set<Assessment>()
                 .Include(x => x.AssessmentAssignments)
+                .ThenInclude( a => a.Student)
                 .Include(x => x.Submissions)
                 .FirstOrDefaultAsync(x => x.Id == id);
         } 
@@ -36,12 +37,12 @@ namespace Infrastructure.Repositories
                 .FirstOrDefaultAsync(x => x.Id == id);
 
         }
-        public Task<Assessment?> GetAsync(string name)
+        public Task<Assessment?> GetAsync(Expression<Func<Assessment,bool>> exp)
         {
             return _context.Set<Assessment>()
                 .Include(x => x.AssessmentAssignments)
-                .Include(x => x.Submissions)
-                .FirstOrDefaultAsync(x => x.Title == name);
+                .Include(x => x.Submissions.Where(x => x.IsAutoSubmitted == false))
+                .FirstOrDefaultAsync(exp);
         }
         public async Task<PaginationDto<Assessment>> GetAllAsync(PaginationRequest request)
         {

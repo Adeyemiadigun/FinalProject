@@ -7,11 +7,15 @@
   <title>Admin Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/public/assets/js/Auth/refreshTokenLogic.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
 </head>
 
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-gray-100 text-gray-800" x-cloak>
   <div id="sidebar-placeholder"></div>
 
   <div class="md:ml-64 p-6 space-y-6">
@@ -19,16 +23,31 @@
 
     <!-- Stat Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-      <template x-for="card in statCards" :key="card.label">
-        <div class="bg-white p-4 rounded shadow flex items-center gap-4">
-          <div :class="card.bg + ' p-2 rounded text-white'">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" :innerHTML="card.icon"></svg>
+      <!-- Skeletons for Stat Cards -->
+      <template x-if="isLoading.metrics">
+        <template x-for="i in 6">
+          <div class="bg-white p-4 rounded shadow flex items-center gap-4 animate-pulse">
+            <div class="bg-gray-300 p-2 rounded w-10 h-10"></div>
+            <div class="flex-1">
+              <div class="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+              <div class="h-6 bg-gray-300 rounded w-1/2"></div>
+            </div>
           </div>
-          <div>
-            <div class="text-sm text-gray-500" x-text="card.label"></div>
-            <div class="text-xl font-bold" x-text="card.value"></div>
+        </template>
+      </template>
+      <!-- Actual Stat Cards -->
+      <template x-if="!isLoading.metrics">
+        <template x-for="card in statCards" :key="card.label">
+          <div class="bg-white p-4 rounded shadow flex items-center gap-4">
+            <div :class="card.bg + ' p-2 rounded text-white'">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" :innerHTML="card.icon"></svg>
+            </div>
+            <div>
+              <div class="text-sm text-gray-500" x-text="card.label"></div>
+              <div class="text-xl font-bold" x-text="card.value"></div>
+            </div>
           </div>
-        </div>
+        </template>
       </template>
     </div>
 
@@ -36,24 +55,37 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div class="bg-white p-4 rounded shadow">
         <h3 class="font-medium mb-2">📊 Top Performing Assessments</h3>
-        <canvas id="topAssessmentChart" class="w-full h-64"></canvas>
+        <div x-show="isLoading.charts" class="w-full h-64 bg-gray-200 rounded animate-pulse"></div>
+        <canvas id="topAssessmentChart" class="w-full h-64" x-show="!isLoading.charts"></canvas>
       </div>
       <div class="bg-white p-4 rounded shadow">
         <h3 class="font-medium mb-2">📉 Lowest Performing Assessments</h3>
-        <canvas id="lowAssessmentChart" class="w-full h-64"></canvas>
+        <div x-show="isLoading.charts" class="w-full h-64 bg-gray-200 rounded animate-pulse"></div>
+        <canvas id="lowAssessmentChart" class="w-full h-64" x-show="!isLoading.charts"></canvas>
       </div>
     </div>
 
     <!-- Students Per Batch Chart -->
     <div class="bg-white p-4 rounded shadow">
       <h3 class="font-medium mb-2">👥 Students Per Batch</h3>
-      <canvas id="batchChart" class="w-full h-64"></canvas>
+      <div x-show="isLoading.charts" class="w-full h-64 bg-gray-200 rounded animate-pulse"></div>
+      <canvas id="batchChart" class="w-full h-64" x-show="!isLoading.charts"></canvas>
     </div>
 
     <!-- Top Students -->
     <div class="bg-white p-4 rounded shadow">
       <h3 class="font-medium mb-4">🏆 Top Performing Students</h3>
-      <table class="w-full text-sm">
+      <!-- Skeleton for Top Students -->
+      <div x-show="isLoading.students" class="animate-pulse">
+        <div class="h-8 bg-gray-200 rounded mb-2"></div>
+        <div class="space-y-2">
+          <div class="h-8 bg-gray-200 rounded"></div>
+          <div class="h-8 bg-gray-200 rounded"></div>
+          <div class="h-8 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+      <!-- Actual Top Students Table -->
+      <table class="w-full text-sm" x-show="!isLoading.students">
         <thead class="bg-gray-50 text-left">
           <tr>
             <th class="p-2">Rank</th>
@@ -76,7 +108,17 @@
     <!-- Lowest Students -->
     <div class="bg-white p-4 rounded shadow">
       <h3 class="font-medium mb-4">📉 Lowest Performing Students</h3>
-      <table class="w-full text-sm">
+      <!-- Skeleton for Lowest Students -->
+      <div x-show="isLoading.students" class="animate-pulse">
+        <div class="h-8 bg-gray-200 rounded mb-2"></div>
+        <div class="space-y-2">
+          <div class="h-8 bg-gray-200 rounded"></div>
+          <div class="h-8 bg-gray-200 rounded"></div>
+          <div class="h-8 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+      <!-- Actual Lowest Students Table -->
+      <table class="w-full text-sm" x-show="!isLoading.students">
         <thead class="bg-gray-50 text-left">
           <tr>
             <th class="p-2">Rank</th>

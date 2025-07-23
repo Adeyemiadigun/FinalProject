@@ -25,55 +25,49 @@ namespace Application.Services
             _unitOfWork = unitOfWork;
         }
 
-        public async Task RunAsync()
+        public async Task ScoreZeroForUnsubmittedAsync(Guid assessmentId)
         {
-            var now = DateTime.UtcNow;
-            var sevenDaysAgo = now.AddDays(-7);
+            var assessment = await _assessmentRepo.GetAsync(assessmentId);
 
-            // 1. Get assessments that have ended in the past 7 days and not fully submitted
-            var expiredAssessments = await _assessmentRepo.GetAllAsync(a =>
-                a.EndDate < now &&
-                a.EndDate >= sevenDaysAgo &&
-                a.AssessmentAssignments.Count != a.Submissions.Count
-            );
+            if (assessment == null || assessment.EndDate > DateTime.UtcNow)
+                return; // Either assessment doesn't exist or hasn't ended yet
 
-            foreach (var assessment in expiredAssessments)
+            // 1. Get assigned students
+            var assignedStudents = assessment.AssessmentAssignments
+                .Select(aa => aa.Student)
+                .ToList();
+
+            // 2. Get students who already submitted
+            var submittedStudentIds = assessment.Submissions
+                .Select(s => s.StudentId)
+                .ToHashSet();
+
+            // 3. Find students who didn’t submit
+            var missingStudents = assignedStudents
+                .Where(s => !submittedStudentIds.Contains(s.Id))
+                .ToList();
+
+            // 4. Create zero-score submissions for missing students
+            foreach (var student in missingStudents)
             {
-                // 2. Get assigned students (fully loaded)
-                var assignedStudents = assessment.AssessmentAssignments
-                    .Select(aa => aa.Student)
-                    .ToList();
-
-                // 3. Get students who already submitted
-                var submittedStudentIds = assessment.Submissions
-                    .Select(s => s.StudentId)
-                    .ToHashSet();
-
-                // 4. Find students who didn’t submit
-                var missingStudents = assignedStudents
-                    .Where(s => !submittedStudentIds.Contains(s.Id))
-                    .ToList();
-
-                // 5. Create zero-score submissions for missing students
-                foreach (var student in missingStudents)
+                var missedSubmission = new Submission()
                 {
-                    var missedSubmission = new Submission()
-                    {
-                        Id = Guid.NewGuid(),
-                        StudentId = student.Id,
-                        AssessmentId = assessment.Id,
-                        SubmittedAt = assessment.EndDate,
-                        TotalScore = 0,
-                        FeedBack = "Did not submit - auto scored 0",
-                        AnswerSubmissions = new List<AnswerSubmission>()
-                    };
+                    Id = Guid.NewGuid(),
+                    StudentId = student.Id,
+                    AssessmentId = assessment.Id,
+                    SubmittedAt = assessment.EndDate,
+                    TotalScore = 0,
+                    FeedBack = "Did not submit - auto scored 0",
+                    IsAutoSubmitted = true,
+                    AnswerSubmissions = new List<AnswerSubmission>()
+                };
 
-                    await _submissionRepo.CreateAsync(missedSubmission);
-                }
+                await _submissionRepo.CreateAsync(missedSubmission);
             }
 
             await _unitOfWork.SaveChangesAsync();
         }
+
 
 
     }

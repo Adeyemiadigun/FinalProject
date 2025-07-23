@@ -8,6 +8,6 @@ namespace Application.Interfaces.Services
 {
     public interface IMissedSubmissionScoringService
     {
-        Task RunAsync();
+        Task ScoreZeroForUnsubmittedAsync(Guid assessmentId);
     }
 }

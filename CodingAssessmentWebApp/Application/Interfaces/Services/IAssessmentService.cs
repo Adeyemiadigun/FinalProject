@@ -17,7 +17,7 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<PaginationDto<AssessmentDto>>> GetCurrentStudentAssessments(
      PaginationRequest request, string? status);
         Task<BaseResponse<PaginationDto<AssessmentDto>>> GetAssessmentsByStudentId(Guid studentId, PaginationRequest request);
-        Task<BaseResponse<AssessmentDto>> AssignStudents(Guid id, AssignStudentsModel model);
+        //Task<BaseResponse<AssessmentDto>> AssignStudents(Guid id, AssignStudentsModel model);
         Task<BaseResponse<AssessmentDto>> UpdateAssessmentAsync(Guid id, UpdateAssessmentRequestModel model);
         Task<BaseResponse<PaginationDto<AssessmentDto>>> GetAssessmentsByBatchId(Guid id, PaginationRequest request);
         Task<BaseResponse<List<AssessmentPerformanceDto>>> GetTopAssessments();

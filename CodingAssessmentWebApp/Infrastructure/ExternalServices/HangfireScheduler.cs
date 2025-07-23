@@ -13,10 +13,10 @@ namespace Infrastructure.ExternalServices
                 service => service.CheckAssessmentsWithoutQuestions(),
                 Cron.Daily()
             );
-            RecurringJob.AddOrUpdate<IMissedSubmissionScoringService>(
-             "score-missed-submissions",
-             service => service.RunAsync(),
-                 Cron.Hourly); // Adjust as needed
+            //RecurringJob.AddOrUpdate<IMissedSubmissionScoringService>(
+            // "score-missed-submissions",
+            // service => service.RunAsync(),
+                 //Cron.Hourly); // Adjust as needed
 
 
             // Add more jobs here as needed

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Application.Dtos;
+﻿using Application.Dtos;
 using Application.Interfaces.ExternalServices;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
@@ -43,7 +38,12 @@ namespace Application.Services
                 await _emailService.SendEmailAsync(instructorDto, "Assessment Without Questions ALert",template);
             }
         }
-        public string EmptyAsseementTemplate(Assessment assessment)
+        public async Task AssessmentReminder(Guid assessmenId)
+        {
+            var assessment = await _assessmentRepo.GetAsync(assessmenId);
+
+        }
+        private string EmptyAsseementTemplate(Assessment assessment)
         {
             var instructorName = assessment.Instructor?.FullName ?? "Instructor";
             var title = assessment.Title ?? "Untitled";

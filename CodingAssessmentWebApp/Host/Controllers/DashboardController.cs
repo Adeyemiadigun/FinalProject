@@ -59,7 +59,7 @@ namespace Host.Controllers
             return Ok(result);
         }
         [HttpGet("admin/analytics/score-by-question-type")]
-        public async Task<IActionResult> GetScoreByQuestionType([FromQuery] Guid? batchId = null, [FromQuery] Guid? instructorId = null)
+        public async Task<IActionResult> GetScoreByQuestionType([FromQuery] Guid? instructorId = null , [FromQuery] Guid? batchId = null)
         {
             var result = await _dashBoardService.GetQuestionTypeMetrics(batchId, instructorId);
             return Ok(result);

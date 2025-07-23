@@ -13,6 +13,7 @@ namespace Infrastructure.Repositories
         {
             var query = _context.Set<Submission>()
                 .Include(x => x.Student)
+                .Include(x => x.Assessment)
                 .Include(x => x.AnswerSubmissions)
                 .ThenInclude(x => x.Question)
                 .Where(x => x.AssessmentId == assessmentId);

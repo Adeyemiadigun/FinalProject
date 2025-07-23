@@ -10,7 +10,7 @@ using Domain.Entitties;
 
 namespace Application.Services
 {
-    public class BatchService(IBatchRepository batchRepository, IUnitOfWork unitOfwork, IAssessmentRepository assessmentRepository, IBackgroundService _backgroundService, ILeaderboardStore _leaderboardStore) : IBatchService
+    public class BatchService(IBatchRepository batchRepository, IUnitOfWork unitOfwork, IAssessmentRepository assessmentRepository, IBackgroundService _backgroundService, ILeaderboardStore _leaderboardStore, ITemplateService tempService) : IBatchService
     {
         public async Task<BaseResponse<string>> AssignAssessmentToBatchAsync(Guid batchId, Assessment assessment)
         {
@@ -59,7 +59,7 @@ namespace Application.Services
                 FullName = x.FullName
             }).ToList();
             await unitOfwork.SaveChangesAsync();
-            _backgroundService.Enqueue<IEmailService>(emailService => emailService.SendBulkEmailAsync(validStudent, "New Assessment", new AssessmentDto()
+            _backgroundService.Enqueue<IEmailService>(emailService => emailService.SendAssessmentEmail(validStudent, "New Assessment", new AssessmentDto()
             {
                 Title = assessment.Title,
                 Description = assessment.Description,
@@ -69,6 +69,22 @@ namespace Application.Services
                 EndDate = assessment.EndDate,
                 PassingScore = assessment.PassingScore
             }));
+            var reminderTime = assessment.StartDate.AddMinutes(-30);
+            var delay = reminderTime - DateTime.UtcNow;
+            if (delay > TimeSpan.Zero)
+            {
+                var template = tempService.GenerateAssessmentReminderTemplate(new AssessmentDto()
+                {
+                    Title = assessment.Title,
+                    Description = assessment.Description,
+                    TechnologyStack = assessment.TechnologyStack,
+                    DurationInMinutes = assessment.DurationInMinutes,
+                    StartDate = assessment.StartDate,
+                    EndDate = assessment.EndDate,
+                    PassingScore = assessment.PassingScore
+                });
+                _backgroundService.Schedule<IEmailService>((emailService => emailService.SendBulkEmailAsync(validStudent, "Assessment Reminder", template)), delay);
+            }
             _leaderboardStore.Invalidate(batchId);
 
             // Return success response  
@@ -120,7 +136,7 @@ namespace Application.Services
                 Email = x.Email,
                 FullName = x.FullName
             }).ToList();
-            _backgroundService.Enqueue<IEmailService>(emailService => emailService.SendBulkEmailAsync(validStudent, "New Assessment", new AssessmentDto()
+            _backgroundService.Enqueue<IEmailService>(emailService => emailService.SendAssessmentEmail(validStudent, "New Assessment", new AssessmentDto()
             {
                 Title = assessment.Title,
                 Description = assessment.Description,

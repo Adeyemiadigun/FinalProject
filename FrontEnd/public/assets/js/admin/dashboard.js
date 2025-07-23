@@ -3,59 +3,30 @@ function adminDashboard() {
     statCards: [],
     topStudents: [],
     lowestStudents: [],
-    sidebarOpen: true,
+    isLoading: {
+      metrics: true,
+      charts: true,
+      students: true,
+    },
     async initDashboard() {
       const token = localStorage.getItem("accessToken");
-      console.log(token);
       const headers = {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       };
-      console.log(headers);
-      console.log(localStorage.getItem("userRole"));
+
       try {
         loadComponent("sidebar-placeholder", "../components/sidebar.html");
         loadComponent("navbar-placeholder", "../components/nav.html");
-        const [metricsRes, topRes, lowRes, batchRes] = await Promise.all([
-          fetch(
-            "https://localhost:7157/api/v1/dashboard/admin/metrics/overview",
-            {
-              method: "GET",
-              headers: headers,
-            }
-          ),
-          fetch(
-            "https://localhost:7157/api/v1/dashboard/admin/analytics/assessments/top-performing",
-            {
-              method: "GET",
-              headers: headers,
-            }
-          ),
-          fetch(
-            "https://localhost:7157/api/v1/dashboard/admin/analytics/assessments/lowest-performing",
-            {
-              method: "GET",
-              headers: headers,
-            }
-          ),
-          fetch("https://localhost:7157/api/v1/dashboard/batch-distribution", {
-            method: "GET",
-            headers: headers,
-          }),
-        ]);
-        if (
-          [metricsRes, topRes, lowRes, batchRes].some(
-            (res) => res.status === 401
-          )
-        ) {
-          // await window.refreshToken();
-          // return this.initDashboard();
-        }
+
+        // --- Step 1: Fetch metrics and student data first for a fast initial render ---
+        const metricsRes = await fetch(
+          "https://localhost:7157/api/v1/dashboard/admin/metrics/overview",
+          { method: "GET", headers: headers }
+        );
+        if (!metricsRes.ok) throw new Error("Failed to fetch dashboard metrics.");
 
         const metrics = await metricsRes.json();
-        const top = await topRes.json();
-        const low = await lowRes.json();
-        const batchData = await batchRes.json();
 
         this.statCards = [
           {
@@ -98,12 +69,48 @@ function adminDashboard() {
 
         this.topStudents = metrics.data.topStudents;
         this.lowestStudents = metrics.data.lowestStudents;
+
+        // Hide loaders for the first batch of content
+        this.isLoading.metrics = false;
+        this.isLoading.students = false;
+
+        // --- Step 2: Fetch chart data in parallel ---
+        const [topRes, lowRes, batchRes] = await Promise.all([
+          fetch(
+            "https://localhost:7157/api/v1/dashboard/admin/analytics/assessments/top-performing",
+            { method: "GET", headers: headers }
+          ),
+          fetch(
+            "https://localhost:7157/api/v1/dashboard/admin/analytics/assessments/lowest-performing",
+            { method: "GET", headers: headers }
+          ),
+          fetch("https://localhost:7157/api/v1/dashboard/batch-distribution", {
+            method: "GET", headers: headers
+          }),
+        ]);
+
+        if ([topRes, lowRes, batchRes].some((res) => !res.ok)) {
+          throw new Error("Failed to fetch chart data.");
+        }
+
+        const top = await topRes.json();
+        const low = await lowRes.json();
+        const batchData = await batchRes.json();
+
         this.drawChart("topAssessmentChart", top.data);
         this.drawChart("lowAssessmentChart", low.data);
         this.drawChart("batchChart", batchData.data);
+        this.isLoading.charts = false;
+
       } catch (err) {
         console.error(err);
-        alert("Dashboard failed to load. Please try again later.");
+        Swal.fire({
+          icon: "error",
+          title: "Dashboard Error",
+          text: "Could not load dashboard data. Please check your connection and try again.",
+        });
+        // Hide all loaders on error
+        this.isLoading = { metrics: false, charts: false, students: false };
       }
     },
     logOut() {
