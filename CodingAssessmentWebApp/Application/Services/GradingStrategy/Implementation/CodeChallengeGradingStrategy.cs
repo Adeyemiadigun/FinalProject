@@ -2,6 +2,7 @@
 using Application.Dtos;
 using Application.Exceptions;
 using Application.Interfaces.ExternalServices;
+using Application.Interfaces.Repositories;
 using Application.Interfaces.Services.GradingStrategyInterfaces.Interfaces;
 using Domain.Entities;
 using Domain.Entitties;
@@ -9,7 +10,7 @@ using Domain.Enum;
 
 namespace Application.Services.GradingStrategy.Implementation
 {
-    public class CodeChallengeGradingStrategy(IJudge0LanguageService _judge, IJudge0LanguageStore _store, ICodeExcution _excute,ICodeWrapper codeWrapper, IExtractMethodName extractMethodName) : IGradingStrategy
+    public class CodeChallengeGradingStrategy(IJudge0LanguageService _judge, IJudge0LanguageStore _store, ICodeExcution _excute,ICodeWrapper codeWrapper, IExtractMethodName extractMethodName,ITestCaseResultRepository testCaseResultRepository) : IGradingStrategy
 
     {
         public QuestionType QuestionType => QuestionType.Coding;
@@ -55,6 +56,8 @@ namespace Application.Services.GradingStrategy.Implementation
 
                 bool isCorrect = result.StdOut?.Trim() == test.ExpectedOutput.Trim();
 
+                answerSubmission.TestCaseResults ??= new List<TestCaseResult>();
+
                 answerSubmission.TestCaseResults.Add(new TestCaseResult
                 {
                     AnswerSubmissionId = answerSubmission.Id,
@@ -65,9 +68,12 @@ namespace Application.Services.GradingStrategy.Implementation
                     EarnedWeight = isCorrect ? test.Weight : 0
                 });
 
+
+
                 totalWeight += isCorrect ? test.Weight : 0;
             }
 
+           await  testCaseResultRepository.CreateAsync(answerSubmission.TestCaseResults);
             answerSubmission.Score = (short)totalWeight;
             answerSubmission.IsCorrect = totalWeight == answerSubmission.Question.Tests.Sum(t => t.Weight);
         }

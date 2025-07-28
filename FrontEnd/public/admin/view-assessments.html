@@ -64,6 +64,15 @@
         </template>
       </template>
     </div>
+    <!-- Filters for Charts -->
+    <div class="flex items-center gap-4 mt-4">
+    <select x-model="filters.month" @change="loadData()" class="px-3 py-2 rounded border bg-white shadow-sm text-sm">
+      <option disabled value="">Select Month</option>
+      <template x-for="(m, index) in ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']">
+        <option :value="index + 1" x-text="m"></option>
+      </template>
+    </select>
+    </div>
 
     <!-- Chart Section -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -138,7 +147,7 @@
                   <td class="p-2"><span class="px-2 py-1 text-xs rounded-full" :class="assessment.statusClass"
                       x-text="assessment.status"></span></td>
                   <td class="p-2" x-text="assessment.passingScore + '%'"></td>
-                  <td class="p-2"><a :href="`/public/admin/assessment-details.html?assessmentId=${assessment.id}`"
+                  <td class="p-2"><a :href="`/public/assessments/assessment-details.html?assessmentId=${assessment.id}`"
                       class="text-indigo-600 hover:underline">Details</a></td>
                 </tr>
               </template>

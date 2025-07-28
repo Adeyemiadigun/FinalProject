@@ -4,6 +4,7 @@ document.addEventListener("alpine:init", () => {
     const editorContentStore = {};
     let remainingSeconds = 0;
     let resizeObserver = null;
+    let editorInstance = null; // Non-reactive editor instance
 
     function debounce(func, wait) {
       let timeout;
@@ -18,7 +19,6 @@ document.addEventListener("alpine:init", () => {
       assessmentId: null,
       assessment: null,
       questions: [],
-      editor: null,
       isEditorLoading: false,
       isSaving: false,
       timerText: "",
@@ -188,9 +188,9 @@ document.addEventListener("alpine:init", () => {
         if (index < 0 || index >= this.questions.length) return;
 
         // Destroy the old editor instance before switching
-        if (this.editor) {
-          this.editor.dispose();
-          this.editor = null;
+        if (editorInstance) {
+          editorInstance.dispose();
+          editorInstance = null;
         }
         if (resizeObserver) {
           resizeObserver.disconnect();
@@ -214,10 +214,10 @@ document.addEventListener("alpine:init", () => {
         }
 
         this.isEditorLoading = true;
-
-        this.editor = monaco.editor.create(container, {
+        console.log(this.currentQuestion)
+        editorInstance = monaco.editor.create(container, {
           value: editorContentStore[this.currentQuestion.id] || "",
-          language: this.currentQuestion.techStack.toLowerCase(),
+          language: "csharp",
           theme: "vs-dark",
           automaticLayout: false, // We manage layout with ResizeObserver
           minimap: { enabled: false },
@@ -228,24 +228,25 @@ document.addEventListener("alpine:init", () => {
         const debouncedUpdate = debounce(() => {
           if (this.currentQuestion) {
             editorContentStore[this.currentQuestion.id] =
-              this.editor.getValue();
+              editorInstance.getValue();
             this.updateNavigator();
           }
         }, 300);
-        this.editor.onDidChangeModelContent(debouncedUpdate);
+        editorInstance.onDidChangeModelContent(debouncedUpdate);
 
         resizeObserver = new ResizeObserver(() => {
-          requestAnimationFrame(() => this.editor?.layout());
+          requestAnimationFrame(() => editorInstance?.layout());
         });
         resizeObserver.observe(container);
 
-        requestAnimationFrame(() => this.editor?.layout());
+        requestAnimationFrame(() => editorInstance?.layout());
         this.isEditorLoading = false;
       },
 
       saveProgress: debounce(async function () {
         this.isSaving = true;
         const token = localStorage.getItem("accessToken");
+
         const payload = {
           assessmentId: this.assessmentId,
           answers: this.questions.map((q) => ({
@@ -290,8 +291,8 @@ document.addEventListener("alpine:init", () => {
 
       async submitAssessment() {
         this.isSaving = true;
-        if (this.editor && this.currentQuestion?.type === "Coding") {
-          editorContentStore[this.currentQuestion.id] = this.editor.getValue();
+        if (editorInstance && this.currentQuestion?.type === "Coding") {
+          editorContentStore[this.currentQuestion.id] = editorInstance.getValue();
         }
 
         const token = localStorage.getItem("accessToken");
@@ -404,9 +405,9 @@ document.addEventListener("alpine:init", () => {
       },
 
       destroy() {
-        if (this.editor) {
-          this.editor.dispose();
-          this.editor = null;
+        if (editorInstance) {
+          editorInstance.dispose();
+          editorInstance = null;
         }
         if (this.timerInterval) {
           clearInterval(this.timerInterval);

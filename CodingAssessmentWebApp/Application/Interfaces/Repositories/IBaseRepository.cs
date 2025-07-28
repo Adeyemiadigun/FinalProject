@@ -7,6 +7,7 @@ namespace Application.Interfaces.Repositories
         Task CreateAsync(T entity);
         Task CreateAsync(ICollection<T> entity);
         void Update(T entity);
+        public void UpdateRange(ICollection<T> entity);
         Task<bool> CheckAsync(Expression<Func<T, bool>> exp);
         Task<bool> CheckAllIds(ICollection<Guid> ids, Expression<Func<T, bool>> exp);
     }

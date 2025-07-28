@@ -61,6 +61,8 @@ namespace Host.Configurations
             builder.AddScoped<IBatchRepository, BatchRepository>();
             builder.AddScoped<IUnitOfWork, UnitOfWork>();
             builder.AddScoped<IStudentProgressRepository, StudentProgressRepository>();
+            builder.AddScoped<IAnswerSubmissionRepository, AnswerSubmissionRepository>();
+            builder.AddScoped<ITestCaseResultRepository, TestCaseResultRepository>();
 
             // External Services
             builder.AddScoped<IEmailService, EmailService>();

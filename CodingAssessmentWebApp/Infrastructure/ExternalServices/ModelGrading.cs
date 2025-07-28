@@ -7,6 +7,7 @@ using Application.Interfaces.ExternalServices.AIProviderStrategy;
 using Infrastructure.Configurations;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Infrastructure.ExternalServices
 {
@@ -66,8 +67,8 @@ namespace Infrastructure.ExternalServices
                 {
                     cleaned = JsonSerializer.Deserialize<string>(cleaned);
                 }
+                cleaned = Regex.Replace(cleaned, @"(?<={|\s|,)(\s*)([a-zA-Z0-9_]+)(\s*):", "\"$2\":");
 
-                
                 var result = JsonSerializer.Deserialize<LlmGradingResultDto>(cleaned);
 
                 return result?.IsCorrect ?? false;

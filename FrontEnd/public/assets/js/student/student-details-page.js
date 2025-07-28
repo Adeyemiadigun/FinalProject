@@ -22,8 +22,19 @@ function studentDetailsPage() {
 
     async init() {
       this.token = localStorage.getItem("accessToken");
-      loadComponent("sidebar-placeholder", "/public/components/sidebar.html");
-      loadComponent("navbar-placeholder", "/public/components/nav.html");
+      const role = localStorage.getItem("userRole");
+      console.log(role)
+      const sidebar =
+        role == "Admin"
+          ? "../components/sidebar.html"
+          : "../components/instructor-sidebar.html";
+      const navbar =
+        role == "Admin"
+          ? "../components/nav.html"
+          : "../components/instructor-nav.html";
+
+      await loadComponent("sidebar-placeholder", sidebar);
+      await loadComponent("navbar-placeholder", navbar);
       await Promise.all([
         this.loadStudent(),
         this.loadAnalytics(),

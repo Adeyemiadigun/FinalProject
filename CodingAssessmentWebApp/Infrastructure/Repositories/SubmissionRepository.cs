@@ -66,8 +66,13 @@ namespace Infrastructure.Repositories
                 .Include(x => x.AnswerSubmissions)
                     .ThenInclude(x => x.Question)
                         .ThenInclude(q => q.Answer)
+                .Include(x => x.AnswerSubmissions)
+                    .ThenInclude(x => x.SelectedOptions)
+                .Include(x => x.AnswerSubmissions) 
+                    .ThenInclude(x => x.TestCaseResults)
                 .FirstOrDefaultAsync(x => x.Id == submissionId);
         }
+
 
         public async Task<Submission?> GetAsync(Expression<Func<Submission, bool>> exp)
         {

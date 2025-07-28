@@ -16,7 +16,7 @@ namespace Infrastructure.Persistence
         public DbSet<TestCase> TestCases => Set<TestCase>();
         public DbSet<User> Users => Set<User>();
         public DbSet<Batch> Batches => Set<Batch>();
-        public DbSet<TestCaseResult> TestCaseResults=> Set<TestCaseResult>();
+        public DbSet<TestCaseResult> TestCaseResults => Set<TestCaseResult>();
         public DbSet<BatchAssessment> BatchAssessments => Set<BatchAssessment>();
         public DbSet<StudentAssessmentProgress> StudentAssessmentProgresses => Set<StudentAssessmentProgress>();
         public DbSet<InProgressAnswer> InProgressAnswers => Set<InProgressAnswer>();

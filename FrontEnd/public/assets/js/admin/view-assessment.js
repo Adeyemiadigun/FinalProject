@@ -16,9 +16,10 @@ function assessmentsPage() {
 
     // State properties
     filters: {
-      instructorId: "",
-      batchId: "",
-    },
+  instructorId: "",
+  batchId: "",
+  month: new Date().getMonth() + 1, // 1-based month
+},
     isLoading: {
       initial: true,
       metrics: true,
@@ -94,11 +95,11 @@ function assessmentsPage() {
               { headers }
             ),
             fetch(
-              `https://localhost:7157/api/v1/Dashboard/admin/analytics/assessments/score-trends?${params}`,
+              `https://localhost:7157/api/v1/Dashboard/admin/analytics/assessments/score-trends?instructorId=${this.filters.instructorId}&batchId=${this.filters.batchId}&month=${this.filters.month}`,
               { headers }
             ),
             fetch(
-              `https://localhost:7157/api/v1/Dashboard/admin/analytics/assessments/created-trend?${params}`,
+              `https://localhost:7157/api/v1/Dashboard/admin/analytics/assessments/created-trend?instructorId=${this.filters.instructorId}&batchId=${this.filters.batchId}&month=${this.filters.month}`,
               { headers }
             ),
           ]);

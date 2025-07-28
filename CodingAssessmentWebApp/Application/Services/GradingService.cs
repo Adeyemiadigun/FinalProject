@@ -5,10 +5,11 @@ using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Application.Interfaces.Services.GradingStrategyInterfaces.Interfaces;
 using Domain.Entitties;
+using Microsoft.EntityFrameworkCore;
 
 namespace Application.Services
 {
-    public class GradingService(IGradingStrategyFactory gradingStrategyFactory, ISubmissionRepository _submissionRepository,IEmailService _emailService,IUnitOfWork _unitOfWork) : IGradingService
+    public class GradingService(IGradingStrategyFactory gradingStrategyFactory, ISubmissionRepository _submissionRepository,IEmailService _emailService,IUnitOfWork _unitOfWork, IAnswerSubmissionRepository answerSubmissionRepository) : IGradingService
     {
         public async Task GradeSubmissionAndNotifyAsync(Guid submissionId, Guid studentId)
         {
@@ -39,8 +40,23 @@ namespace Application.Services
             }
             submission.TotalScore = (short)totalScore;
             submission.FeedBack = submission.TotalScore >= submission.Assessment.PassingScore ? "You Passed the assessment" : "You failed the assessment";
-             _submissionRepository.Update(submission);
-            await _unitOfWork.SaveChangesAsync();
+
+             answerSubmissionRepository.UpdateRange(submission.AnswerSubmissions);
+            _submissionRepository.Update(submission);
+
+            try
+            {
+                await _unitOfWork.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                foreach (var entry in ex.Entries)
+                {
+                    Console.WriteLine($"Concurrency conflict on entity: {entry.Entity.GetType().Name}");
+                }
+                throw;
+            }
+
             var student = submission.Student;
             var studentDto = new UserDto()
             {

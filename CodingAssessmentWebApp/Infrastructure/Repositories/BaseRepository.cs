@@ -31,6 +31,10 @@ namespace Infrastructure.Repositories
         {
             _context.Set<T>().Update(entity);
         }
+        public void UpdateRange(ICollection<T> entity)
+        {
+            _context.Set<T>().UpdateRange(entity);
+        }
         public async Task<bool> CheckAllIds(ICollection<Guid> ids, Expression<Func<T, bool>> exp)
         {
             var existingIdsCount = await _context.Set<T>()

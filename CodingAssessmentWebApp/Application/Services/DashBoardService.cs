@@ -336,21 +336,23 @@ namespace Application.Services
                 Message = "Batch analytics retrieved successfully."
             };
         }
-        public async Task<BaseResponse<List<ScoreTrenddto>>> GetScoreTrendsAsync(Guid? instructorId, Guid? batchId)
+        public async Task<BaseResponse<List<ScoreTrenddto>>> GetScoreTrendsAsync(Guid? instructorId, Guid? batchId, int? month)
         {
-            var assessments = await _assessmentRepository.GetAllAsync(x => x != null);
+            var targetMonth = month ?? DateTime.UtcNow.Month;
+
+            var assessments = await _assessmentRepository.GetAllAsync(x =>
+                (instructorId == null || x.InstructorId == instructorId.Value) &&
+                (batchId == null || x.BatchAssessment.Any(ba => ba.BatchId == batchId.Value)) &&
+                x.Submissions.Any(s => s.SubmittedAt.Month == targetMonth)
+            );
+
             if (assessments == null || !assessments.Any())
                 throw new ApiException("No assessments found.", (int)HttpStatusCode.NotFound, "NoAssessmentsFound", null);
 
-            if (instructorId.HasValue)
-                assessments = assessments.Where(a => a.InstructorId == instructorId.Value).ToList();
-
-            if (batchId.HasValue)
-                assessments = assessments.Where(a => a.BatchAssessment.Any(ba => ba.BatchId == batchId.Value)).ToList();
-
             var trends = assessments
-                .SelectMany(a => a.Submissions)
-                .GroupBy(s => CultureInfo.CurrentCulture.Calendar.GetWeekOfYear(s.SubmittedAt, CalendarWeekRule.FirstDay, DayOfWeek.Monday))
+                .SelectMany(a => a.Submissions.Where(s => s.SubmittedAt.Month == targetMonth))
+                .GroupBy(s => CultureInfo.CurrentCulture.Calendar.GetWeekOfYear(
+                    s.SubmittedAt, CalendarWeekRule.FirstDay, DayOfWeek.Monday))
                 .Select(g => new ScoreTrenddto
                 {
                     Label = $"Week {g.Key}",
@@ -367,17 +369,19 @@ namespace Application.Services
             };
         }
 
-        public async Task<BaseResponse<List<AssessmentCreatedDto>>> GetAssessmentsCreatedTrendAsync(Guid? instructorId, Guid? batchId)
+
+        public async Task<BaseResponse<List<AssessmentCreatedDto>>> GetAssessmentsCreatedTrendAsync(Guid? instructorId, Guid? batchId, int? month)
         {
-            var assessments = await _assessmentRepository.GetAllAsync(x => x != null);
+            var targetMonth = month ?? DateTime.UtcNow.Month;
+
+            var assessments = await _assessmentRepository.GetAllAsync(x =>
+                (instructorId == null || x.InstructorId == instructorId.Value) &&
+                (batchId == null || x.BatchAssessment.Any(ba => ba.BatchId == batchId.Value)) &&
+                x.CreatedAt.Month == targetMonth
+            );
+
             if (assessments == null || !assessments.Any())
                 throw new ApiException("No assessments found.", (int)HttpStatusCode.NotFound, "NoAssessmentsFound", null);
-
-            if (instructorId.HasValue)
-                assessments = assessments.Where(a => a.InstructorId == instructorId.Value).ToList();
-
-            if (batchId.HasValue)
-                assessments = assessments.Where(a => a.BatchAssessment.Any(ba => ba.BatchId == batchId.Value)).ToList();
 
             var trends = assessments
                 .GroupBy(a => a.CreatedAt.ToString("MMM"))
@@ -397,6 +401,6 @@ namespace Application.Services
             };
         }
 
-    }
 
+    }
 }

@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Host.Configurations;
@@ -118,11 +119,17 @@ builder.Services.AddAuthentication(config =>
 
     };
 });
+builder.Services.AddDbContext<ClhAssessmentAppDpContext>(options =>
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
+           .EnableSensitiveDataLogging() // show actual data values
+           .LogTo(Console.WriteLine, LogLevel.Information);
+});
 
 
 var app = builder.Build();
 app.UseHangfireServer();
-app.UseHangfireDashboard("/hangfirebhyk");
+app.UseHangfireDashboard("/hangfire");
 HangfireJobScheduler.RegisterRecurringJobs();
 if (app.Environment.IsDevelopment())
 {

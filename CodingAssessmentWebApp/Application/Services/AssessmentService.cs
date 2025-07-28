@@ -203,14 +203,14 @@ namespace Application.Services
 
             // Build the complete filter with status included directly
             Expression<Func<Assessment, bool>> filter = x =>
-                x.AssessmentAssignments.Any(a => a.StudentId == userId) &&
-                (
-                    string.IsNullOrWhiteSpace(status) ||
-                    (status.ToLower() == "upcoming" && x.StartDate > now) ||
-                    (status.ToLower() == "inprogress" && x.StartDate <= now && x.EndDate >= now) ||
-                    (status.ToLower() == "completed" && x.EndDate < now) && x.Questions.Count() > 0 && x.Questions.Count > 0
-                );
-
+             x.AssessmentAssignments.Any(a => a.StudentId == userId) &&
+             (
+                 string.IsNullOrWhiteSpace(status) ||
+                 (status.ToLower() == "upcoming" && x.StartDate > now) ||
+                 (status.ToLower() == "inprogress" && x.StartDate <= now && x.EndDate >= now) ||
+                 (status.ToLower() == "completed" && x.EndDate < now)
+             ) &&
+             x.Questions.Count() > 0;
             var assessments = await _assessmentRepository.GetAllAsync(filter, request);
 
             var paginationDto = new PaginationDto<AssessmentDto>

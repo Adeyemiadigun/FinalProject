@@ -65,16 +65,16 @@ namespace Host.Controllers
             return Ok(result);
         }
         [HttpGet("admin/analytics/assessments/score-trends")]
-        public async Task<IActionResult> GetScoreTrends([FromQuery] Guid? instructorId, [FromQuery] Guid? batchId)
+        public async Task<IActionResult> GetScoreTrends([FromQuery] Guid? instructorId, [FromQuery] Guid? batchId, [FromQuery] int? month)
         {
-            var result = await _dashBoardService.GetScoreTrendsAsync(instructorId, batchId);
+            var result = await _dashBoardService.GetScoreTrendsAsync(instructorId, batchId, month);
             return Ok(result);
         }
 
         [HttpGet("admin/analytics/assessments/created-trend")]
-        public async Task<IActionResult> GetAssessmentCreatedTrend([FromQuery] Guid? instructorId, [FromQuery] Guid? batchId)
+        public async Task<IActionResult> GetAssessmentCreatedTrend([FromQuery] Guid? instructorId, [FromQuery] Guid? batchId, [FromQuery] int? month)
         {
-            var result = await _dashBoardService.GetAssessmentsCreatedTrendAsync(instructorId, batchId);
+            var result = await _dashBoardService.GetAssessmentsCreatedTrendAsync(instructorId, batchId, month);
             return Ok(result);
         }
         [HttpGet("admin/batch/analytics")]
