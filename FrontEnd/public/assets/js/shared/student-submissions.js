@@ -9,31 +9,66 @@ function adminStudentSubmissions() {
     studentId: new URLSearchParams(window.location.search).get("id"),
     submissions: [],
     studentName: "",
-    sidebarOpen: true,
+
+    // Pagination state
+    currentPage: 1,
+    totalPages: 0,
+    pageSize: 5,
+    hasNextPage: false,
+    hasPreviousPage: false,
+
     async init() {
       const token = localStorage.getItem("accessToken");
       const role = localStorage.getItem("userRole");
-      const sidebar =
+
+      await loadComponent(
+        "sidebar-placeholder",
         role == "Admin"
           ? "../components/sidebar.html"
-          : "../components/instructor-sidebar.html";
-      const navbar =
+          : "../components/instructor-sidebar.html"
+      );
+      await loadComponent(
+        "navbar-placeholder",
         role == "Admin"
           ? "../components/nav.html"
-          : "../components/instructor-nav.html";
-
-      await loadComponent("sidebar-placeholder", sidebar);
-      await loadComponent("navbar-placeholder", navbar);
-      const res = await fetch(
-        `https://localhost:7157/api/v1/Students/${this.studentId}/submissions`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+          : "../components/instructor-nav.html"
       );
+
+      await this.fetchSubmissions(1); // Load first page
+    },
+
+    async fetchSubmissions(page) {
+      this.currentPage = page;
+      const token = localStorage.getItem("accessToken");
+
+      const res = await fetch(
+        `https://localhost:7157/api/v1/Students/${this.studentId}/submissions?pageNumber=${page}&pageSize=${this.pageSize}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
       const json = await res.json();
-      this.submissions = json.data || [];
-      console.log(this.submissions);
-      this.studentName = this.submissions[0].studentName;
+
+      if (json.status && json.data) {
+        const data = json.data;
+        this.submissions = data.items;
+        this.totalPages = data.totalPages;
+        this.hasNextPage = data.hasNextPage;
+        this.hasPreviousPage = data.hasPreviousPage;
+
+        this.studentName =
+          this.submissions.length > 0 ? this.submissions[0].studentName : "";
+      }
+    },
+
+    changePage(page) {
+      if (page >= 1 && page <= this.totalPages) {
+        this.fetchSubmissions(page);
+      }
+    },
+
+    pages() {
+      // Generate an array like [1, 2, 3, ... totalPages]
+      return Array.from({ length: this.totalPages }, (_, i) => i + 1);
     },
 
     logOut() {

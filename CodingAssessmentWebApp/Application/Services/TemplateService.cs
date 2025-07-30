@@ -58,7 +58,6 @@ namespace Application.Services
                        </p>
                     <h4>Submission Details:</h4>
                     <ul>
-                      <li><strong>Assessment ID:</strong> {submission.AssessmentId}</li>
                       <li><strong>Submitted At:</strong> {submission.SubmittedAt}</li>
                       <li><strong>Total Score:</strong> {submission.TotalScore}</li>
                       <li><strong>Feedback:</strong> {submission.FeedBack}</li>

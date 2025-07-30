@@ -1,4 +1,5 @@
 ﻿using Application.Dtos;
+using Domain.Enum;
 
 namespace Application.Interfaces.Services
 {
@@ -15,7 +16,7 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<PaginationDto<AssessmentDto>>> GetAllAssessmentsByInstructorIdAsync( PaginationRequest request, Guid instructorId = default);
         Task<BaseResponse<PaginationDto<AssessmentDto>>> GetAllStudentAssessments(PaginationRequest request, Guid studentId = default);
         Task<BaseResponse<PaginationDto<AssessmentDto>>> GetCurrentStudentAssessments(
-     PaginationRequest request, string? status);
+     PaginationRequest request, AssessmentStatus? status);
         Task<BaseResponse<PaginationDto<AssessmentDto>>> GetAssessmentsByStudentId(Guid studentId, PaginationRequest request);
         //Task<BaseResponse<AssessmentDto>> AssignStudents(Guid id, AssignStudentsModel model);
         Task<BaseResponse<AssessmentDto>> UpdateAssessmentAsync(Guid id, UpdateAssessmentRequestModel model);
@@ -24,10 +25,11 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<List<AssessmentPerformanceDto>>> GetLowestAssessments();
         Task<BaseResponse<List<AssessmentDto>>> GetRecentAssessment();
         Task<BaseResponse<List<AssessmentPerformanceDto>>> GetInstructorAssessmentScoresAsync();
-        Task<BaseResponse<PaginationDto<InstructorAssessmentDto>>> GetAssessmentsByInstructorAsync(Guid? batchId, string? status, PaginationRequest request);
+        Task<BaseResponse<PaginationDto<InstructorAssessmentDto>>> GetAssessmentsByInstructorAsync(Guid? batchId, AssessmentStatus? status, PaginationRequest request);
         Task<BaseResponse<PaginationDto<BatchAssessmentsOverview>>> GetAssessmentsByBatchIdDetails(Guid id, PaginationRequest request);
         Task<BaseResponse<PaginationDto<StudentAssessmentDetail>>> GetStudentAssessmentDetails(Guid id,PaginationRequest request);
         Task<BaseResponse<PaginationDto<InstructorAssessmentPerformanceDetailDto>>> GetInstructorAssessmentDetail(Guid instructorId, PaginationRequest request);
         Task<BaseResponse<List<AssessmentDto>>> GetInstructorRecentAssessment();
+        Task UpdateAssessmentStatusAsync(Guid assessmentId, AssessmentStatus newStatus);
     }
 }

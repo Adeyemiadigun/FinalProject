@@ -1,4 +1,5 @@
 ﻿using Domain.Entities;
+using Domain.Enum;
 
 namespace Domain.Entitties
 {
@@ -11,6 +12,7 @@ namespace Domain.Entitties
         public int DurationInMinutes { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
+        public AssessmentStatus Status { get; set; }
         public Guid InstructorId { get; set; }
         public User Instructor { get; set; }
         public ICollection<BatchAssessment> BatchAssessment { get; set; } = [];

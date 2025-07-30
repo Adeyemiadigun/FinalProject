@@ -351,8 +351,11 @@ namespace Application.Services
 
             var trends = assessments
                 .SelectMany(a => a.Submissions.Where(s => s.SubmittedAt.Month == targetMonth))
-                .GroupBy(s => CultureInfo.CurrentCulture.Calendar.GetWeekOfYear(
-                    s.SubmittedAt, CalendarWeekRule.FirstDay, DayOfWeek.Monday))
+                .GroupBy(s =>
+                {
+                    var day = s.SubmittedAt.Day;
+                    return (int)Math.Ceiling(day / 7.0); // Week 1: days 1–7, Week 2: 8–14, etc.
+                })
                 .Select(g => new ScoreTrenddto
                 {
                     Label = $"Week {g.Key}",

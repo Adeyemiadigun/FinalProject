@@ -32,6 +32,6 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<List<SubmissionDto>>> GetSubmittedAssessmentsAsync();
         Task<BaseResponse<StudentDetail>> GetStudentDetail();
         Task<BaseResponse<StudentProfileMetrics>> GetStudentMetrics();
-        Task<BaseResponse<List<SubmissionsDto>>> GetStudentSubmissionsAsync(Guid studentId);
+        Task<BaseResponse<PaginationDto<SubmissionsDto>>> GetStudentSubmissionsAsync(Guid studentId, PaginationRequest request);
     }
 }

@@ -25,6 +25,7 @@ namespace Infrastructure.Persistence.Configurations
                 .HasConversion(
                         v => v.ToUniversalTime(),
                         v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+            builder.Property(x => x.Status).IsRequired();
             builder.Property(x => x.CreatedAt);
             builder.Property(x => x.PassingScore).IsRequired();
             builder.Property(x => x.InstructorId).IsRequired();

@@ -21,6 +21,10 @@ namespace Application.Services
             }
             // Retrieve the batch entity  
             var batch = await batchRepository.GetBatchByIdAsync(batchId);
+            if (batch == null)
+            {
+                throw new ApiException("Batch not found.", 404, "BatchNotFound", null);
+            }
             var newStart = assessment.StartDate;
             var newEnd = assessment.StartDate.AddMinutes(assessment.DurationInMinutes);
 
@@ -32,12 +36,7 @@ namespace Application.Services
                 return newStart < existingEnd && newEnd > existingStart;
             }))
             {
-                throw new ApiException("Batch already has an assessment assigned in the same time frame.", 400, "BatchAlreadyHasAssessment", null);
-            }
-
-            if (batch == null)
-            {
-                throw new ApiException("Batch not found.", 404, "BatchNotFound", null);
+                throw new ApiException("Batch already has an assessment assigned in the same time frame.", 200, "BatchAlreadyHasAssessment", batch.Name);
             }
             var studentAssessments = batch.Students.Select(x => new AssessmentAssignment()
             {
@@ -83,7 +82,7 @@ namespace Application.Services
                     EndDate = assessment.EndDate,
                     PassingScore = assessment.PassingScore
                 });
-                _backgroundService.Schedule<IEmailService>((emailService => emailService.SendBulkEmailAsync(validStudent, "Assessment Reminder", template)), delay);
+                _backgroundService.Schedule<IEmailService>((emailService => emailService.SendBulkEmailAsync(validStudent, "Assessment Reminder", template)), reminderTime);
             }
             _leaderboardStore.Invalidate(batchId);
 

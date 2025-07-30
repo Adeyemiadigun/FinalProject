@@ -132,7 +132,8 @@ function assessmentsPage() {
           statusClass: this.getStatusClass(a.status),
         }));
         console.log(this.assessments)
-
+        console.log(scoreTrendData)
+        console.log(createdTrendData)
         // Store chart configurations to be drawn after the canvas is visible
         this.chartConfigs.scoreTrendsChart = {
           type: "line",

@@ -52,7 +52,6 @@ namespace Application.Services
             {
                 var missedSubmission = new Submission()
                 {
-                    Id = Guid.NewGuid(),
                     StudentId = student.Id,
                     AssessmentId = assessment.Id,
                     SubmittedAt = assessment.EndDate,

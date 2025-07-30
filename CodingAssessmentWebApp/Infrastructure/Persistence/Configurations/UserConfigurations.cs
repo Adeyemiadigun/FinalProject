@@ -22,7 +22,7 @@ namespace Infrastructure.Persistence.Configurations
                 .WithOne()
                 .HasForeignKey("InstructorId");
             builder.HasMany(x => x.Submissions)
-                .WithOne()
+                .WithOne(x => x.Student)
                 .HasForeignKey("StudentId");
             builder.HasMany(x => x.AssessmentAssignments)
                 .WithOne(a => a.Student)

@@ -806,14 +806,14 @@ namespace Application.Services
                 }
             };
         }
-        public async Task<BaseResponse<List<SubmissionsDto>>> GetStudentSubmissionsAsync(Guid studentId)
+        public async Task<BaseResponse<PaginationDto<SubmissionsDto>>> GetStudentSubmissionsAsync(Guid studentId, PaginationRequest request)
         {
 
             var check = await _userRepository.CheckAsync(x => x.Id == studentId);
             if (!check)
                 throw new ApiException("InvalidStudentId", 404, "Invalid_Id", null);
-            var submissions = await _submissionRepo.GetAllAsync(s => s.StudentId == studentId);
-            var data = submissions.Select(s => new SubmissionsDto
+            var submissions = await _submissionRepo.GetStudentSubmissionsAsync(studentId,request);
+            var data = submissions.Items.Select(s => new SubmissionsDto
             {
                 Id = s.Id,
                 Title = s.Assessment.Title,
@@ -824,11 +824,21 @@ namespace Application.Services
                 StudentName = s.Student.FullName
             }).ToList();
 
-            return new BaseResponse<List<SubmissionsDto>>
+            var paginationDto = new PaginationDto<SubmissionsDto>()
+            {
+                TotalItems = submissions.TotalItems,
+                TotalPages = submissions.TotalPages,
+                CurrentPage = submissions.CurrentPage,
+                HasNextPage = submissions.HasNextPage,
+                HasPreviousPage = submissions.HasPreviousPage,
+                PageSize = submissions.PageSize,
+                Items = data
+            };
+            return new BaseResponse<PaginationDto<SubmissionsDto>>
             {
                 Status = true,
                 Message = "Student submissions retrieved",
-                Data = data
+                Data = paginationDto
             };
         }
         public async Task<BaseResponse<UserDto>> UploadStudentFileAsync(UploadFileDto studentFile)

@@ -45,6 +45,28 @@
           </tr>
         </tbody>
       </table>
+      <div class="flex justify-center items-center space-x-2 mt-4">
+        <!-- Previous -->
+        <button @click="changePage(currentPage - 1)" :disabled="!hasPreviousPage"
+          class="px-3 py-1 bg-gray-200 rounded disabled:opacity-50">
+          Previous
+        </button>
+      
+        <!-- Page Numbers -->
+        <template x-for="page in pages()" :key="page">
+          <button @click="changePage(page)" class="px-3 py-1 rounded"
+            :class="page === currentPage ? 'bg-indigo-500 text-white' : 'bg-gray-200 hover:bg-gray-300'">
+            <span x-text="page"></span>
+          </button>
+        </template>
+      
+        <!-- Next -->
+        <button @click="changePage(currentPage + 1)" :disabled="!hasNextPage"
+          class="px-3 py-1 bg-gray-200 rounded disabled:opacity-50">
+          Next
+        </button>
+      </div>
+
     </div>
   </div>
 

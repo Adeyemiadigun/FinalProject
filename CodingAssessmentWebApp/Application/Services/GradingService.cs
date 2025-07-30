@@ -39,7 +39,7 @@ namespace Application.Services
                 totalScore += answer.Score;
             }
             submission.TotalScore = (short)totalScore;
-            submission.FeedBack = submission.TotalScore >= submission.Assessment.PassingScore ? "You Passed the assessment" : "You failed the assessment";
+            submission.FeedBack = submission.TotalScore >= submission.Assessment.PassingScore ? "Passed" : "Failed";
 
              answerSubmissionRepository.UpdateRange(submission.AnswerSubmissions);
             _submissionRepository.Update(submission);

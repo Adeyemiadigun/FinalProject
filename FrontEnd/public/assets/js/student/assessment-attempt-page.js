@@ -139,7 +139,7 @@ document.addEventListener("alpine:init", () => {
           if (!res.ok) return;
           const progress = await res.json();
           if (!progress.data || !progress.data.answers) return;
-
+          console.log(progress.data)
           for (const ans of progress.data.answers) {
             const q = this.questions.find((q) => q.id === ans.questionId);
             if (!q) continue;

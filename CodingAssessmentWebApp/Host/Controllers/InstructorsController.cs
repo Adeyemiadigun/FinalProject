@@ -1,6 +1,7 @@
 ﻿using Application.Dtos;
 using Application.Interfaces.Services;
 using Application.Services;
+using Domain.Enum;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -34,7 +35,7 @@ namespace Host.Controllers
             return response.Status ? Ok(response) : NotFound(response);
         }
         [HttpGet("assessments")]
-        public async Task<IActionResult> GetInstructorAssessments([FromQuery] Guid? batchId,[FromQuery] string? status,[FromQuery] PaginationRequest request)
+        public async Task<IActionResult> GetInstructorAssessments([FromQuery] Guid? batchId,[FromQuery] AssessmentStatus? status,[FromQuery] PaginationRequest request)
         {
             var result = await _assessmentService.GetAssessmentsByInstructorAsync(batchId, status, request);
          

@@ -103,6 +103,7 @@ namespace Application.Services
                 DurationInMinutes = model.DurationInMinutes,
                 StartDate = model.StartDate,
                 EndDate = model.EndDate,
+                Status = AssessmentStatus.Upcoming,
                 PassingScore = model.PassingScore,
                 InstructorId = user.Id,
                 Instructor = user,
@@ -125,13 +126,15 @@ namespace Application.Services
 
                 await batchService.AssignAssessmentToBatchAsync(batch.Id, assessment);
             }
-            BackgroundJob.Schedule<IMissedSubmissionScoringService>(
+            _backgroundService.Schedule<IMissedSubmissionScoringService>(
                 service => service.ScoreZeroForUnsubmittedAsync(assessment.Id),
                 assessment.EndDate
             );
            
             await _unitOfWork.SaveChangesAsync();
 
+            _backgroundService.Schedule<IAssessmentService>(service => service.UpdateAssessmentStatusAsync(assessment.Id,AssessmentStatus.InProgress),assessment.StartDate);
+            _backgroundService.Schedule<IAssessmentService>(service => service.UpdateAssessmentStatusAsync(assessment.Id,AssessmentStatus.Completed),assessment.EndDate);
 
             return new BaseResponse<AssessmentDto>()
             {
@@ -193,7 +196,7 @@ namespace Application.Services
             };
         }
         public async Task<BaseResponse<PaginationDto<AssessmentDto>>> GetCurrentStudentAssessments(
-     PaginationRequest request, string? status)
+     PaginationRequest request, AssessmentStatus? status)
         {
             var userId = _currentUser.GetCurrentUserId();
             if (userId == Guid.Empty)
@@ -205,10 +208,10 @@ namespace Application.Services
             Expression<Func<Assessment, bool>> filter = x =>
              x.AssessmentAssignments.Any(a => a.StudentId == userId) &&
              (
-                 string.IsNullOrWhiteSpace(status) ||
-                 (status.ToLower() == "upcoming" && x.StartDate > now) ||
-                 (status.ToLower() == "inprogress" && x.StartDate <= now && x.EndDate >= now) ||
-                 (status.ToLower() == "completed" && x.EndDate < now)
+             status == null ||
+                 (status == AssessmentStatus.Upcoming) ||
+                 (status == AssessmentStatus.InProgress) ||
+                 (status == AssessmentStatus.Completed)
              ) &&
              x.Questions.Count() > 0;
             var assessments = await _assessmentRepository.GetAllAsync(filter, request);
@@ -608,7 +611,7 @@ namespace Application.Services
                 Data = assessmentScores
             };
         }
-        public async Task<BaseResponse<PaginationDto<InstructorAssessmentDto>>> GetAssessmentsByInstructorAsync(Guid? batchId, string? status, PaginationRequest request)
+        public async Task<BaseResponse<PaginationDto<InstructorAssessmentDto>>> GetAssessmentsByInstructorAsync(Guid? batchId, AssessmentStatus? status, PaginationRequest request)
         {
             var userId = _currentUser.GetCurrentUserId();
             var now = DateTime.UtcNow;
@@ -616,9 +619,12 @@ namespace Application.Services
             var assessments = await _assessmentRepository.GetAllAsync(x =>
                 x.InstructorId == userId &&
                 (!batchId.HasValue || x.BatchAssessment.Any(b => b.BatchId == batchId)) &&
-                (string.IsNullOrEmpty(status) ||
-                    (status == "upcoming" && x.StartDate > now) ||
-                    (status == "past" && x.EndDate < now)), request);
+               (
+             status == null ||
+                 (status == AssessmentStatus.Upcoming) ||
+                 (status == AssessmentStatus.InProgress) ||
+                 (status == AssessmentStatus.Completed)
+             ), request);
 
             var items = assessments.Items.Select(a => new InstructorAssessmentDto
             {
@@ -868,6 +874,16 @@ namespace Application.Services
                 Data = caps
             };
         }
+        public async Task UpdateAssessmentStatusAsync(Guid assessmentId, AssessmentStatus newStatus)
+        {
+            var assessment = await _assessmentRepository.GetAsync(assessmentId);
+            if (assessment == null) throw new Exception("Assessment not found");
+
+            assessment.Status = newStatus;
+            _assessmentRepository.Update(assessment);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
 
     }
 

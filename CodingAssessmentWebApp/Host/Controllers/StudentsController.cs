@@ -1,6 +1,7 @@
 ﻿using Application.Dtos;
 using Application.Interfaces.Services;
 using Application.Services;
+using Domain.Enum;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -45,7 +46,7 @@ namespace Host.Controllers
             return response.Status ? Ok(response) : NotFound(response);
         }
         [HttpGet("assessments")]
-        public async Task<IActionResult> GetStudentsAssessment([FromQuery] PaginationRequest request, [FromQuery] string? status)
+        public async Task<IActionResult> GetStudentsAssessment([FromQuery] PaginationRequest request, [FromQuery] AssessmentStatus? status)
         {
             var response = await _assementService.GetCurrentStudentAssessments(request, status);
             return response.Status ? Ok(response) : NotFound(response);
@@ -130,9 +131,9 @@ namespace Host.Controllers
             return Ok(result);
         }
         [HttpGet("{studentId:guid}/submissions")]
-        public async Task<IActionResult> GetStudentSubmissions(Guid studentId)
+        public async Task<IActionResult> GetStudentSubmissions(Guid studentId,[FromQuery] PaginationRequest request)
         {
-            var result = await _userService.GetStudentSubmissionsAsync(studentId);
+            var result = await _userService.GetStudentSubmissionsAsync(studentId, request);
             return Ok(result);
         }
         [HttpGet("{submissionId:guid}/submission")]
