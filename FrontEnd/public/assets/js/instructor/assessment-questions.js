@@ -8,6 +8,7 @@ function questionsPage() {
   return {
     assessmentId: null,
     assessmentTitle: "",
+    passingScore:"",
     questions: [],
     showCreateModal: false,
     showEditModal: false,
@@ -46,9 +47,59 @@ function questionsPage() {
       this.assessmentId = params.get("assessmentId");
       this.assessmentTitle = `Assessment #${this.assessmentId ?? "N/A"}`;
       this.token = localStorage.getItem("accessToken");
-
+      await this.loadAssessment();
       await this.loadQuestions();
     },
+   async loadAssessment() {
+  try {
+    const res = await fetch(
+      `https://localhost:7157/api/v1/Assessments/${this.assessmentId}`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.token}`,
+        },
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      Swal.fire({
+        icon: "error",
+        title: data.errorCode || "Error",
+        text: data.message || "Failed to load assessment",
+      }).then(() => {
+        if (res.status === 401 || res.status === 403) {
+          // Token issue → redirect to login
+          window.location.href = "/public/auth/login.html";
+        } else if (res.status === 404) {
+          // Assessment not found → redirect to assessments page
+          window.location.href = "/public/instructor/assessment-page.html";
+        } else {
+          // Other errors → fallback to dashboard
+          window.location.href = "/public/instructor/dashboard.html";
+        }
+      });
+      return;
+    }
+
+    // ✅ Success: Set values
+    this.assessmentTitle = data.data.title;
+    this.passingScore = data.data.passingScore;
+    this.aiForm.technologyStack = data.data.technologyStack;
+
+  } catch (err) {
+    console.error("Network or parsing error:", err);
+    Swal.fire({
+      icon: "error",
+      title: "Network Error",
+      text: "Failed to load assessment. Please try again.",
+    }).then(() => {
+      window.location.href = "/public/instructor/dashboard.html";
+    });
+  }
+},
 
     async loadQuestions() {
       try {

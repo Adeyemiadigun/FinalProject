@@ -16,7 +16,6 @@ public  class CodeWrapper : ICodeWrapper
             TechnologyStack.Java => WrapJava(studentCode, functionCall),
             TechnologyStack.Python => WrapPython(studentCode, functionCall),
             TechnologyStack.JavaScript => WrapJavaScript(studentCode, functionCall),
-            TechnologyStack.Cpp => WrapCpp(studentCode, functionCall),
 
             // Add more languages if needed
             _ => throw new NotSupportedException($"Language {language} is not supported.")
@@ -39,7 +38,6 @@ public  class CodeWrapper : ICodeWrapper
           }}
         }}";
     }
-
     private  string WrapJava(string code, string functionCall)
     {
         return $@"

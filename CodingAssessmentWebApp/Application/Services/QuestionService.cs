@@ -25,11 +25,7 @@ namespace Application.Services
                     throw new ApiException("Assessment not found.", 404, "ASSESSMENT_NOT_FOUND", null);
                     if(currentUser != assessment.InstructorId)
                     throw new ApiException("You are not authorized to add questions to this assessment.", 403, "UNAUTHORIZED_ACCESS", null);
-                TechnologyStack techStack;
-                if(assessment.TechnologyStack == "c#" || assessment.TechnologyStack =="C#")
-                    techStack = TechnologyStack.CSharp;
-                else
-                    techStack = (TechnologyStack)Enum.Parse(typeof(TechnologyStack), assessment.TechnologyStack);
+               
               
                 var questions = model.Select(x => new Question
                 {
@@ -37,7 +33,7 @@ namespace Application.Services
                     QuestionType = x.QuestionType,
                     AssessmentId = assessmentId,
                     Assessment = assessment,
-                    TechnologyStack = techStack,
+                    TechnologyStack = assessment.TechnologyStack,
                     Options = x.QuestionType == QuestionType.MCQ
                         ? x.Options.Select(o => new Option
                         {

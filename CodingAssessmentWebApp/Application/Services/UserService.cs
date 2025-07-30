@@ -651,8 +651,8 @@ namespace Application.Services
                     Title = x.Title,
                     StartedDate = x.StartDate,
                     EndDate = x.EndDate,
-                    Status = "Ongoing",
-                    Type = x.TechnologyStack,
+                    Status = x.Status.ToString(),
+                    Type = x.TechnologyStack.ToString(),
                     Duration = x.DurationInMinutes
                 }).ToList();
             return new BaseResponse<List<StudentAssessmentDto>>
@@ -680,8 +680,8 @@ namespace Application.Services
                    Title = x.Title,
                    StartedDate = x.StartDate,
                    EndDate = x.EndDate,
-                   Status = "Ongoing",
-                   Type = x.TechnologyStack,
+                   Status = x.Status.ToString(),
+                   Type = x.TechnologyStack.ToString(),
                    Duration = x.DurationInMinutes
                }).ToList();
             return new BaseResponse<List<StudentAssessmentDto>>

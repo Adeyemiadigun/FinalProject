@@ -13,7 +13,9 @@ namespace Infrastructure.Persistence.Configurations
             builder.Property(x => x.Title).IsRequired().HasMaxLength(200);
             builder.Property(x => x.Description).IsRequired()
                 .HasMaxLength(500);
-            builder.Property(x => x.TechnologyStack).IsRequired();
+            builder.Property(a => a.TechnologyStack)
+                .IsRequired()
+                .HasConversion<string>();
             builder.Property(x => x.DurationInMinutes).IsRequired();
             builder.Property(x => x.StartDate).IsRequired()
                     .HasConversion(

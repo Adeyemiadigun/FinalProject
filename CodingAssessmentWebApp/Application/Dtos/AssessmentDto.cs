@@ -1,4 +1,6 @@
-﻿namespace Application.Dtos
+﻿using Domain.Enum;
+
+namespace Application.Dtos
 {
     public class AssessmentDto
     {
@@ -13,6 +15,7 @@
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public double PassingScore { get; set; }
         public bool Submitted { get; set; }
+        public string Status { get; set; }
     }
     public class StudentAssessmentDetail
     {
@@ -51,7 +54,7 @@
     {
         public string Title { get; set; }
         public string Description { get; set; }
-        public string TechnologyStack { get; set; }
+        public TechnologyStack TechnologyStack { get; set; }
         public int DurationInMinutes { get; set; }
         public List<Guid> BatchIds { get; set; } = [];
         public DateTime StartDate { get; set; }
@@ -66,7 +69,7 @@
     {
         public string Title { get; set; }
         public string Description { get; set; }
-        public string TechnologyStack { get; set; }
+        public TechnologyStack TechnologyStack { get; set; }
         public int DurationInMinutes { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }

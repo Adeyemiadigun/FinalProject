@@ -7,36 +7,17 @@ using Application.Interfaces.Services.GradingStrategyInterfaces.Interfaces;
 using Domain.Entities;
 using Domain.Entitties;
 using Domain.Enum;
-
 namespace Application.Services.GradingStrategy.Implementation
 {
-    public class CodeChallengeGradingStrategy(IJudge0LanguageService _judge, IJudge0LanguageStore _store, ICodeExcution _excute,ICodeWrapper codeWrapper, IExtractMethodName extractMethodName,ITestCaseResultRepository testCaseResultRepository) : IGradingStrategy
+    public class CodeChallengeGradingStrategy(IJudge0LanguageService _judge,IJudge0Languages judge0Language, ICodeExcution _excute,ICodeWrapper codeWrapper, IExtractMethodName extractMethodName,ITestCaseResultRepository testCaseResultRepository) : IGradingStrategy
 
     {
         public QuestionType QuestionType => QuestionType.Coding;
 
         public async Task GradeAsync(AnswerSubmission answerSubmission)
         {
-            Judge0LanguageDto stack = null;
-            var techStack = (TechnologyStack)Enum.Parse(typeof(TechnologyStack), answerSubmission.Question.TechnologyStack.ToString());
-            if(techStack != TechnologyStack.CSharp)
-            {
-
-                stack = await _store.GetLanguageByName(techStack.ToString());
-            }
-
-            stack = await _store.GetLanguageByName("C#");
-
-            if (stack is null)
-            {
-                var languages = await _judge.GetSupportedLanguagesAsync();
-                await _store.SaveLanguages(languages);
-                if(techStack != TechnologyStack.CSharp)
-                    stack = await _store.GetLanguageByName(techStack.ToString());
-                stack = await _store.GetLanguageByName("C#");
-                if (stack is null)
-                    throw new ApiException("Code execution failed", 500, "ExecutionError", null);
-            }
+            var techStack = answerSubmission.Question.TechnologyStack ?? TechnologyStack.CSharp;
+            var langId = judge0Language.GetLanguageId(techStack);
 
             string studentCode = answerSubmission.SubmittedAnswer;
             string methodName = extractMethodName.ExtractMethodName(studentCode,answerSubmission.Question.TechnologyStack.Value) ?? "Solve";
@@ -50,7 +31,7 @@ namespace Application.Services.GradingStrategy.Implementation
                 var result = await _excute.ExecuteCodeAsync(new Judge0CodeExecutionRequest
                 {
                     SourceCode = wrappedCode,
-                    Id = stack.Id,
+                    Id = langId,
                     ExpectedOutput = test.ExpectedOutput
                 }) ?? throw new ApiException("Code execution failed", 500, "ExecutionError", null);
 

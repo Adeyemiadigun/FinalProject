@@ -16,14 +16,14 @@ namespace Application.Services
             _assessmentRepo = assessmentRepo;
             _emailService = emailService;
         }
-
         public async Task CheckAssessmentsWithoutQuestions()
         {
             var upcomingAssessments = await _assessmentRepo.GetAllAsync(a =>
                 a.StartDate <= DateTime.UtcNow.AddHours(1) &&  // Adjust time window as needed
                 !a.Questions.Any());
 
-            
+            if (upcomingAssessments is null || !upcomingAssessments.Any())
+                return;
             foreach (var assessment in upcomingAssessments)
             {
                 var template = EmptyAsseementTemplate(assessment);
@@ -47,7 +47,7 @@ namespace Application.Services
         {
             var instructorName = assessment.Instructor?.FullName ?? "Instructor";
             var title = assessment.Title ?? "Untitled";
-            var tech = assessment.TechnologyStack?.ToString() ?? "Unknown";
+            var tech = assessment.TechnologyStack.ToString() ?? "Unknown";
             var start = assessment.StartDate;
             var end = assessment.EndDate;
             var duration = assessment.DurationInMinutes;

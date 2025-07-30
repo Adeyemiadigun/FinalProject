@@ -127,6 +127,7 @@ function assessmentsPage() {
             { label: 'Pass Rate', value: `${metricsSource.passRate}%` },
             { label: 'Completion Rate', value: `${metricsSource.completionRate}%` }
         ];
+        console.log(assessmentsData.data)
         this.assessments = assessmentsData.data.map((a) => ({
           ...a,
           statusClass: this.getStatusClass(a.status),

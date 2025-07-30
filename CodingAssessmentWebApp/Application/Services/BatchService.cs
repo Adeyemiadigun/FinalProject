@@ -62,7 +62,7 @@ namespace Application.Services
             {
                 Title = assessment.Title,
                 Description = assessment.Description,
-                TechnologyStack = assessment.TechnologyStack,
+                TechnologyStack = assessment.TechnologyStack.ToString(),
                 DurationInMinutes = assessment.DurationInMinutes,
                 StartDate = assessment.StartDate,
                 EndDate = assessment.EndDate,
@@ -76,7 +76,7 @@ namespace Application.Services
                 {
                     Title = assessment.Title,
                     Description = assessment.Description,
-                    TechnologyStack = assessment.TechnologyStack,
+                    TechnologyStack = assessment.TechnologyStack.ToString(),
                     DurationInMinutes = assessment.DurationInMinutes,
                     StartDate = assessment.StartDate,
                     EndDate = assessment.EndDate,
@@ -139,7 +139,7 @@ namespace Application.Services
             {
                 Title = assessment.Title,
                 Description = assessment.Description,
-                TechnologyStack = assessment.TechnologyStack,
+                TechnologyStack = assessment.TechnologyStack.ToString(),
                 DurationInMinutes = assessment.DurationInMinutes,
                 StartDate = assessment.StartDate,
                 EndDate = assessment.EndDate,

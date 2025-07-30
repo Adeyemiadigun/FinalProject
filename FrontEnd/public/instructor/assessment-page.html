@@ -36,10 +36,11 @@
             <option :value="batch.id" x-text="batch.name"></option>
           </template>
         </select>
-        <select x-model="filters.status" @change="applyFilters" class="px-3 py-2 rounded border bg-white text-sm">
+        <select x-model.number="filters.status" @change="applyFilters" class="px-3 py-2 rounded border bg-white text-sm">
           <option value="">All</option>
-          <option value="upcoming">Upcoming</option>
-          <option value="past">Past</option>
+          <option value="1">Upcoming</option>
+          <option value="2">InProgress</option>
+          <option value="3">Completed</option>
         </select>
         <button @click="showCreateModal = true" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">➕
           New Assessment</button>
@@ -129,8 +130,14 @@
             required>
           <textarea x-model="newAssessment.description" placeholder="Description" class="w-full border p-2 mb-2 rounded"
             required></textarea>
-          <input type="text" x-model="newAssessment.technologyStack" placeholder="Technology Stack"
-            class="w-full border p-2 mb-2 rounded" required>
+          <select x-model.number="newAssessment.technologyStack" class="w-full border p-2 mb-2 rounded" required>
+            <option value="">Select Technology Stack</option>
+            <option value="1">C#</option>
+            <option value="2">Java</option>
+            <option value="3">Python</option>
+            <option value="4">JavaScript</option>
+            <option value="5">SQL</option>
+          </select>
           <input type="number" x-model.number="newAssessment.durationInMinutes" placeholder="Duration (mins)"
             class="w-full border p-2 mb-2 rounded" required>
           <input type="datetime-local" x-model="newAssessment.startDate" class="w-full border p-2 mb-2 rounded"

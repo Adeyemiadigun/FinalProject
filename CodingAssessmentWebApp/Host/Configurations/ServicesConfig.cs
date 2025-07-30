@@ -70,6 +70,7 @@ namespace Host.Configurations
             builder.AddScoped<ICodeExcution, Judge0CodeExecution>();
             builder.AddScoped<IJudge0LanguageService, Judge0LanguageService>();
             builder.AddSingleton<IJudge0LanguageStore, Judge0LanguageStore>();
+            builder.AddScoped<IJudge0Languages, Judge0Languages>();
             builder.AddScoped<IAIProviderGateway, AIStrategyGateway>();
             builder.AddScoped<IPayloadBuider, PayloadBuilder>();
 

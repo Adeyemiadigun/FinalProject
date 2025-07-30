@@ -20,7 +20,11 @@
 
     <!-- Header -->
     <div class="flex justify-between items-center mb-4">
+      <div class="flex items-center space-x-4">
       <h2 class="text-2xl font-bold">Questions for Assessment: <span x-text="assessmentTitle"></span></h2>
+        <span class="text-sm text-gray-500">Passing Score: <span x-text="passingScore"></span></span>
+
+</div>
       <button @click="showCreateModal = true" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">➕ Add
         Question</button>
         <button @click="showAIModal = true" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">🤖 Generate Ai 
@@ -194,17 +198,6 @@
     <h3 class="text-xl font-bold mb-4">Generate AI Question</h3>
 
     <div class="grid grid-cols-2 gap-4 mb-4">
-      <div>
-        <label class="font-semibold block">Technology Stack</label>
-        <select x-model="aiForm.technologyStack" class="w-full border rounded px-2 py-1">
-          <option value="">Select</option>
-          <option>JavaScript</option>
-          <option>Python</option>
-          <option>C#</option>
-          <option>Java</option>
-          <option>SQL</option>
-        </select>
-      </div>
       <div>
         <label class="font-semibold block">Difficulty</label>
         <select x-model="aiForm.difficulty" class="w-full border rounded px-2 py-1">

@@ -8,7 +8,7 @@ namespace Domain.Entitties
         public Guid Id { get; init; } = Guid.NewGuid();
         public string Title { get; set; }
         public string Description { get; set; }
-        public string TechnologyStack { get; set; }
+        public TechnologyStack TechnologyStack { get; set; }
         public int DurationInMinutes { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }

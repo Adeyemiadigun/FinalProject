@@ -22,11 +22,11 @@
 
       <!-- Filters -->
       <div class="flex flex-wrap gap-4 items-center">
-        <select class="px-3 py-2 border rounded text-sm" x-model="status" @change="fetchAssessments">
+        <select class="px-3 py-2 border rounded text-sm" x-model.number="status" @change="fetchAssessments">
           <option value="">All Status</option>
-          <option value="Upcoming">Upcoming</option>
-          <option value="InProgress">In Progress</option>
-          <option value="Completed">Completed</option>
+          <option value="1">Upcoming</option>
+          <option value="2">In Progress</option>
+          <option value="3">Completed</option>
         </select>
       </div>
 

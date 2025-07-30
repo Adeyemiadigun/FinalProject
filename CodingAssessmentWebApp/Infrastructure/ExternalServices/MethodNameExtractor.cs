@@ -18,7 +18,6 @@ namespace Infrastructure.ExternalServices
                 TechnologyStack.CSharp or TechnologyStack.Java => ExtractFromCSharpOrJava(code),
                 TechnologyStack.Python => ExtractFromPython(code),
                 TechnologyStack.JavaScript => ExtractFromJavaScript(code),
-                TechnologyStack.Cpp => ExtractFromCpp(code),
                 _ => null
             };
         }
