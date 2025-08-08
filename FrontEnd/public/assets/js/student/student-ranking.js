@@ -1,107 +1,108 @@
-  function loadLayout() {
-    fetch("/public/components/sidebar-student.html")
-      .then(res => res.text())
-      .then(html => document.getElementById("sidebar-placeholder").innerHTML = html);
+import { api, loadComponent, logOut } from "../utils.js";
 
-    fetch("/public/components/navbar-student.html")
-      .then(res => res.text())
-      .then(html => document.getElementById("navbar-placeholder").innerHTML = html);
-  }
+window.studentRanking = function () {
+  return {
+    viewMode: "my-batch", // "my-batch" or "all-batches"
+    rankings: [],
+    currentPage: 1,
+    pageSize: 10,
+    totalItems: 0,
+    loading: false,
 
-  function getToken() {
-    return localStorage.getItem("accessToken");
-  }
+    get filteredRankings() {
+      return this.rankings;
+    },
 
-  function studentRanking() {
-    return {
-      viewMode: "my-batch",
-      rankings: [],
-      currentPage: 1,
-      pageSize: 10,
-      totalItems: 0,
-      loading: false,
+    get paginatedRankings() {
+      return this.filteredRankings;
+    },
 
-      get filteredRankings() {
-        return this.rankings;
-      },
-
-      get paginatedRankings() {
-        return this.filteredRankings;
-      },
-
-      nextPage() {
-        if (this.currentPage * this.pageSize < this.totalItems) {
-          this.currentPage++;
-          this.fetchRankings();
-        }
-      },
-
-      prevPage() {
-        if (this.currentPage > 1) {
-          this.currentPage--;
-          this.fetchRankings();
-        }
-      },
-
-      async init() {
+    nextPage() {
+      if (this.currentPage * this.pageSize < this.totalItems) {
+        this.currentPage++;
         this.fetchRankings();
-      },
-      logOut() {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("userRole");
-        window.location.href = "/public/auth/login.html";
-      },
+      }
+    },
 
-      async fetchRankings() {
-        this.loading = true;
-        const token = getToken();
-        const params = new URLSearchParams({
-          pageSize: this.pageSize,
-          currentPage: this.currentPage,
-        });
+    prevPage() {
+      if (this.currentPage > 1) {
+        this.currentPage--;
+        this.fetchRankings();
+      }
+    },
 
-        try {
-          const res = await fetch(
-            `https://localhost:7157/api/v1/Students/batch/leaderboard?${params.toString()}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
+    async init() {
+      // Load shared layout components
+      await Promise.all([
+        loadComponent(
+          "sidebar-placeholder",
+          "/public/components/sidebar-student.html"
+        ),
+        loadComponent(
+          "navbar-placeholder",
+          "/public/components/navbar-student.html"
+        ),
+      ]);
+
+      this.fetchRankings();
+    },
+
+    logOut() {
+      logOut(); // Uses central logout
+    },
+
+    async fetchRankings() {
+      this.loading = true;
+      const params = new URLSearchParams({
+        pageSize: this.pageSize,
+        currentPage: this.currentPage,
+        viewMode: this.viewMode,
+      });
+
+      try {
+        // Endpoint depends on view mode
+        const endpoint =
+          this.viewMode === "my-batch"
+            ? `/Students/batch/leaderboard?${params.toString()}`
+            : `/Students/all/leaderboard?${params.toString()}`;
+
+        const res = await api.get(endpoint);
+        const json = await res.json();
+
+        if (json.status) {
+          this.rankings = json.data.items.map((s) => ({
+            id: s.id,
+            name: s.name,
+            score: s.avgScore,
+            completed: s.completedAssessments,
+            batch: s.batchName || "N/A",
+            isCurrentUser: s.id === this.getCurrentUserId(),
+          }));
+          this.totalItems = json.data.totalItems;
+        } else {
+          Swal.fire(
+            "Error",
+            json.message || "Failed to load leaderboard.",
+            "error"
           );
-
-          const json = await res.json();
-
-          if (json.status) {
-            this.rankings = json.data.items.map((s) => ({
-              id: s.id,
-              name: s.name,
-              score: s.avgScore,
-              completed: s.completedAssessments,
-              batch: "Batch", // Optional if you don't fetch batch name
-              isCurrentUser: s.id === this.getCurrentUserId(),
-            }));
-            this.totalItems = json.data.totalItems;
-          } else {
-            alert(json.message || "Failed to load leaderboard.");
-          }
-        } catch (err) {
-          console.error("Error loading leaderboard:", err);
-        } finally {
-          this.loading = false;
         }
-      },
+      } catch (err) {
+        console.error("Error loading leaderboard:", err);
+        Swal.fire("Error", "Unable to fetch leaderboard.", "error");
+      } finally {
+        this.loading = false;
+      }
+    },
 
-      getCurrentUserId() {
-        // Decode JWT from localStorage
-        try {
-          const token = getToken();
-          if (!token) return null;
-          const payload = JSON.parse(atob(token.split(".")[1]));
-          return payload.sub || payload.id || null;
-        } catch (e) {
-          return null;
-        }
-      },
-    };
-  }
+    getCurrentUserId() {
+      try {
+        const token = localStorage.getItem("accessToken");
+        if (!token) return null;
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        return payload.sub || payload.id || null;
+      } catch {
+        return null;
+      }
+    },
+  };
+};

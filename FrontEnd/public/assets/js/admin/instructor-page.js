@@ -1,17 +1,6 @@
-function loadLayout() {
-  fetch("/public/components/sidebar.html")
-    .then((res) => res.text())
-    .then(
-      (html) =>
-        (document.getElementById("sidebar-placeholder").innerHTML = html)
-    );
-  fetch("/public/components/nav.html")
-    .then((res) => res.text())
-    .then(
-      (html) => (document.getElementById("navbar-placeholder").innerHTML = html)
-    );
-}
-function instructorsPage() {
+import { api, loadComponent, logOut } from "../shared/utils.js";
+
+window.instructorsPage = function () {
   return {
     instructors: [],
     search: "",
@@ -27,65 +16,79 @@ function instructorsPage() {
       confirmPassword: "",
     },
     sidebarOpen: true,
-    init() {
-      this.fetchInstructors();
+
+    async init() {
+      // Load layout components
+      await loadComponent("sidebar-placeholder", "../components/sidebar.html");
+      await loadComponent("navbar-placeholder", "../components/nav.html");
+
+      // Fetch data
+      await this.fetchInstructors();
     },
 
     async fetchInstructors() {
       const params = new URLSearchParams();
-      if (this.searchQuery) params.append("query", this.search);
+      if (this.search) params.append("query", this.search);
       if (this.statusFilter) params.append("status", this.statusFilter);
       params.append("pageSize", this.pageSize);
       params.append("currentPage", this.currentPage);
 
       try {
-        const res = await fetch(
-          `https://localhost:7157/api/v1/Instructors/search?${params.toString()}`,
-          {
-            headers: {
-              Authorization: "Bearer " + localStorage.getItem("accessToken"),
-            },
-          }
-        );
+        const res = await api.get(`/Instructors/search?${params.toString()}`);
         const data = await res.json();
-        console.log("Response data:", data);
-        if (data.status) {
+
+        if (res.ok && data.status) {
           this.instructors = data.data.items;
           this.pagination = data.data;
-          console.log(this.pagination);
-          console.log(this.instructors);
         } else {
           this.instructors = [];
           this.pagination = {};
+          Swal.fire({
+            icon: "warning",
+            title: "No Results",
+            text: data.message || "No instructors found with current filters.",
+          });
         }
       } catch (err) {
-        console.error("Failed to fetch students:", err);
+        console.error("Failed to fetch instructors:", err);
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: "Could not fetch instructors. Please try again later.",
+        });
       }
     },
 
     async registerInstructor() {
       const payload = { ...this.newInstructor };
 
-      const response = await fetch(
-        "https://localhost:7157/api/v1/Instructors",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + localStorage.getItem("token"),
-          },
-          body: JSON.stringify(payload),
-        }
-      );
+      try {
+        const res = await api.post("/Instructors", payload);
 
-      if (response.ok) {
-        alert("Instructor registered successfully");
-        this.showCreateModal = false;
-        this.resetForm();
-        this.fetchInstructors();
-      } else {
-        const error = await response.json();
-        alert(error.message || "Failed to register instructor");
+        if (res.ok) {
+          Swal.fire({
+            icon: "success",
+            title: "Instructor Registered",
+            text: "The instructor has been successfully added.",
+          });
+          this.showCreateModal = false;
+          this.resetForm();
+          await this.fetchInstructors();
+        } else {
+          const error = await res.json();
+          Swal.fire({
+            icon: "error",
+            title: "Registration Failed",
+            text: error.message || "Could not register instructor.",
+          });
+        }
+      } catch (err) {
+        console.error(err);
+        Swal.fire({
+          icon: "error",
+          title: "Server Error",
+          text: "An unexpected error occurred while registering the instructor.",
+        });
       }
     },
 
@@ -106,18 +109,14 @@ function instructorsPage() {
     prevPage() {
       if (this.pagination.hasPreviousPage) {
         this.currentPage--;
-        this.fetchStudents();
+        this.fetchInstructors();
       }
     },
-    logOut() {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("userRole");
-      window.location.href = "/public/auth/login.html";
-    },
+
     nextPage() {
       if (this.pagination.hasNextPage) {
         this.currentPage++;
-        this.fetchStudents();
+        this.fetchInstructors();
       }
     },
 
@@ -126,16 +125,26 @@ function instructorsPage() {
     },
 
     editInstructor(instructor) {
-      alert("Edit modal not implemented yet.");
+      Swal.fire(
+        "Info",
+        `Edit modal for ${instructor.fullName} not implemented yet.`,
+        "info"
+      );
     },
 
     toggleStatus(instructor) {
-      alert(`Toggling status for ${instructor.name}`);
+      Swal.fire(
+        "Info",
+        `Toggling status for ${instructor.fullName} not implemented yet.`,
+        "info"
+      );
     },
 
     openCreateModal() {
       this.showCreateModal = true;
       this.resetForm();
     },
+
+    logOut, // Use shared logout
   };
 }

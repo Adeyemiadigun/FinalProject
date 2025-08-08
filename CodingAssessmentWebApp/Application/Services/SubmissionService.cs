@@ -1,4 +1,5 @@
-﻿using Application.Dtos;
+﻿using System.Net;
+using Application.Dtos;
 using Application.Exceptions;
 using Application.Interfaces.ExternalServices;
 using Application.Interfaces.Repositories;
@@ -192,22 +193,16 @@ namespace Application.Services
         {
             var userId = _currentUser.GetCurrentUserId();
             var submission = await _submissionRepository.GetAsync(s => s.AssessmentId == assessmentId && s.StudentId == userId);
-            if(submission.Assessment.EndDate > DateTime.UtcNow)
-            {
-                return new BaseResponse<SubmissionDto>
-                {
-                    Status = true,
-                    Message = "Assessment is Ongoing"
-                };
-            }
             if (submission == null)
             {
-                return new BaseResponse<SubmissionDto>
-                {
-                    Status = false,
-                    Message = "Submission not found"
-                };
+
+                throw new ApiException("Assessment not found.", 404, "AssessmentNotFound", null);
             }
+            if (submission.Assessment.EndDate > DateTime.UtcNow)
+            {
+                throw new ApiException("Assessment still Ongoing.", 400, "OngoingAssessment", null);
+            }
+        
 
             var submissionDto = new SubmissionDto
             {
@@ -426,6 +421,46 @@ namespace Application.Services
             return new BaseResponse<SubmissionDto>() 
             { Status = true, Data = submissionDto, Message = "Submission Answers Retrieved" };
         }
+        public async Task<BaseResponse<List<StudentScoreTrendDto>>> GetStudentScoreTrendsAsync(Guid studentId, DateTime? date)
+        {
+            var targetDate = date ?? DateTime.UtcNow;
+            var targetMonth = targetDate.Month;
+            var targetYear = targetDate.Year;
 
+            // Fetch all submissions by student within the target month/year
+            var submissions = await _submissionRepository.GetAllAsync(s =>
+                s.StudentId == studentId &&
+                s.SubmittedAt.Month == targetMonth &&
+                s.SubmittedAt.Year == targetYear);
+
+            if (submissions == null || !submissions.Any())
+                throw new ApiException("No submissions found for the student in the specified month.",
+                    (int)HttpStatusCode.NotFound, "NoSubmissionsFound", null);
+
+            // Group by week of the month
+            var groupedTrends = submissions
+                .GroupBy(s => (int)Math.Ceiling(s.SubmittedAt.Day / 7.0)) // week number (1–5)
+                .Select(g => new { Week = g.Key, AverageScore = Math.Round(g.Average(x => x.TotalScore), 2) })
+                .ToDictionary(x => x.Week, x => x.AverageScore);
+
+            var daysInMonth = DateTime.DaysInMonth(targetYear, targetMonth);
+            var totalWeeks = (int)Math.Ceiling(daysInMonth / 7.0);
+
+            // Fill in empty weeks with 0
+            var trends = Enumerable.Range(1, totalWeeks)
+                .Select(week => new StudentScoreTrendDto
+                {
+                    Labels = $"Week {week}",
+                    Scores = groupedTrends.ContainsKey(week) ? groupedTrends[week] : 0
+                })
+                .ToList();
+
+            return new BaseResponse<List<StudentScoreTrendDto>>
+            {
+                Status = true,
+                Message = "Student score trends loaded.",
+                Data = trends
+            };
+        }
     }
 }

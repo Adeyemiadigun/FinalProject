@@ -1,18 +1,6 @@
-async function loadComponent(id, path) {
-  const res = await fetch(path);
-  const html = await res.text();
-  document.getElementById(id).innerHTML = html;
-}
+import { api, loadComponent, logOut } from "../shared/utils.js";
 
-function initLayout() {
-  loadComponent(
-    "sidebar-placeholder",
-    "/public/components/sidebar-student.html"
-  );
-  loadComponent("navbar-placeholder", "/public/components/navbar-student.html");
-}
-
-function studentAssessments() {
+window.studentAssessments = function () {
   return {
     assessments: [],
     status: "",
@@ -21,25 +9,31 @@ function studentAssessments() {
     totalPages: 1,
     interval: null,
 
-    init() {
-      this.fetchAssessments();
+    async init() {
+      await loadComponent(
+        "sidebar-placeholder",
+        "/public/components/sidebar-student.html"
+      );
+      await loadComponent(
+        "navbar-placeholder",
+        "/public/components/navbar-student.html"
+      );
+
+      await this.fetchAssessments();
       this.startCountdown();
     },
 
     async fetchAssessments() {
       try {
-        const token = localStorage.getItem("accessToken");
-        const url = `https://localhost:7157/api/v1/Students/assessments?pageSize=${this.perPage}&currentPage=${this.page}&status=${this.status}`;
-    
-        const res = await fetch(url, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+        const params = new URLSearchParams({
+          pageSize: this.perPage,
+          currentPage: this.page,
+          status: this.status || "",
         });
-    
+
+        const res = await api.get(`/Students/assessments?${params.toString()}`);
         const result = await res.json();
-    
+
         if (result.status) {
           this.assessments = result.data.items.map((a) => {
             const status = this.determineStatus(a.startDate, a.endDate);
@@ -47,10 +41,12 @@ function studentAssessments() {
               ...a,
               status,
               submitted: a.submitted,
-              countdown: status !== "Completed" ? this.calculateCountdown(a, status) : "—",
+              countdown:
+                status !== "Completed"
+                  ? this.calculateCountdown(a, status)
+                  : "—",
             };
           });
-    
           this.totalPages = result.data.totalPages;
         } else {
           Swal.fire({
@@ -68,10 +64,11 @@ function studentAssessments() {
         });
       }
     },
-    
+
     calculateCountdown(a, status) {
       const now = new Date();
-      const target = status === "Upcoming" ? new Date(a.startDate) : new Date(a.endDate);
+      const target =
+        status === "Upcoming" ? new Date(a.startDate) : new Date(a.endDate);
       const diff = target - now;
       if (diff <= 0) return "Now";
       const h = Math.floor(diff / (1000 * 60 * 60));
@@ -79,7 +76,7 @@ function studentAssessments() {
       const s = Math.floor((diff % (1000 * 60)) / 1000);
       return `${h}h ${m}m ${s}s`;
     },
-    
+
     determineStatus(startDate, endDate) {
       const now = new Date();
       const start = new Date(startDate);
@@ -125,11 +122,7 @@ function studentAssessments() {
         this.fetchAssessments();
       }
     },
-    logOut() {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("userRole");
-      window.location.href = "/public/auth/login.html";
-    },
+
     startAssessment(id) {
       window.location.href = `/public/student/assessment-attempt-page.html?id=${id}`;
     },
@@ -141,5 +134,7 @@ function studentAssessments() {
     viewResult(id) {
       window.location.href = `/public/student/view-assessment-result.html?id=${id}`;
     },
+
+    logOut,
   };
-}
+};

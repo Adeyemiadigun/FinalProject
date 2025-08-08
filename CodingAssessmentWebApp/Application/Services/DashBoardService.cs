@@ -349,19 +349,24 @@ namespace Application.Services
             if (assessments == null || !assessments.Any())
                 throw new ApiException("No assessments found.", (int)HttpStatusCode.NotFound, "NoAssessmentsFound", null);
 
-            var trends = assessments
+            // ✅ Group submissions by week
+            var groupedTrends = assessments
                 .SelectMany(a => a.Submissions.Where(s => s.SubmittedAt.Month == targetMonth))
-                .GroupBy(s =>
+                .GroupBy(s => (int)Math.Ceiling(s.SubmittedAt.Day / 7.0)) // Week number
+                .Select(g => new { Week = g.Key, AverageScore = Math.Round(g.Average(x => x.TotalScore), 2) })
+                .ToDictionary(x => x.Week, x => x.AverageScore);
+
+            // ✅ Determine total weeks in the target month
+            var daysInMonth = DateTime.DaysInMonth(DateTime.UtcNow.Year, targetMonth);
+            var totalWeeks = (int)Math.Ceiling(daysInMonth / 7.0);
+
+            // ✅ Ensure weeks with 0 score appear
+            var trends = Enumerable.Range(1, totalWeeks)
+                .Select(week => new ScoreTrenddto
                 {
-                    var day = s.SubmittedAt.Day;
-                    return (int)Math.Ceiling(day / 7.0); // Week 1: days 1–7, Week 2: 8–14, etc.
+                    Label = $"Week {week}",
+                    AverageScore = groupedTrends.ContainsKey(week) ? groupedTrends[week] : 0
                 })
-                .Select(g => new ScoreTrenddto
-                {
-                    Label = $"Week {g.Key}",
-                    AverageScore = Math.Round(g.Average(x => x.TotalScore), 2)
-                })
-                .OrderBy(x => x.Label)
                 .ToList();
 
             return new BaseResponse<List<ScoreTrenddto>>
@@ -372,7 +377,6 @@ namespace Application.Services
             };
         }
 
-
         public async Task<BaseResponse<List<AssessmentCreatedDto>>> GetAssessmentsCreatedTrendAsync(Guid? instructorId, Guid? batchId, int? month)
         {
             var targetMonth = month ?? DateTime.UtcNow.Month;
@@ -380,20 +384,26 @@ namespace Application.Services
             var assessments = await _assessmentRepository.GetAllAsync(x =>
                 (instructorId == null || x.InstructorId == instructorId.Value) &&
                 (batchId == null || x.BatchAssessment.Any(ba => ba.BatchId == batchId.Value)) &&
-                x.CreatedAt.Month == targetMonth
+                x.CreatedAt.Month <= targetMonth // Include all up to targetMonth
             );
 
             if (assessments == null || !assessments.Any())
                 throw new ApiException("No assessments found.", (int)HttpStatusCode.NotFound, "NoAssessmentsFound", null);
 
-            var trends = assessments
-                .GroupBy(a => a.CreatedAt.ToString("MMM"))
-                .Select(g => new AssessmentCreatedDto
+            // ✅ Group by month
+            var grouped = assessments
+                .Where(a => a.CreatedAt.Month <= targetMonth)
+                .GroupBy(a => a.CreatedAt.Month)
+                .Select(g => new { Month = g.Key, Count = g.Count() })
+                .ToDictionary(x => x.Month, x => x.Count);
+
+            // ✅ Generate months 1 → targetMonth
+            var trends = Enumerable.Range(1, targetMonth)
+                .Select(m => new AssessmentCreatedDto
                 {
-                    Label = g.Key,
-                    Count = g.Count()
+                    Label = CultureInfo.InvariantCulture.DateTimeFormat.GetAbbreviatedMonthName(m),
+                    Count = grouped.ContainsKey(m) ? grouped[m] : 0
                 })
-                .OrderBy(x => DateTime.ParseExact(x.Label, "MMM", CultureInfo.InvariantCulture))
                 .ToList();
 
             return new BaseResponse<List<AssessmentCreatedDto>>
@@ -403,6 +413,7 @@ namespace Application.Services
                 Data = trends
             };
         }
+
 
 
     }

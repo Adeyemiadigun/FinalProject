@@ -1,22 +1,8 @@
-function loadLayout() {
-  fetch("/public/components/sidebar-student.html")
-    .then((res) => res.text())
-    .then(
-      (html) =>
-        (document.getElementById("sidebar-placeholder").innerHTML = html)
-    );
+import { api, loadComponent, logOut } from "../shared/utils.js";
 
-  fetch("/public/components/navbar-student.html")
-    .then((res) => res.text())
-    .then(
-      (html) => (document.getElementById("navbar-placeholder").innerHTML = html)
-    );
-}
-
-function viewResult() {
+window.viewResultPage = function () {
   return {
     result: {
-
       title: "",
       date: "",
       score: 0,
@@ -24,39 +10,56 @@ function viewResult() {
       correctCount: 0,
       wrongCount: 0,
       questions: [],
-
     },
+    resultLoaded: false,
 
     async init() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const assessmentId = urlParams.get("id");
-      const token = localStorage.getItem("accessToken");
-
-      if (!assessmentId) return;
-      this.resultLoaded = false;
-
-      const res = await fetch(
-        `https://localhost:7157/api/v1/Assessments/${assessmentId}/submission`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      await loadComponent(
+        "sidebar-placeholder",
+        "/public/components/sidebar-student.html"
+      );
+      await loadComponent(
+        "navbar-placeholder",
+        "/public/components/navbar-student.html"
       );
 
-      if (!res.ok) {
-        Swal.fire(
-          "Error",
-          "Failed to load assessment result. Please try again later.",
-          "error"
-        );
-        this.resultLoaded = true;
+      const urlParams = new URLSearchParams(window.location.search);
+      const assessmentId = urlParams.get("id");
+
+      if (!assessmentId) {
+        Swal.fire("Error", "No assessment ID provided.", "error");
         return;
       }
-      try {
-        const json = await res.json();
-        if (!json.status) return;
-        const submission = json.data;
-        const submittedAnswers = submission.submittedAnswers || [];
 
+      try {
+        // ✅ Fetch student result
+        const res = await api.get(
+          `/Assessments/${assessmentId}/student-answers`
+        );
+        const json = await res.json();
+
+        if (!json.status) {
+          Swal.fire("Error", json.message || "Unable to load result.", "error");
+          return;
+        }
+
+        const submission = json.data;
+
+        // ✅ Redirect if assessment is ongoing
+        if (
+          !submission.submittedAt ||
+          new Date(submission.assessmentEndDate) > new Date()
+        ) {
+          Swal.fire("Info", "This assessment is still ongoing.", "info").then(
+            () => {
+              window.location.href = "/public/student/dashboard.html";
+            }
+          );
+          return;
+        }
+
+        // ✅ Prepare result display
+        const submittedAnswers = submission.submittedAnswers || [];
         const correctCount = submittedAnswers.filter((q) => q.isCorrect).length;
         const wrongCount = submittedAnswers.length - correctCount;
 
@@ -78,21 +81,15 @@ function viewResult() {
           })),
         };
       } catch (error) {
-        console.error("Error processing response:", error);
-        Swal.fire(
-          "Error",
-          "An unexpected error occurred. Please try again.",
-          "error"
-        );
+        console.error("Error fetching result:", error);
+        Swal.fire("Error", "Failed to load assessment result.", "error");
       } finally {
         this.resultLoaded = true;
       }
     },
-    logOut() {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("userRole");
-      window.location.href = "/public/auth/login.html";
-    },
+
+    logOut,
+
     extractCorrectAnswer(ans) {
       if (ans.questionType === "MCQ" || ans.questionType === "Objective") {
         const correctOptions = ans.options.filter((o) => o.isCorrect);
@@ -101,4 +98,4 @@ function viewResult() {
       return "";
     },
   };
-}
+};

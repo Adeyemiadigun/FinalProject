@@ -17,13 +17,16 @@ public class AssessmentsController(IAssessmentService assessmentService, IQuesti
         var response = await assessmentService.CreateAssessmentAsync(model);
         return response.Status ? Created("response", response) : BadRequest(response);
     }
-
-    // GET /api/assessments
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] PaginationRequest request)
+    public async Task<IActionResult> GetAllAssessments(
+    [FromQuery] Guid? batchId,
+    [FromQuery] DateTime? startDate,
+    [FromQuery] DateTime? endDate,
+    [FromQuery] string? search,
+    [FromQuery] PaginationRequest request)
     {
-        var response = await assessmentService.GetAllAssessmentsAsync(request);
-        return response.Status ? Ok(response) : BadRequest(response);
+        var result = await assessmentService.GetAllAssessmentsAsync(batchId, startDate, endDate, search, request);
+        return Ok(result);
     }
 
     // GET /api/assessments/{id}
@@ -71,7 +74,7 @@ public class AssessmentsController(IAssessmentService assessmentService, IQuesti
         return Ok(response);
     }
 
-    [HttpGet("{assessmentId:guid}/submission")]    
+    [HttpGet("{assessmentId:guid}/student-answers")]    
     public async Task<IActionResult> GetMySubmission(Guid assessmentId)
     {
         var response = await _submissionService.GetCurrentStudentSubmission(assessmentId);

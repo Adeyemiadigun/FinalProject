@@ -1,4 +1,7 @@
-function assessmentsPage() {
+// public/assets/js/admin/assessments.js
+import { api, loadComponent, logOut } from "../shared/utils.js";
+
+window.assessmentsPage = function () {
   return {
     // Data properties
     assessments: [],
@@ -16,10 +19,10 @@ function assessmentsPage() {
 
     // State properties
     filters: {
-  instructorId: "",
-  batchId: "",
-  month: new Date().getMonth() + 1, // 1-based month
-},
+      instructorId: "",
+      batchId: "",
+      month: new Date().getMonth() + 1, // 1-based month
+    },
     isLoading: {
       initial: true,
       metrics: true,
@@ -36,19 +39,15 @@ function assessmentsPage() {
     },
 
     async loadLayout() {
-      // Assuming loadComponent is a global helper
       await loadComponent("sidebar-placeholder", "../components/sidebar.html");
       await loadComponent("navbar-placeholder", "../components/nav.html");
     },
 
     async loadFilters() {
       try {
-        const token = localStorage.getItem("accessToken");
-        const headers = { Authorization: `Bearer ${token}` };
-
         const [batchesRes, instructorsRes] = await Promise.all([
-          fetch("https://localhost:7157/api/v1/Batches/all", { headers }),
-          fetch("https://localhost:7157/api/v1/Instructors", { headers }),
+          api.get("/Batches/all"),
+          api.get("/Instructors"),
         ]);
 
         if (!batchesRes.ok || !instructorsRes.ok) {
@@ -79,28 +78,18 @@ function assessmentsPage() {
       this.isLoading.assessments = true;
 
       try {
-        const token = localStorage.getItem("accessToken");
-        const headers = { Authorization: `Bearer ${token}` };
         const params = new URLSearchParams(this.filters).toString();
 
         // Fetch all data in parallel
         const [metricsRes, assessmentsRes, scoreTrendRes, createdTrendRes] =
           await Promise.all([
-            fetch(
-              `https://localhost:7157/api/v1/dashboard/admin/assessments/metrics?${params}`,
-              { headers }
+            api.get(`/dashboard/admin/assessments/metrics?${params}`),
+            api.get(`/Assessments/recents`),
+            api.get(
+              `/Dashboard/admin/analytics/assessments/score-trends?instructorId=${this.filters.instructorId}&batchId=${this.filters.batchId}&month=${this.filters.month}`
             ),
-            fetch(
-              `https://localhost:7157/api/v1/Assessments/recents?${params}`,
-              { headers }
-            ),
-            fetch(
-              `https://localhost:7157/api/v1/Dashboard/admin/analytics/assessments/score-trends?instructorId=${this.filters.instructorId}&batchId=${this.filters.batchId}&month=${this.filters.month}`,
-              { headers }
-            ),
-            fetch(
-              `https://localhost:7157/api/v1/Dashboard/admin/analytics/assessments/created-trend?instructorId=${this.filters.instructorId}&batchId=${this.filters.batchId}&month=${this.filters.month}`,
-              { headers }
+            api.get(
+              `/Dashboard/admin/analytics/assessments/created-trend?instructorId=${this.filters.instructorId}&batchId=${this.filters.batchId}&month=${this.filters.month}`
             ),
           ]);
 
@@ -118,24 +107,29 @@ function assessmentsPage() {
         const scoreTrendData = await scoreTrendRes.json();
         const createdTrendData = await createdTrendRes.json();
 
-        // Process and set data
+        // Set metrics
         const metricsSource = metricsData.data;
         this.metrics = [
-            { label: 'Total Assessments', value: metricsSource.totalAssessments },
-            { label: 'Active Assessments', value: metricsSource.activeAssessments },
-            { label: 'Average Score', value: `${metricsSource.averageScore}%` },
-            { label: 'Pass Rate', value: `${metricsSource.passRate}%` },
-            { label: 'Completion Rate', value: `${metricsSource.completionRate}%` }
+          { label: "Total Assessments", value: metricsSource.totalAssessments },
+          {
+            label: "Active Assessments",
+            value: metricsSource.activeAssessments,
+          },
+          { label: "Average Score", value: `${metricsSource.averageScore}%` },
+          { label: "Pass Rate", value: `${metricsSource.passRate}%` },
+          {
+            label: "Completion Rate",
+            value: `${metricsSource.completionRate}%`,
+          },
         ];
-        console.log(assessmentsData.data)
+
+        // Process assessments
         this.assessments = assessmentsData.data.map((a) => ({
           ...a,
           statusClass: this.getStatusClass(a.status),
         }));
-        console.log(this.assessments)
-        console.log(scoreTrendData)
-        console.log(createdTrendData)
-        // Store chart configurations to be drawn after the canvas is visible
+
+        // Store chart configs
         this.chartConfigs.scoreTrendsChart = {
           type: "line",
           labels: scoreTrendData.data.map((d) => d.label || d.Label),
@@ -170,15 +164,14 @@ function assessmentsPage() {
           text: "Could not retrieve assessment data. Please try again later.",
         });
       } finally {
-        // Ensure all loaders are turned off
+        // Stop all loaders
         this.isLoading.metrics = false;
         this.isLoading.charts = false;
         this.isLoading.assessments = false;
 
-        // Wait for Alpine to update the DOM and make the canvas visible
         await this.$nextTick();
 
-        // Now, draw the charts on the visible canvases
+        // Draw charts
         if (this.chartConfigs.scoreTrendsChart) {
           this.drawChart(
             "scoreTrendsChart",
@@ -195,7 +188,6 @@ function assessmentsPage() {
     },
 
     getStatusClass(status) {
-      // Use optional chaining (?.) to prevent error if status is null or undefined
       switch (status?.toLowerCase()) {
         case "upcoming":
           return "bg-blue-100 text-blue-800";
@@ -230,20 +222,7 @@ function assessmentsPage() {
         },
       });
     },
-  };
-}
 
-// This global helper function is assumed to exist from other files like dashboard.js
-async function loadComponent(id, path) {
-  try {
-    const res = await fetch(path);
-    if (!res.ok) throw new Error(`Failed to load component: ${path}`);
-    const html = await res.text();
-    const element = document.getElementById(id);
-    if (element) {
-      element.innerHTML = html;
-    }
-  } catch (error) {
-    console.error(error);
-  }
-}
+    logOut,
+  };
+};

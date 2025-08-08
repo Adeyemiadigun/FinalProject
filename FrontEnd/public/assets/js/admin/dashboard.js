@@ -1,31 +1,24 @@
-function adminDashboard() {
+import { api, loadComponent, logOut } from "../shared/utils.js";
+
+window.adminDashboard = function () {
   return {
     statCards: [],
     topStudents: [],
     lowestStudents: [],
-    isLoading: {
-      metrics: true,
-      charts: true,
-      students: true,
-    },
+    isLoading: { metrics: true, charts: true, students: true },
+
     async initDashboard() {
-      const token = localStorage.getItem("accessToken");
-      const headers = {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      };
-
       try {
-        loadComponent("sidebar-placeholder", "../components/sidebar.html");
-        loadComponent("navbar-placeholder", "../components/nav.html");
-
-        // --- Step 1: Fetch metrics and student data first for a fast initial render ---
-        const metricsRes = await fetch(
-          "https://localhost:7157/api/v1/dashboard/admin/metrics/overview",
-          { method: "GET", headers: headers }
+        await loadComponent(
+          "sidebar-placeholder",
+          "../components/sidebar.html"
         );
-        if (!metricsRes.ok) throw new Error("Failed to fetch dashboard metrics.");
+        await loadComponent("navbar-placeholder", "../components/nav.html");
 
+        // --- Step 1: Fetch metrics and students
+        const metricsRes = await api.get("/dashboard/admin/metrics/overview");
+        if (!metricsRes.ok)
+          throw new Error("Failed to fetch dashboard metrics.");
         const metrics = await metricsRes.json();
 
         this.statCards = [
@@ -70,23 +63,14 @@ function adminDashboard() {
         this.topStudents = metrics.data.topStudents;
         this.lowestStudents = metrics.data.lowestStudents;
 
-        // Hide loaders for the first batch of content
         this.isLoading.metrics = false;
         this.isLoading.students = false;
 
-        // --- Step 2: Fetch chart data in parallel ---
+        // --- Step 2: Fetch chart data in parallel
         const [topRes, lowRes, batchRes] = await Promise.all([
-          fetch(
-            "https://localhost:7157/api/v1/dashboard/admin/analytics/assessments/top-performing",
-            { method: "GET", headers: headers }
-          ),
-          fetch(
-            "https://localhost:7157/api/v1/dashboard/admin/analytics/assessments/lowest-performing",
-            { method: "GET", headers: headers }
-          ),
-          fetch("https://localhost:7157/api/v1/dashboard/batch-distribution", {
-            method: "GET", headers: headers
-          }),
+          api.get("/dashboard/admin/analytics/assessments/top-performing"),
+          api.get("/dashboard/admin/analytics/assessments/lowest-performing"),
+          api.get("/dashboard/batch-distribution"),
         ]);
 
         if ([topRes, lowRes, batchRes].some((res) => !res.ok)) {
@@ -100,8 +84,8 @@ function adminDashboard() {
         this.drawChart("topAssessmentChart", top.data);
         this.drawChart("lowAssessmentChart", low.data);
         this.drawChart("batchChart", batchData.data);
-        this.isLoading.charts = false;
 
+        this.isLoading.charts = false;
       } catch (err) {
         console.error(err);
         Swal.fire({
@@ -109,15 +93,12 @@ function adminDashboard() {
           title: "Dashboard Error",
           text: "Could not load dashboard data. Please check your connection and try again.",
         });
-        // Hide all loaders on error
         this.isLoading = { metrics: false, charts: false, students: false };
       }
     },
-    logOut() {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("userRole");
-      window.location.href = "/public/auth/login.html";
-    },
+
+    logOut,
+
     drawChart(id, data) {
       const ctx = document.getElementById(id).getContext("2d");
       new Chart(ctx, {
@@ -136,8 +117,4 @@ function adminDashboard() {
       });
     },
   };
-}
-async function loadComponent(id, path) {
-  const res = await fetch(path);
-  document.getElementById(id).innerHTML = await res.text();
-}
+};

@@ -1,4 +1,6 @@
-function studentsPage() {
+import { api, loadComponent, logOut } from "../shared/utils.js";
+
+window.studentsPage = function () {
   return {
     students: [],
     batches: [],
@@ -8,7 +10,6 @@ function studentsPage() {
     pagination: {},
     currentPage: 1,
     pageSize: 10,
-    users: [],
     showCreateModal: false,
     newStudent: {
       fullName: "",
@@ -30,23 +31,19 @@ function studentsPage() {
 
     async loadBatches() {
       try {
-        const res = await fetch("https://localhost:7157/api/v1/batches/all", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
+        const res = await api.get("/batches/all");
         const data = await res.json();
         if (data.status) this.batches = data.data;
       } catch (err) {
         console.error("Failed to load batches:", err);
-        Swal.fire('Error', 'Could not load batch options.', 'error');
+        Swal.fire("Error", "Could not load batch options.", "error");
       }
     },
 
     async fetchStudents() {
-      const params = new URLSearchParams();
       this.isLoading = true;
 
+      const params = new URLSearchParams();
       if (this.selectedBatch) params.append("batchId", this.selectedBatch);
       if (this.searchQuery) params.append("query", this.searchQuery);
       if (this.statusFilter) params.append("status", this.statusFilter);
@@ -54,30 +51,30 @@ function studentsPage() {
       params.append("pageSize", this.pageSize);
       params.append("currentPage", this.currentPage);
 
-      const url = `https://localhost:7157/api/v1/Students/search?${params.toString()}`;
-      console.log("Fetching students with URL:", url);
-
       try {
-        const res = await fetch(url, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
+        const res = await api.get(`/Students/search?${params.toString()}`);
         const data = await res.json();
 
         if (data.status) {
           this.students = data.data.items || [];
           this.pagination = data.data;
-          console.log(this.pagination);
         } else {
           this.students = [];
           this.pagination = {};
-          Swal.fire('Error', data.message || 'Failed to fetch students.', 'error');
+          Swal.fire(
+            "Error",
+            data.message || "Failed to fetch students.",
+            "error"
+          );
         }
       } catch (err) {
         this.students = [];
         console.error("Failed to fetch students:", err);
-        Swal.fire('Error', 'An error occurred while fetching students.', 'error');
+        Swal.fire(
+          "Error",
+          "An error occurred while fetching students.",
+          "error"
+        );
       } finally {
         this.isLoading = false;
       }
@@ -127,39 +124,31 @@ function studentsPage() {
 
     async submitStudent() {
       if (this.newStudent.password !== this.newStudent.confirmPassword) {
-        Swal.fire('Error', 'Passwords do not match.', 'error');
+        Swal.fire("Error", "Passwords do not match.", "error");
         return;
       }
 
       this.isSubmitting = true;
-      console.log(this.newStudent);
-      // Create a fresh user array for the request
-      const usersToCreate = [this.newStudent];
-      const bulkStudent = {
-        users: usersToCreate,
-      };
+      const bulkStudent = { users: [this.newStudent] };
 
       try {
-        const res = await fetch("https://localhost:7157/api/v1/Students", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-          body: JSON.stringify(bulkStudent),
-        });
+        const res = await api.post("/Students", bulkStudent);
         const data = await res.json();
+
         if (data.status) {
-          Swal.fire('Success!', 'Student created successfully!', 'success');
+          Swal.fire("Success!", "Student created successfully!", "success");
           this.closeCreateModal();
           this.resetAndFetch();
         } else {
-          const errorMessage = data.errors?.users?.Email || data.message || 'An unknown error occurred.';
-          Swal.fire('Error', errorMessage, 'error');
+          const errorMessage =
+            data.errors?.users?.Email ||
+            data.message ||
+            "An unknown error occurred.";
+          Swal.fire("Error", errorMessage, "error");
         }
       } catch (err) {
         console.error(err);
-        Swal.fire('Error', 'Failed to create student.', 'error');
+        Swal.fire("Error", "Failed to create student.", "error");
       } finally {
         this.isSubmitting = false;
       }
@@ -172,7 +161,7 @@ function studentsPage() {
           document.getElementById("addStudentBtn").disabled = true;
         }
       } catch (err) {
-        console.warn("Could not decode token:", err);
+        console.warn("Could not disable for instructor:", err);
       }
     },
 
@@ -187,20 +176,12 @@ function studentsPage() {
           ? "../components/nav.html"
           : "../components/instructor-nav.html";
 
-      await loadComponent("sidebar-placeholder", sidebar);
-      await loadComponent("navbar-placeholder", navbar);
+      await Promise.all([
+        loadComponent("sidebar-placeholder", sidebar),
+        loadComponent("navbar-placeholder", navbar),
+      ]);
     },
 
-    logOut() {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("userRole");
-      window.location.href = "/public/auth/login.html";
-    },
+    logOut,
   };
-}
-
-async function loadComponent(id, path) {
-  const res = await fetch(path);
-  const html = await res.text();
-  document.getElementById(id).innerHTML = html;
-}
+};

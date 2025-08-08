@@ -1,10 +1,14 @@
+import { api, loadComponent, logOut } from "../utils.js";
+
 document.addEventListener("alpine:init", () => {
   Alpine.data("attemptAssessment", () => {
-    // These are private variables for the component instance, not reactive.
+    // ===== Private Variables =====
     const editorContentStore = {};
     let remainingSeconds = 0;
     let resizeObserver = null;
-    let editorInstance = null; // Non-reactive editor instance
+    let editorInstance = null;
+    let autoSaveInterval = null;
+    let lastSavedHash = "";
 
     function debounce(func, wait) {
       let timeout;
@@ -14,7 +18,20 @@ document.addEventListener("alpine:init", () => {
       };
     }
 
-    // This is the public, reactive object for Alpine.
+    function computeAnswersHash(questions) {
+      return JSON.stringify(
+        questions.map((q) => ({
+          id: q.id,
+          answer:
+            q.type === "Coding"
+              ? editorContentStore[q.id] || ""
+              : q.answerText || "",
+          selected: q.selectedOptionIds || [],
+        }))
+      );
+    }
+
+    // ===== Alpine Component =====
     return {
       assessmentId: null,
       assessment: null,
@@ -24,23 +41,21 @@ document.addEventListener("alpine:init", () => {
       timerText: "",
       timerInterval: null,
       currentQuestionIndex: 0,
-      questionNavigator: [], // Memoized navigator
+      questionNavigator: [],
 
       get currentQuestion() {
         return this.questions[this.currentQuestionIndex] || null;
       },
 
+      // ===== Lifecycle =====
       async init() {
-        // Preload Monaco Editor in parallel with other setup
-        this.preloadMonaco();
-
-        // Load components
+        // Load Navbar & Sidebar
         await Promise.all([
-          this.loadComponent(
+          loadComponent(
             "sidebar-placeholder",
             "/public/components/sidebar-student.html"
           ),
-          this.loadComponent(
+          loadComponent(
             "navbar-placeholder",
             "/public/components/navbar-student.html"
           ),
@@ -51,20 +66,25 @@ document.addEventListener("alpine:init", () => {
         );
         const token = localStorage.getItem("accessToken");
         if (!this.assessmentId || !token) {
-          localStorage.removeItem("accessToken");
-          window.location.href = "/public/auth/login.html";
+          logOut();
           return;
         }
 
+        // Preload Monaco Editor
+        this.preloadMonaco();
+
         await this.fetchQuestions(token);
         await this.loadProgress(token);
-        this.updateNavigator(); // Initial navigator state
+        this.updateNavigator();
 
         if (this.assessment) {
           this.startTimer(this.assessment.durationInMinutes * 60);
         }
 
         await this.switchTo(0);
+
+        // Periodic autosave every 30 seconds
+        autoSaveInterval = window.setInterval(() => this.saveProgress(), 30000);
 
         window.addEventListener("beforeunload", () => this.destroy());
         document.addEventListener("visibilitychange", () =>
@@ -75,12 +95,11 @@ document.addEventListener("alpine:init", () => {
       async preloadMonaco() {
         if (!window.MonacoEnvironment) {
           window.MonacoEnvironment = {
-            getWorkerUrl: function () {
-              return `data:text/javascript;charset=utf-8,${encodeURIComponent(`
-                  self.MonacoEnvironment = { baseUrl: 'https://unpkg.com/monaco-editor@0.47.0/min/' };
-                  importScripts('https://unpkg.com/monaco-editor@0.47.0/min/vs/base/worker/workerMain.js');
-                `)}`;
-            },
+            getWorkerUrl: () =>
+              `data:text/javascript;charset=utf-8,${encodeURIComponent(`
+                self.MonacoEnvironment = { baseUrl: 'https://unpkg.com/monaco-editor@0.47.0/min/' };
+                importScripts('https://unpkg.com/monaco-editor@0.47.0/min/vs/base/worker/workerMain.js');
+              `)}`,
           };
         }
 
@@ -92,19 +111,11 @@ document.addEventListener("alpine:init", () => {
         });
       },
 
-      async fetchQuestions(token) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-
+      async fetchQuestions() {
         try {
-          const res = await fetch(
-            `https://localhost:7157/api/v1/Assessments/${this.assessmentId}/questions`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-              signal: controller.signal,
-            }
+          const res = await api.get(
+            `/Assessments/${this.assessmentId}/questions`
           );
-          if (!res.ok) throw new Error("Failed to fetch questions");
           const data = await res.json();
           this.assessment = data.data;
           this.questions = (data.data.questions || []).map((q) => ({
@@ -120,42 +131,33 @@ document.addEventListener("alpine:init", () => {
         } catch (err) {
           console.error("Fetch questions error:", err);
           Swal.fire("Error", "Failed to load assessment", "error");
-        } finally {
-          clearTimeout(timeoutId);
         }
       },
 
-      async loadProgress(token) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+      async loadProgress() {
         try {
-          const res = await fetch(
-            `https://localhost:7157/api/v1/AssessmentProgress/load?assessmentId=${this.assessmentId}`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-              signal: controller.signal,
-            }
+          const res = await api.get(
+            `/AssessmentProgress/load?assessmentId=${this.assessmentId}`
           );
-          if (!res.ok) return;
           const progress = await res.json();
-          if (!progress.data || !progress.data.answers) return;
-          console.log(progress.data)
+          if (!progress.data?.answers) return;
+
           for (const ans of progress.data.answers) {
             const q = this.questions.find((q) => q.id === ans.questionId);
             if (!q) continue;
-            q.answerText = ans.answerText || q.answerText;
+            q.answerText = ans.answerText || "";
             q.selectedOptionIds = ans.selectedOptionIds || [];
-            if (q.type === "Coding") {
+            if (q.type === "Coding")
               editorContentStore[q.id] = ans.answerText || "";
-            }
           }
+
+          lastSavedHash = computeAnswersHash(this.questions);
         } catch (err) {
           console.error("Load progress error:", err);
-        } finally {
-          clearTimeout(timeoutId);
         }
       },
 
+      // ===== UI Interaction =====
       toggleOption(question, optionId) {
         const idx = question.selectedOptionIds.indexOf(optionId);
         idx === -1
@@ -179,7 +181,7 @@ document.addEventListener("alpine:init", () => {
           return (editorContentStore[question.id] || "").trim().length > 0;
         if (question.type === "Objective")
           return (question.answerText || "").trim().length > 0;
-        if (question.type === "MCQ" || question.type === "Mcq")
+        if (question.type?.toLowerCase() === "mcq")
           return question.selectedOptionIds.length > 0;
         return false;
       },
@@ -187,7 +189,6 @@ document.addEventListener("alpine:init", () => {
       async switchTo(index) {
         if (index < 0 || index >= this.questions.length) return;
 
-        // Destroy the old editor instance before switching
         if (editorInstance) {
           editorInstance.dispose();
           editorInstance = null;
@@ -209,44 +210,43 @@ document.addEventListener("alpine:init", () => {
           !this.currentQuestion ||
           this.currentQuestion.type !== "Coding" ||
           !container
-        ) {
+        )
           return;
-        }
 
         this.isEditorLoading = true;
-        console.log(this.currentQuestion)
+
         editorInstance = monaco.editor.create(container, {
           value: editorContentStore[this.currentQuestion.id] || "",
           language: "csharp",
           theme: "vs-dark",
-          automaticLayout: false, // We manage layout with ResizeObserver
+          automaticLayout: false,
           minimap: { enabled: false },
           fontSize: 14,
           scrollBeyondLastLine: false,
         });
 
         const debouncedUpdate = debounce(() => {
-          if (this.currentQuestion) {
-            editorContentStore[this.currentQuestion.id] =
-              editorInstance.getValue();
-            this.updateNavigator();
-          }
+          editorContentStore[this.currentQuestion.id] =
+            editorInstance.getValue();
+          this.updateNavigator();
         }, 300);
         editorInstance.onDidChangeModelContent(debouncedUpdate);
 
-        resizeObserver = new ResizeObserver(() => {
-          requestAnimationFrame(() => editorInstance?.layout());
-        });
+        resizeObserver = new ResizeObserver(() =>
+          requestAnimationFrame(() => editorInstance?.layout())
+        );
         resizeObserver.observe(container);
 
         requestAnimationFrame(() => editorInstance?.layout());
         this.isEditorLoading = false;
       },
 
+      // ===== Progress Saving =====
       saveProgress: debounce(async function () {
-        this.isSaving = true;
-        const token = localStorage.getItem("accessToken");
+        const currentHash = computeAnswersHash(this.questions);
+        if (currentHash === lastSavedHash) return; // Skip if no changes
 
+        this.isSaving = true;
         const payload = {
           assessmentId: this.assessmentId,
           answers: this.questions.map((q) => ({
@@ -261,41 +261,30 @@ document.addEventListener("alpine:init", () => {
         };
 
         try {
-          const res = await fetch(
-            "https://localhost:7157/api/v1/AssessmentProgress/students/progress/save",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify(payload),
-            }
+          const res = await api.post(
+            "/AssessmentProgress/students/progress/save",
+            payload
           );
           if (res.ok) {
-            Swal.fire("Saved", "Progress saved successfully", "success");
-          } else {
-            Swal.fire("Error", "Failed to save progress", "error");
+            lastSavedHash = currentHash;
+            console.log("Progress autosaved:", new Date().toLocaleTimeString());
           }
         } catch (err) {
           console.error("Save progress error:", err);
-          Swal.fire(
-            "Error",
-            "An error occurred while saving progress",
-            "error"
-          );
         } finally {
           this.isSaving = false;
         }
       }, 1000),
 
+      // ===== Submission =====
       async submitAssessment() {
         this.isSaving = true;
+
         if (editorInstance && this.currentQuestion?.type === "Coding") {
-          editorContentStore[this.currentQuestion.id] = editorInstance.getValue();
+          editorContentStore[this.currentQuestion.id] =
+            editorInstance.getValue();
         }
 
-        const token = localStorage.getItem("accessToken");
         const filtered = this.questions
           .map((q) => ({
             questionId: q.id,
@@ -307,8 +296,7 @@ document.addEventListener("alpine:init", () => {
           }))
           .filter(
             (ans) =>
-              (ans.submittedAnswer && ans.submittedAnswer.trim() !== "") ||
-              (ans.selectedOptionIds && ans.selectedOptionIds.length > 0)
+              ans.submittedAnswer?.trim() || ans.selectedOptionIds?.length
           );
 
         if (!filtered.length) {
@@ -322,28 +310,20 @@ document.addEventListener("alpine:init", () => {
         }
 
         try {
-          const res = await fetch(
-            `https://localhost:7157/api/v1/Assessments/${this.assessmentId}/submit`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({ answers: filtered }),
-            }
+          const res = await api.post(
+            `/Assessments/${this.assessmentId}/submit`,
+            { answers: filtered }
           );
-
           if (res.ok) {
             Swal.fire(
               "Submitted",
               "Assessment submitted successfully",
               "success"
-            ).then(() => {
-              window.location.href = "/public/student/student-dashboard.html";
-            });
-          } else {
-            Swal.fire("Error", "Failed to submit assessment", "error");
+            ).then(
+              () =>
+                (window.location.href =
+                  "/public/student/student-dashboard.html")
+            );
           }
         } catch (err) {
           console.error("Submission error:", err);
@@ -357,25 +337,16 @@ document.addEventListener("alpine:init", () => {
         }
       },
 
-      async loadComponent(id, path) {
-        try {
-          const res = await fetch(path);
-          if (!res.ok) throw new Error(`Component load failed: ${path}`);
-          document.getElementById(id).innerHTML = await res.text();
-        } catch (err) {
-          console.error("Load component error:", err);
-        }
-      },
-
+      // ===== Timer & Cleanup =====
       startTimer(durationInSeconds) {
         remainingSeconds = durationInSeconds;
         this.updateTimerText(remainingSeconds);
 
-        this.timerInterval = setInterval(() => {
+        this.timerInterval = window.setInterval(() => {
           remainingSeconds--;
           this.updateTimerText(remainingSeconds);
           if (remainingSeconds <= 0) {
-            clearInterval(this.timerInterval);
+            window.clearInterval(this.timerInterval);
             Swal.fire(
               "Time's Up!",
               "Your assessment will be submitted automatically.",
@@ -383,7 +354,7 @@ document.addEventListener("alpine:init", () => {
             );
             this.submitAssessment();
           }
-        }, 1000); // Corrected to 1 second
+        }, 1000);
       },
 
       updateTimerText(seconds) {
@@ -396,25 +367,17 @@ document.addEventListener("alpine:init", () => {
 
       handleVisibilityChange() {
         if (document.hidden) {
-          if (this.timerInterval) clearInterval(this.timerInterval);
-        } else {
-          if (remainingSeconds > 0) {
-            this.startTimer(remainingSeconds);
-          }
+          if (this.timerInterval) window.clearInterval(this.timerInterval);
+        } else if (remainingSeconds > 0) {
+          this.startTimer(remainingSeconds);
         }
       },
 
       destroy() {
-        if (editorInstance) {
-          editorInstance.dispose();
-          editorInstance = null;
-        }
-        if (this.timerInterval) {
-          clearInterval(this.timerInterval);
-        }
-        if (resizeObserver) {
-          resizeObserver.disconnect();
-        }
+        if (editorInstance) editorInstance.dispose();
+        if (this.timerInterval) window.clearInterval(this.timerInterval);
+        if (autoSaveInterval) window.clearInterval(autoSaveInterval);
+        if (resizeObserver) resizeObserver.disconnect();
         document.removeEventListener(
           "visibilitychange",
           this.handleVisibilityChange

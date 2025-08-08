@@ -1,14 +1,10 @@
+import { api, loadComponent, logOut } from "../shared/utils.js";
 
-async function loadComponent(id, path) {
-  const res = await fetch(path);
-  const html = await res.text();
-  document.getElementById(id).innerHTML = html;
-}
-function questionsPage() {
+window.questionsPage = function () {
   return {
     assessmentId: null,
     assessmentTitle: "",
-    passingScore:"",
+    passingScore: "",
     questions: [],
     showCreateModal: false,
     showEditModal: false,
@@ -23,7 +19,6 @@ function questionsPage() {
       testCases: [],
       answer: { answerText: "" },
     },
-    token: "",
     aiForm: {
       questionType: "",
       technologyStack: "",
@@ -46,73 +41,30 @@ function questionsPage() {
       const params = new URLSearchParams(window.location.search);
       this.assessmentId = params.get("assessmentId");
       this.assessmentTitle = `Assessment #${this.assessmentId ?? "N/A"}`;
-      this.token = localStorage.getItem("accessToken");
+
       await this.loadAssessment();
       await this.loadQuestions();
     },
-   async loadAssessment() {
-  try {
-    const res = await fetch(
-      `https://localhost:7157/api/v1/Assessments/${this.assessmentId}`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.token}`,
-        },
+
+    async loadAssessment() {
+      try {
+        const res = await api.get(`/Assessments/${this.assessmentId}`);
+        const data = await res.json();
+
+        this.assessmentTitle = data.data.title;
+        this.passingScore = data.data.passingScore;
+        this.aiForm.technologyStack = data.data.technologyStack;
+      } catch (err) {
+        console.error("Failed to load assessment", err);
+        // handleResponse in utils already triggers Swal + redirect for 401/403
       }
-    );
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      Swal.fire({
-        icon: "error",
-        title: data.errorCode || "Error",
-        text: data.message || "Failed to load assessment",
-      }).then(() => {
-        if (res.status === 401 || res.status === 403) {
-          // Token issue → redirect to login
-          window.location.href = "/public/auth/login.html";
-        } else if (res.status === 404) {
-          // Assessment not found → redirect to assessments page
-          window.location.href = "/public/instructor/assessment-page.html";
-        } else {
-          // Other errors → fallback to dashboard
-          window.location.href = "/public/instructor/dashboard.html";
-        }
-      });
-      return;
-    }
-
-    // ✅ Success: Set values
-    this.assessmentTitle = data.data.title;
-    this.passingScore = data.data.passingScore;
-    this.aiForm.technologyStack = data.data.technologyStack;
-
-  } catch (err) {
-    console.error("Network or parsing error:", err);
-    Swal.fire({
-      icon: "error",
-      title: "Network Error",
-      text: "Failed to load assessment. Please try again.",
-    }).then(() => {
-      window.location.href = "/public/instructor/dashboard.html";
-    });
-  }
-},
+    },
 
     async loadQuestions() {
       try {
-        const res = await fetch(
-          `https://localhost:7157/api/v1/Assessments/${this.assessmentId}/questions/answers`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${this.token}`,
-            },
-          }
+        const res = await api.get(
+          `/Assessments/${this.assessmentId}/questions/answers`
         );
-
         const data = await res.json();
         this.questions = data?.data || [];
       } catch (err) {
@@ -122,52 +74,36 @@ function questionsPage() {
     },
 
     getQuestionTypeLabel(type) {
-      return (
-        {
-          1: "MCQ",
-          2: "Objective",
-          3: "Coding",
-        }[type] || "Unknown"
-      );
+      return { 1: "MCQ", 2: "Objective", 3: "Coding" }[type] || "Unknown";
     },
 
     async generateAIQuestion() {
       try {
-        const res = await fetch(
-          "https://localhost:7157/api/v1/Ai/generate-text",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${this.token}`,
-            },
-            body: JSON.stringify(this.aiForm),
-          }
-        );
-    
+        const res = await api.post("/Ai/generate-text", this.aiForm);
         const result = await res.json();
-        if (!res.ok || !result.status) {
-          alert("Failed to generate question.");
+
+        if (!result.status) {
+          Swal.fire("Error", "Failed to generate question.", "error");
           return;
         }
-    
+
         this.aiPreviewData = {
           ...result.data,
           questionType: this.mapQuestionType(result.data.questionType),
         };
         this.showAIModal = false;
         this.showAIPreviewModal = true;
-        
-      console.log(this.aiPreviewData);
       } catch (error) {
         console.error("AI Generation Error", error);
-        alert("Error generating AI question.");
+        Swal.fire("Error", "Error generating AI question.", "error");
       }
     },
+
     mapQuestionType(type) {
-      const map = { "MCQ": 1, "Objective": 2, "Coding": 3 };
+      const map = { MCQ: 1, Objective: 2, Coding: 3 };
       return typeof type === "string" ? map[type] || type : type;
     },
+
     useAIPreviewQuestion() {
       this.questionForm = {
         questionText: this.aiPreviewData.questionText || "",
@@ -176,14 +112,15 @@ function questionsPage() {
         order: this.questions.length + 1,
         options: this.aiPreviewData.options || [],
         testCases: this.aiPreviewData.testCases || [],
-        answer: this.aiPreviewData.answer || { answerText: this.aiPreviewData.answerText || "" }
+        answer: this.aiPreviewData.answer || {
+          answerText: this.aiPreviewData.answerText || "",
+        },
       };
-    
+
       this.showCreateModal = true;
       this.showAIPreviewModal = false;
     },
-    
-    
+
     async submitQuestion() {
       const payload = {
         questionText: this.questionForm.questionText,
@@ -195,32 +132,22 @@ function questionsPage() {
         answer: this.questionForm.answer,
       };
 
-      const url = this.showEditModal
-        ? `https://localhost:7157/api/v1/Questions/${
-            this.questions[this.editIndex].id
-          }`
-        : `https://localhost:7157/api/v1/Assessments/${this.assessmentId}/questions`;
+      const endpoint = this.showEditModal
+        ? `/Questions/${this.questions[this.editIndex].id}`
+        : `/Assessments/${this.assessmentId}/questions`;
 
-      const method = this.showEditModal ? "PUT" : "POST";
-      const body = this.showEditModal
-        ? JSON.stringify(payload)
-        : JSON.stringify([payload]);
+      const body = this.showEditModal ? payload : [payload];
+      const method = this.showEditModal ? api.put : api.post;
 
-      const res = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.token}`,
-        },
-        body,
-      });
-
-      if (res.ok) {
-        await this.loadQuestions();
-        if (this.showEditModal) this.closeModals();
-        if (this.showCreateModal) this.resetForm(); // don't close modal for create
-      } else {
-        alert("Failed to submit question");
+      try {
+        const res = await method(endpoint, body);
+        if (res.ok) {
+          await this.loadQuestions();
+          if (this.showEditModal) this.closeModals();
+          if (this.showCreateModal) this.resetForm();
+        }
+      } catch {
+        Swal.fire("Error", "Failed to submit question", "error");
       }
     },
 
@@ -234,20 +161,11 @@ function questionsPage() {
     async deleteQuestion(questionId) {
       if (!confirm("Are you sure you want to delete this question?")) return;
 
-      const res = await fetch(
-        `https://localhost:7157/api/v1/Questions/${questionId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${this.token}`,
-          },
-        }
-      );
-
-      if (res.ok) {
+      try {
+        await api.delete(`/Questions/${questionId}`);
         this.questions = this.questions.filter((q) => q.id !== questionId);
-      } else {
-        alert("Failed to delete question");
+      } catch {
+        Swal.fire("Error", "Failed to delete question", "error");
       }
     },
 
@@ -269,10 +187,6 @@ function questionsPage() {
       this.resetForm();
     },
 
-    logOut() {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("userRole");
-      window.location.href = "/public/auth/login.html";
-    },
+    logOut,
   };
-}
+};

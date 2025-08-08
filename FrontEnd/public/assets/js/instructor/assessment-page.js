@@ -1,10 +1,6 @@
-const token = localStorage.getItem("accessToken");
-const headers = {
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${token}`,
-};
+import { api, loadComponent, logOut } from "../shared/utils.js";
 
-function instructorAssessmentsPage() {
+window.instructorAssessmentsPage = function () {
   return {
     assessments: [],
     batches: [],
@@ -38,76 +34,69 @@ function instructorAssessmentsPage() {
         "../components/instructor-nav.html"
       );
 
-      const batchRes = await fetch(
-        "https://localhost:7157/api/v1/Batches/all",
-        {
-          method: "GET",
-          headers: headers,
-        }
-      );
-      const data = await batchRes.json();
-      console.log(data);
-      this.batches = data.data;
+      const batchRes = await api.get("/Batches/all");
+      if (batchRes.status) this.batches = batchRes.data;
+
       await this.fetchPage();
     },
 
     async fetchPage() {
-      
       const params = new URLSearchParams();
       if (this.filters.batchId) params.append("batchId", this.filters.batchId);
       if (this.filters.status) params.append("status", this.filters.status);
       params.append("pageSize", this.pageSize);
       params.append("currentPage", this.pagination.currentPage);
 
-      const res = await fetch(
-        `https://localhost:7157/api/v1/Instructors/assessments?${params}`,
-        {
-          method: "GET",
-          headers: headers,
-        }
+      const result = await api.get(
+        `/Instructors/assessments?${params.toString()}`
       );
-      const result = await res.json();
-      console.log(result);
-      this.assessments = result.data.items;
-      console.log(this.assessments);
-      this.pagination = {
-        currentPage: result.data.currentPage,
-        totalPages: result.data.totalPages,
-        hasNextPage: result.data.hasNextPage,
-        hasPreviousPage: result.data.hasPreviousPage,
-      };
-      this.drawAllCharts();
+      if (result.status) {
+        this.assessments = result.data.items;
+        this.pagination = {
+          currentPage: result.data.currentPage,
+          totalPages: result.data.totalPages,
+          hasNextPage: result.data.hasNextPage,
+          hasPreviousPage: result.data.hasPreviousPage,
+        };
+        this.drawAllCharts();
+      } else {
+        Swal.fire(
+          "Error",
+          result.message || "Failed to load assessments",
+          "error"
+        );
+      }
     },
 
     async submitAssessment() {
-      console.log(this.newAssessment)
-      const res = await fetch("https://localhost:7157/api/v1/assessments", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(this.newAssessment),
-      });
-      if (res.ok) {
-        alert("Assessment created successfully");
-        this.showCreateModal = false;
-        this.newAssessment = {
-          title: "",
-          description: "",
-          technologyStack: "",
-          durationInMinutes: 0,
-          batchIds: [],
-          startDate: "",
-          endDate: "",
-          passingScore: 0,
-        };
-        console.log(this.newAssessment);
+      const res = await api.post("/assessments", this.newAssessment);
+      if (res.status) {
+        Swal.fire("Success", "Assessment created successfully", "success");
+        this.resetNewAssessment();
         await this.fetchPage();
       } else {
-        alert("Failed to create assessment.");
+        Swal.fire(
+          "Error",
+          res.message || "Failed to create assessment",
+          "error"
+        );
       }
     },
+
+    resetNewAssessment() {
+      this.showCreateModal = false;
+      this.newAssessment = {
+        title: "",
+        description: "",
+        technologyStack: "",
+        durationInMinutes: 0,
+        batchIds: [],
+        startDate: "",
+        endDate: "",
+        passingScore: 0,
+      };
+    },
+
     prevPage() {
       if (this.pagination.hasPreviousPage) {
         this.pagination.currentPage--;
@@ -118,10 +107,10 @@ function instructorAssessmentsPage() {
     nextPage() {
       if (this.pagination.hasNextPage) {
         this.pagination.currentPage++;
-        console.log(this.pagination.currentPage)
         this.fetchPage();
       }
     },
+
     applyFilters() {
       this.pagination.currentPage = 1;
       this.fetchPage();
@@ -131,8 +120,10 @@ function instructorAssessmentsPage() {
       this.assessments.forEach((a) => {
         const ctx = document.getElementById(`chart-${a.id}`);
         if (!ctx) return;
+
         const labels = a.batchPerformance.map((bp) => bp.batchName);
         const data = a.batchPerformance.map((bp) => bp.averageScore);
+
         new Chart(ctx, {
           type: "bar",
           data: {
@@ -153,17 +144,11 @@ function instructorAssessmentsPage() {
         });
       });
     },
-    logOut() {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("userRole");
-      window.location.href = "/public/auth/login.html";
-    },
+
+    logOut,
 
     canAddQuestions(startDate) {
-      const start = new Date(startDate);
-      const now = new Date();
-      const diffMinutes = (start - now) / (1000 * 60);
-      return diffMinutes >= 0;
+      return (new Date(startDate) - new Date()) / (1000 * 60) >= 0;
     },
   };
-}
+};

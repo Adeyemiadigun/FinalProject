@@ -1,10 +1,6 @@
+import { api, loadComponent, logOut } from "../shared/utils.js";
 
-async function loadComponent(id, path) {
-  const res = await fetch(path);
-  const html = await res.text();
-  document.getElementById(id).innerHTML = html;
-}
-function adminStudentSubmissions() {
+window.adminStudentSubmissions = function () {
   return {
     studentId: new URLSearchParams(window.location.search).get("id"),
     submissions: [],
@@ -18,45 +14,52 @@ function adminStudentSubmissions() {
     hasPreviousPage: false,
 
     async init() {
-      const token = localStorage.getItem("accessToken");
       const role = localStorage.getItem("userRole");
-
-      await loadComponent(
-        "sidebar-placeholder",
-        role == "Admin"
+      const sidebar =
+        role === "Admin"
           ? "../components/sidebar.html"
-          : "../components/instructor-sidebar.html"
-      );
-      await loadComponent(
-        "navbar-placeholder",
-        role == "Admin"
+          : "../components/instructor-sidebar.html";
+      const navbar =
+        role === "Admin"
           ? "../components/nav.html"
-          : "../components/instructor-nav.html"
-      );
+          : "../components/instructor-nav.html";
+
+      await Promise.all([
+        loadComponent("sidebar-placeholder", sidebar),
+        loadComponent("navbar-placeholder", navbar),
+      ]);
 
       await this.fetchSubmissions(1); // Load first page
     },
 
     async fetchSubmissions(page) {
       this.currentPage = page;
-      const token = localStorage.getItem("accessToken");
 
-      const res = await fetch(
-        `https://localhost:7157/api/v1/Students/${this.studentId}/submissions?pageNumber=${page}&pageSize=${this.pageSize}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      try {
+        const res = await api.get(
+          `/Students/${this.studentId}/submissions?pageNumber=${page}&pageSize=${this.pageSize}`
+        );
+        const json = await res.json();
 
-      const json = await res.json();
+        if (json.status && json.data) {
+          const data = json.data;
+          this.submissions = data.items;
+          this.totalPages = data.totalPages;
+          this.hasNextPage = data.hasNextPage;
+          this.hasPreviousPage = data.hasPreviousPage;
 
-      if (json.status && json.data) {
-        const data = json.data;
-        this.submissions = data.items;
-        this.totalPages = data.totalPages;
-        this.hasNextPage = data.hasNextPage;
-        this.hasPreviousPage = data.hasPreviousPage;
-
-        this.studentName =
-          this.submissions.length > 0 ? this.submissions[0].studentName : "";
+          this.studentName =
+            this.submissions.length > 0 ? this.submissions[0].studentName : "";
+        } else {
+          Swal.fire(
+            "Error",
+            json.message || "Failed to load submissions.",
+            "error"
+          );
+        }
+      } catch (error) {
+        console.error("Error fetching submissions:", error);
+        Swal.fire("Error", "Could not fetch submissions.", "error");
       }
     },
 
@@ -71,10 +74,6 @@ function adminStudentSubmissions() {
       return Array.from({ length: this.totalPages }, (_, i) => i + 1);
     },
 
-    logOut() {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("userRole");
-      window.location.href = "/public/auth/login.html";
-    },
+    logOut,
   };
-}
+};

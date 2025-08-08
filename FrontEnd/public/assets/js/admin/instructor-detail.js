@@ -1,56 +1,70 @@
-function instructorDetailsPage() {
+import { api, loadComponent, logOut } from "../shared/utils.js";
+
+window.instructorDetailsPage = function () {
   return {
     instructor: {},
     assessments: [],
     sidebarOpen: true,
+
     async init() {
+      // Load layout components
+      await loadComponent("sidebar-placeholder", "../components/sidebar.html");
+      await loadComponent("navbar-placeholder", "../components/nav.html");
+
       const id = new URLSearchParams(window.location.search).get("id");
-      const token = localStorage.getItem("accessToken");
+      if (!id) {
+        Swal.fire({
+          icon: "error",
+          title: "Invalid Access",
+          text: "Instructor ID is missing in the URL.",
+        });
+        return;
+      }
 
-      const [profileRes, assessmentRes] = await Promise.all([
-        fetch(`https://localhost:7157/api/v1/Instructors/${id}/details`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(
-          `https://localhost:7157/api/v1/Instructors/${id}/assessment/details?pageSize=10&currentPage=1`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        ),
-      ]);
+      try {
+        // Fetch profile and assessments in parallel
+        const [profileRes, assessmentRes] = await Promise.all([
+          api.get(`/Instructors/${id}/details`),
+          api.get(
+            `/Instructors/${id}/assessment/details?pageSize=10&currentPage=1`
+          ),
+        ]);
 
-      const profileData = await profileRes.json();
-      const assessmentsData = await assessmentRes.json();
-      console.log(profileData);
-      console.log(assessmentsData);
-      this.instructor = profileData.data;
-      console.log(this.instructor);
-      this.assessments =
-        assessmentsData.items || assessmentsData.data?.items || [];
-    },
-    logOut() {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("userRole");
-      window.location.href = "/public/auth/login.html";
+        // Handle unauthorized globally in api wrapper
+        if (!profileRes.ok || !assessmentRes.ok) {
+          const profileErr = await profileRes.json();
+          const assessmentErr = await assessmentRes.json();
+          throw new Error(
+            profileErr?.detail ||
+              assessmentErr?.detail ||
+              "Failed to load instructor details."
+          );
+        }
+
+        const profileData = await profileRes.json();
+        const assessmentsData = await assessmentRes.json();
+
+        this.instructor = profileData.data;
+        this.assessments =
+          assessmentsData.data?.items || assessmentsData.items || [];
+      } catch (err) {
+        console.error(err);
+        Swal.fire({
+          icon: "error",
+          title: "Loading Error",
+          text:
+            err.message ||
+            "Unable to load instructor details. Please try again later.",
+        });
+      }
     },
 
     formatDate(date) {
+      if (!date) return "N/A";
       const d = new Date(date);
       return d.toLocaleDateString();
     },
+
+    logOut, // Use shared logOut
   };
 }
-
-async function loadLayout() {
-  const sidebar = await fetch("/public/components/sidebar.html").then((res) =>
-    res.text()
-  );
-  document.getElementById("sidebar-placeholder").innerHTML = sidebar;
-
-  const navbar = await fetch("/public/components/nav.html").then((res) =>
-    res.text()
-  );
-  document.getElementById("navbar-placeholder").innerHTML = navbar;
-}
-
-document.addEventListener("DOMContentLoaded", loadLayout);

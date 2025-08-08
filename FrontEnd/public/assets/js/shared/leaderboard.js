@@ -1,10 +1,6 @@
-async function loadComponent(id, path) {
-  const res = await fetch(path);
-  const html = await res.text();
-  document.getElementById(id).innerHTML = html;
-}
+import { api, loadComponent, logOut } from "../shared/utils.js";
 
-function leaderboardPage() {
+window.leaderboardPage = function () {
   return {
     selectedBatch: "",
     batches: [],
@@ -17,66 +13,71 @@ function leaderboardPage() {
       totalItems: 0,
     },
 
-    logOut() {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("userRole");
-      window.location.href = "/public/auth/login.html";
-    },
-
     async init() {
       const role = localStorage.getItem("userRole");
       const sidebar =
-        role == "Admin"
+        role === "Admin"
           ? "../components/sidebar.html"
           : "../components/instructor-sidebar.html";
       const navbar =
-        role == "Admin"
+        role === "Admin"
           ? "../components/nav.html"
           : "../components/instructor-nav.html";
 
-      await loadComponent("sidebar-placeholder", sidebar);
-      await loadComponent("navbar-placeholder", navbar);
+      await Promise.all([
+        loadComponent("sidebar-placeholder", sidebar),
+        loadComponent("navbar-placeholder", navbar),
+      ]);
+
       this.loadBatches();
     },
 
     async loadBatches() {
-      const token = localStorage.getItem("accessToken");
-      const res = await fetch("https://localhost:7157/api/v1/batches/all", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      this.batches = data.data;
-      this.selectedBatch = this.batches.length > 0 ? this.batches[0].id : "";
-      console.log(data);
-      await this.loadLeaderboard();
+      try {
+        const res = await api.get("/batches/all");
+        const data = await res.json();
+        this.batches = data.data || [];
+        this.selectedBatch = this.batches.length > 0 ? this.batches[0].id : "";
+        await this.loadLeaderboard();
+      } catch (error) {
+        console.error("Failed to load batches:", error);
+        Swal.fire("Error", "Could not load batches.", "error");
+      }
     },
 
     async loadLeaderboard() {
-      const token = localStorage.getItem("accessToken");
-      const query = new URLSearchParams({
-        batchId: this.selectedBatch,
-        pageSize: this.pagination.pageSize,
-        currentPage: this.pagination.pageNumber,
-      });
+      try {
+        const query = new URLSearchParams({
+          batchId: this.selectedBatch,
+          pageSize: this.pagination.pageSize,
+          currentPage: this.pagination.pageNumber,
+        });
 
-      const res = await fetch(
-        `https://localhost:7157/api/v1/Students/leaderboard?${query.toString()}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
+        const res = await api.get(`/Students/leaderboard?${query.toString()}`);
+        const response = await res.json();
+
+        if (response.status && response.data) {
+          this.leaderboard = response.data.items;
+          this.pagination.totalPages = response.data.totalPages;
+          this.pagination.totalItems = response.data.totalItems;
+        } else {
+          this.leaderboard = [];
+          Swal.fire(
+            "Info",
+            response.message || "No leaderboard data found.",
+            "info"
+          );
         }
-      );
-
-      const response = await res.json();
-      if (response.status && response.data) {
-        this.leaderboard = response.data.items;
-        console.log(this.leaderboard);
-        this.pagination.totalPages = response.data.totalPages;
-        this.pagination.totalItems = response.data.totalItems;
+      } catch (error) {
+        console.error("Failed to load leaderboard:", error);
+        Swal.fire("Error", "Could not load leaderboard.", "error");
       }
     },
+
     viewStudentDetails(studentId) {
       window.location.href = `/public/shared/student-details.html?id=${studentId}`;
     },
+
     filterByBatch() {
       this.pagination.pageNumber = 1;
       this.loadLeaderboard();
@@ -95,5 +96,7 @@ function leaderboardPage() {
         this.loadLeaderboard();
       }
     },
+
+    logOut,
   };
-}
+};

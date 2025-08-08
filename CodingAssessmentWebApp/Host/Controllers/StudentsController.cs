@@ -149,6 +149,13 @@ namespace Host.Controllers
             var result = await _userService.GetStudentMetrics();
             return Ok(result);
         }
+        [HttpGet("{studentId:guid}score-trends")]
+        public async Task<IActionResult> GetStudentScoreTrends(Guid studentId, [FromQuery] DateTime? date)
+        {
+            var result = await submissionService.GetStudentScoreTrendsAsync(studentId, date);
+            return Ok(result);
+        }
+
 
     }
 }

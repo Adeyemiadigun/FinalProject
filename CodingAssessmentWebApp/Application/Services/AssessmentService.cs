@@ -10,6 +10,7 @@ using Domain.Entities;
 using Domain.Entitties;
 using Domain.Enum;
 using Hangfire;
+using Microsoft.EntityFrameworkCore;
 
 namespace Application.Services
 {
@@ -884,7 +885,55 @@ namespace Application.Services
             _assessmentRepository.Update(assessment);
             await _unitOfWork.SaveChangesAsync();
         }
+        public async Task<BaseResponse<PaginationDto<AdminAssessmentDto>>> GetAllAssessmentsAsync(
+    Guid? batchId, DateTime? startDate, DateTime? endDate, string search, PaginationRequest request)
+        {
+            var query = await _assessmentRepository.GetAllAsync(x => (!batchId.HasValue || x.BatchAssessment.Any(a => a.BatchId == batchId.Value)) && (!startDate.HasValue || x.StartDate.Date >= startDate.Value.Date) && (!endDate.HasValue || x.EndDate.Date <= endDate.Value.Date) &&
+                (
+                    string.IsNullOrEmpty(search) ||
+                    x.Title.Contains(search) || x.Instructor.FullName.Contains(search)
+                ), request);
+            
+            var assessments = query.Items.Select(x => new AdminAssessmentDto
+            {
+                Id = x.Id,
+                Title = x.Title,
+                TechnologyStack = x.TechnologyStack.ToString(),
+                DurationInMinutes = x.DurationInMinutes,
+                StartDate = x.StartDate,
+                TotalScore = x.Questions.Sum(b => b.Marks),
+                EndDate = x.EndDate,
+                PassingScore = x.PassingScore,
+                Status = x.Status.ToString(),
+                InstructorName = x.Instructor.FullName,
+                Batches = x.BatchAssessment.Select(b => new BatchDto
+                {
+                    Id = b.Id,
+                    Name = b.Batch.Name
+                }).ToList()
+            }).ToList();
 
+
+            var response = new PaginationDto<AdminAssessmentDto>
+            {
+                Items = assessments,
+                TotalItems = query.TotalItems,
+                TotalPages = query.TotalPages,
+                CurrentPage = query.CurrentPage,
+                PageSize = query.PageSize,
+                HasNextPage = query.HasNextPage,
+                HasPreviousPage = query.HasPreviousPage
+
+            };
+
+            return new BaseResponse<PaginationDto<AdminAssessmentDto>>
+            {
+                Data = response,
+                Status = true,
+                Message = "Assessments fetched successfully"
+            };
+        }
+        
 
     }
 

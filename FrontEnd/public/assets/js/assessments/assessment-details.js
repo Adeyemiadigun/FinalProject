@@ -1,6 +1,7 @@
-function assessmentDetailsPage() {
+import { api, loadComponent, logOut } from "../shared/utils.js";
+
+window.assessmentDetailsPage = function () {
   return {
-    token: localStorage.getItem("accessToken") || "",
     assessment: {},
     metrics: {},
     students: [],
@@ -12,10 +13,16 @@ function assessmentDetailsPage() {
     assessmentId: new URLSearchParams(window.location.search).get(
       "assessmentId"
     ),
+    charts: {},
 
-    init() {
-      loadComponent("sidebar-placeholder", "../components/sidebar.html");
-      loadComponent("navbar-placeholder", "../components/nav.html");
+    async init() {
+      // Load layout components first
+      await Promise.all([
+        loadComponent("sidebar-placeholder", "../components/sidebar.html"),
+        loadComponent("navbar-placeholder", "../components/nav.html"),
+      ]);
+
+      // Load all data
       this.loadAssessment();
     },
 
@@ -28,102 +35,70 @@ function assessmentDetailsPage() {
     },
 
     async fetchAssessment() {
-      console.log(this.assessmentId);
-      const res = await fetch(
-        `https://localhost:7157/api/v1/Assessments/${this.assessmentId}`,
-        {
-          headers: { Authorization: `Bearer ${this.token}` },
-        }
-      );
+      const res = await api.get(`/Assessments/${this.assessmentId}`);
       const data = await res.json();
       this.assessment = data.data;
     },
 
     async fetchMetrics() {
-      const res = await fetch(
-        `https://localhost:7157/api/v1/Assessments/${this.assessmentId}/metrics`,
-        {
-          headers: { Authorization: `Bearer ${this.token}` },
-        }
-      );
+      const res = await api.get(`/Assessments/${this.assessmentId}/metrics`);
       const data = await res.json();
       this.metrics = data.data;
     },
 
     async fetchScoreDistribution() {
-      const res = await fetch(
-        `https://localhost:7157/api/v1/Assessments/${this.assessmentId}/score-distribution`,
-        {
-          headers: { Authorization: `Bearer ${this.token}` },
-        }
+      const res = await api.get(
+        `/Assessments/${this.assessmentId}/score-distribution`
       );
       const data = await res.json();
-      const dist = data.data;
+      const dist = data.data || [];
 
-      new Chart(document.getElementById("scoreDistChart"), {
+      this.drawChart("scoreDistChart", {
         type: "bar",
-        data: {
-          labels: dist.map((x) => x.cap),
-          datasets: [
-            {
-              label: "Number of Students",
-              data: dist.map((x) => x.count),
-              backgroundColor: "#3b82f6",
-            },
-          ],
-        },
+        labels: dist.map((x) => x.cap),
+        datasets: [
+          {
+            label: "Number of Students",
+            data: dist.map((x) => x.count),
+            backgroundColor: "#3b82f6",
+          },
+        ],
       });
     },
 
     async fetchBatchPerformance() {
-      const res = await fetch(
-        `https://localhost:7157/api/v1/Assessments/${this.assessmentId}/batch-performance`,
-        {
-          headers: { Authorization: `Bearer ${this.token}` },
-        }
+      const res = await api.get(
+        `/Assessments/${this.assessmentId}/batch-performance`
       );
       const data = await res.json();
-      const perf = data.data;
+      const perf = data.data || [];
 
-      new Chart(document.getElementById("batchPerfChart"), {
+      this.drawChart("batchPerfChart", {
         type: "doughnut",
-        data: {
-          labels: perf.map((x) => x.batchName),
-          datasets: [
-            {
-              data: perf.map((x) => x.averageScore),
-              backgroundColor: [
-                "#3b82f6",
-                "#f59e0b",
-                "#10b981",
-                "#ef4444",
-                "#6366f1",
-              ],
-            },
-          ],
-        },
+        labels: perf.map((x) => x.batchName),
+        datasets: [
+          {
+            data: perf.map((x) => x.averageScore),
+            backgroundColor: [
+              "#3b82f6",
+              "#f59e0b",
+              "#10b981",
+              "#ef4444",
+              "#6366f1",
+            ],
+          },
+        ],
       });
     },
 
-    logOut() {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("userRole");
-      window.location.href = "/public/auth/login.html";
-    },
     async fetchStudentPerformance() {
-      const res = await fetch(
-        `https://localhost:7157/api/v1/Assessments/${this.assessmentId}/students?CurrentPage=${this.page}&PageSize=${this.perPage}`,
-        {
-          headers: { Authorization: `Bearer ${this.token}` },
-        }
+      const res = await api.get(
+        `/Assessments/${this.assessmentId}/students?CurrentPage=${this.page}&PageSize=${this.perPage}`
       );
       const data = await res.json();
-      console.log(data);
       const paginated = data.data;
-      this.students = paginated.items;
-      console.log(paginated);
-      console.log(paginated.items);
-      console.log(this.students);
+
+      this.students = paginated.items || [];
       this.totalPages = paginated.totalPages;
       this.hasNextPage = paginated.hasNextPage;
       this.hasPreviousPage = paginated.hasPreviousPage;
@@ -142,11 +117,26 @@ function assessmentDetailsPage() {
         this.fetchStudentPerformance();
       }
     },
-  };
-}
 
-async function loadComponent(id, path) {
-  const res = await fetch(path);
-  const html = await res.text();
-  document.getElementById(id).innerHTML = html;
-}
+    drawChart(id, { type, labels, datasets }) {
+      const ctx = document.getElementById(id)?.getContext("2d");
+      if (!ctx) return;
+
+      // Destroy old chart if exists
+      if (this.charts[id]) {
+        this.charts[id].destroy();
+      }
+
+      this.charts[id] = new Chart(ctx, {
+        type,
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          scales: type === "bar" ? { y: { beginAtZero: true } } : {},
+        },
+      });
+    },
+
+    logOut,
+  };
+};

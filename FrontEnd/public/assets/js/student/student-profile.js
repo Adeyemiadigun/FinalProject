@@ -1,41 +1,37 @@
-function loadLayout() {
-  fetch("/public/components/sidebar-student.html")
-    .then((res) => res.text())
-    .then(
-      (html) =>
-        (document.getElementById("sidebar-placeholder").innerHTML = html)
-    );
-  fetch("/public/components/navbar-student.html")
-    .then((res) => res.text())
-    .then(
-      (html) => (document.getElementById("navbar-placeholder").innerHTML = html)
-    );
-}
+import { api, loadComponent, logOut } from "../utils.js";
 
-function studentProfile() {
+window.studentProfile = function () {
   return {
     student: { name: "", email: "", batch: "", joinedAt: "" },
     summary: { avgScore: 0, completedAssessments: 0, passRate: 0, rank: 0 },
     history: [],
+
     logOut() {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("userRole");
-      window.location.href = "/public/auth/login.html";
+      logOut(); // Use the shared logout function
     },
+
     async init() {
       const token = localStorage.getItem("accessToken");
-    
-console.log(token)
+      if (!token) {
+        logOut();
+        return;
+      }
+
       try {
-        // Get Student Info
-        const detailRes = await fetch(
-          "https://localhost:7157/api/v1/students/details",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        // Load Layout Components
+        await Promise.all([
+          loadComponent(
+            "sidebar-placeholder",
+            "/public/components/sidebar-student.html"
+          ),
+          loadComponent(
+            "navbar-placeholder",
+            "/public/components/navbar-student.html"
+          ),
+        ]);
+
+        // Fetch Student Details
+        const detailRes = await api.get("/students/details");
         const detailJson = await detailRes.json();
         const s = detailJson.data;
         this.student = {
@@ -45,15 +41,8 @@ console.log(token)
           joinedAt: new Date(s.dateCreated).toLocaleDateString(),
         };
 
-        // Get Student Metrics
-        const metricRes = await fetch(
-          "https://localhost:7157/api/v1/students/metrics/summary",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        // Fetch Student Metrics
+        const metricRes = await api.get("/students/metrics/summary");
         const metricJson = await metricRes.json();
         const m = metricJson.data;
         this.summary = {
@@ -63,27 +52,20 @@ console.log(token)
           rank: m.rank,
         };
 
-        // Get History
-        const historyRes = await fetch(
-          "https://localhost:7157/api/v1/students/history",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        // Fetch Submission History
+        const historyRes = await api.get("/students/history");
         const historyJson = await historyRes.json();
         this.history = historyJson.data.map((x) => ({
           id: x.assessmentId,
           title: x.assessmentTitle,
-          date: x.submittedAt,
+          date: new Date(x.submittedAt).toLocaleDateString(),
           score: x.totalScore,
-          passed: x.totalScore >= 50, // or compare with passing score if available
+          passed: x.totalScore >= 50, // adjust if pass mark varies
         }));
       } catch (err) {
         console.error("Failed to load student profile", err);
-        alert("Failed to load profile. Try again later.");
+        Swal.fire("Error", "Failed to load profile. Try again later.", "error");
       }
     },
   };
-}
+};

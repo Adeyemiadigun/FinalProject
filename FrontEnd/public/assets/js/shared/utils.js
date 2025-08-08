@@ -1,38 +1,70 @@
 const API_BASE_URL = "https://localhost:7157/api/v1";
 
-/**
- * A simple API wrapper for making authenticated requests.
- */
-const api = {
-  async request(endpoint, method = 'GET', body = null) {
+async function handleResponse(response) {
+  if (response.status === 401 || response.status === 403) {
+    // Unauthorized or Forbidden → log out user
+    Swal.fire({
+      icon: "warning",
+      title: "Session Expired",
+      text: "Your session has expired. Please log in again.",
+    }).then(() => {
+      logOut();
+    });
+    throw new Error("Unauthorized");
+  }
+
+  if (!response.ok) {
+    // Try to parse ProblemDetails JSON
+    let errorMessage = "Something went wrong.";
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.detail || errorData.title || errorMessage;
+    } catch {
+      // Fallback if JSON parsing fails
+    }
+    Swal.fire({
+      icon: "error",
+      title: "Request Failed",
+      text: errorMessage,
+    });
+    throw new Error(errorMessage);
+  }
+
+  return response;
+}
+
+ const api = {
+  async request(endpoint, method = "GET", body = null) {
     const token = localStorage.getItem("accessToken");
     const headers = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+    if (token) headers["Authorization"] = `Bearer ${token}`;
 
     const config = { method, headers };
-
-    if (body) {
-      config.body = JSON.stringify(body);
-    }
+    if (body) config.body = JSON.stringify(body);
 
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-      // This could be enhanced to handle token refreshing on 401 errors
-      return response; // Return the full response for flexibility
+      const res = await fetch(`${API_BASE_URL}${endpoint}`, config);
+      return await handleResponse(res); // central error handler
     } catch (error) {
       console.error(`API request failed: ${method} ${endpoint}`, error);
       throw error;
     }
   },
 
-  get: function(endpoint) { return this.request(endpoint, 'GET'); },
-  post: function(endpoint, body) { return this.request(endpoint, 'POST', body); },
-  put: function(endpoint, body) { return this.request(endpoint, 'PUT', body); },
-  delete: function(endpoint) { return this.request(endpoint, 'DELETE'); }
+  get(endpoint) {
+    return this.request(endpoint, "GET");
+  },
+  post(endpoint, body) {
+    return this.request(endpoint, "POST", body);
+  },
+  put(endpoint, body) {
+    return this.request(endpoint, "PUT", body);
+  },
+  delete(endpoint) {
+    return this.request(endpoint, "DELETE");
+  },
 };
 
 /**
@@ -51,3 +83,4 @@ function logOut() {
   localStorage.clear();
   window.location.href = "/public/auth/login.html";
 }
+export { api, loadComponent, logOut };

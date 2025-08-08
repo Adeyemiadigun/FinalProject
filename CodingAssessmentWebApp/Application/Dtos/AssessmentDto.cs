@@ -126,4 +126,21 @@ namespace Application.Dtos
         public double AvgScore { get; set; }
         public DateTime CreatedAt { get; set; }
     }
+    public class AdminAssessmentDto
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; }
+        public string InstructorName { get; set; }
+        public List<BatchDto> Batches { get; set; } = new();
+        public string TechnologyStack { get; set; }
+        public int DurationInMinutes { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public double PassingScore { get; set; }
+        public int TotalScore { get; set; }
+        public string Status { get; set; } 
+    }
+
+  
+
 }

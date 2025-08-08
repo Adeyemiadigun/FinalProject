@@ -1,4 +1,6 @@
-function assessmentSubmissionsPage() {
+import { api, loadComponent, logOut } from "../shared/utils.js";
+
+window.assessmentSubmissionsPage = function () {
   return {
     submissions: [],
     page: 1,
@@ -7,13 +9,17 @@ function assessmentSubmissionsPage() {
     assessmentId: null,
 
     async init() {
+      // Load sidebar & navbar dynamically based on user role
       await this.loadLayout();
+
+      // Parse URL params
       const params = new URLSearchParams(window.location.search);
       this.assessmentId = params.get("id");
       if (!this.assessmentId) {
         Swal.fire("Error", "Assessment ID not provided", "error");
         return;
       }
+
       await this.fetchSubmissions();
     },
 
@@ -29,37 +35,26 @@ function assessmentSubmissionsPage() {
         sidebarPath = "/public/components/instructor-sidebar.html";
         navbarPath = "/public/components/instructor-nav.html";
       } else {
-        // Default or handle other roles if necessary
-        return;
+        return; // Exit if role is unknown
       }
 
-      const [sidebarRes, navbarRes] = await Promise.all([fetch(sidebarPath), fetch(navbarPath)]);
-      document.getElementById("sidebar-placeholder").innerHTML = await sidebarRes.text();
-      document.getElementById("navbar-placeholder").innerHTML = await navbarRes.text();
+      // Use shared utility
+      await Promise.all([
+        loadComponent("sidebar-placeholder", sidebarPath),
+        loadComponent("navbar-placeholder", navbarPath),
+      ]);
     },
 
-    logOut() {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("userRole");
-      window.location.href = "/public/auth/login.html";
-    },
     async fetchSubmissions() {
-      const token = localStorage.getItem("accessToken");
-      const url = `https://localhost:7157/api/v1/assessments/${this.assessmentId}/submissions?pageSize=${this.perPage}&currentPage=${this.page}`;
-
       try {
-        const res = await fetch(url, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await api.get(
+          `/assessments/${this.assessmentId}/submissions?pageSize=${this.perPage}&currentPage=${this.page}`
+        );
 
         const result = await res.json();
-
         if (result.status) {
-          this.submissions = result.data.items;
-          this.totalPages = result.data.totalPages;
+          this.submissions = result.data.items || [];
+          this.totalPages = result.data.totalPages || 1;
         } else {
           Swal.fire(
             "Error",
@@ -88,5 +83,7 @@ function assessmentSubmissionsPage() {
       const date = new Date(dateStr);
       return date.toLocaleString();
     },
+
+    logOut,
   };
-}
+};

@@ -1,4 +1,6 @@
-function instructorDashboard() {
+import { api, loadComponent, logOut } from "../shared/utils.js";
+
+window.instructorDashboard = function () {
   return {
     summary: {
       totalAssessments: 0,
@@ -10,58 +12,57 @@ function instructorDashboard() {
     recentAssessments: [],
     assessmentScoreTrends: [],
 
-    async loadData() {
-      const token = localStorage.getItem("accessToken");
-      console.log("Token:", token);
+    async init() {
+      await this.loadLayout();
+      await this.loadData();
+    },
 
-      const headers = {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      };
+    async loadLayout() {
+      const role = localStorage.getItem("userRole");
+      const sidebar =
+        role === "Admin"
+          ? "../components/sidebar.html"
+          : "../components/instructor-sidebar.html";
+      const navbar =
+        role === "Admin"
+          ? "../components/nav.html"
+          : "../components/instructor-nav.html";
+
+      await Promise.all([
+        loadComponent("sidebar-placeholder", sidebar),
+        loadComponent("navbar-placeholder", navbar),
+      ]);
+    },
+
+    async loadData() {
       try {
-        let metrics = await fetch(
-          "https://localhost:7157/api/v1/Dashboard/instructor/metrics/overview",
-          {
-            method: "GET",
-            headers: headers,
-          }
-        ).then((r) => r.json());
-        this.summary = metrics.data;
-        console.log(this.summary)
-        const batchData= await fetch(
-          "https://localhost:7157/api/v1/Dashboard/batch-distribution",
-          {
-            method: "GET",
-            headers: headers,
-          }
-        ).then((r) => r.json());
-        this.batches = batchData.data
-       const data = await fetch(
-          "https://localhost:7157/api/v1/Instructors/assessment/recents",
-          {
-            method: "GET",
-            headers: headers,
-          }
-        ).then((r) => r.json());
-        this.recentAssessments = data.data
-        console.log(this.recentAssessments)
-        const scoreTrend = await fetch(
-          "https://localhost:7157/api/v1/Assessments/assessment-scores",
-          {
-            method: "GET",
-            headers: headers,
-          }
-        ).then((r) => r.json());
-        
-        this.assessmentScoreTrends = scoreTrend.data
+        const [metrics, batchData, recent, scoreTrend] = await Promise.all([
+          api
+            .get("/Dashboard/instructor/metrics/overview")
+            .then((r) => r.json()),
+          api.get("/Dashboard/batch-distribution").then((r) => r.json()),
+          api.get("/Instructors/assessment/recents").then((r) => r.json()),
+          api.get("/Assessments/assessment-scores").then((r) => r.json()),
+        ]);
+
+        if (metrics.status) this.summary = metrics.data;
+        if (batchData.status) this.batches = batchData.data;
+        if (recent.status) this.recentAssessments = recent.data;
+        if (scoreTrend.status) this.assessmentScoreTrends = scoreTrend.data;
+
         this.drawCharts();
       } catch (error) {
-        console.error("Error loading data:", error);
-        alert("Failed to load data. Please try again later.");
+        console.error("Error loading dashboard data:", error);
+        Swal.fire(
+          "Error",
+          "Failed to load data. Please try again later.",
+          "error"
+        );
       }
     },
 
     drawCharts() {
+      // Assessment Scores Chart
       new Chart(document.getElementById("assessmentScoreChart"), {
         type: "bar",
         data: {
@@ -76,6 +77,7 @@ function instructorDashboard() {
         },
       });
 
+      // Student Batch Distribution Chart
       new Chart(document.getElementById("studentBatchChart"), {
         type: "pie",
         data: {
@@ -89,16 +91,7 @@ function instructorDashboard() {
         },
       });
     },
-    logOut() {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("userRole");
-      window.location.href = "/public/auth/login.html";
-    },
-  };
-}
 
-async function loadComponent(id, path) {
-  const res = await fetch(path);
-  const html = await res.text();
-  document.getElementById(id).innerHTML = html;
-}
+    logOut,
+  };
+};

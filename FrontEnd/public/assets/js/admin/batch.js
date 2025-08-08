@@ -1,4 +1,6 @@
-function batchPage() {
+import { api, loadComponent, logOut } from "../shared/utils.js";
+
+ window.batchPage = function () {
   return {
     showCreateModal: false,
     selectedBatchId: "",
@@ -14,34 +16,25 @@ function batchPage() {
     async init() {
       await loadComponent("sidebar-placeholder", "../components/sidebar.html");
       await loadComponent("navbar-placeholder", "../components/nav.html");
+
       await this.fetchBatchOptions();
       await this.fetchBatchList();
       await this.fetchMetrics();
       await this.fetchTrend();
-      this.drawCharts(); // Dummy for now or add real endpoint if exists
-    },
-    logOut() {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("userRole");
-      window.location.href = "/public/auth/login.html";
+      this.drawCharts();
     },
 
+    logOut, // Use global logout function
+
     async fetchBatchOptions() {
-      const token = localStorage.getItem("accessToken");
-      const res = await fetch("https://localhost:7157/api/v1/Batches/all", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get("/Batches/all");
       const data = await res.json();
-      this.batchOptions = data.data;
+      this.batchOptions = data.data ?? [];
     },
 
     async fetchBatchList() {
-      const token = localStorage.getItem("accessToken");
-      const res = await fetch(
-        `https://localhost:7157/api/v1/Dashboard/admin/batches/analytics?PageSize=10&CurrentPage=1`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const res = await api.get(
+        `/Dashboard/admin/batches/analytics?PageSize=10&CurrentPage=1`
       );
       const json = await res.json();
       this.batchList = json.data.items.map((batch) => ({
@@ -54,29 +47,22 @@ function batchPage() {
     },
 
     async fetchMetrics() {
-      const token = localStorage.getItem("accessToken");
       const batchIdParam = this.selectedBatchId
         ? `?batchId=${this.selectedBatchId}`
         : "";
-      const res = await fetch(
-        `https://localhost:7157/api/v1/Dashboard/admin/batch/analytics${batchIdParam}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const res = await api.get(
+        `/Dashboard/admin/batch/analytics${batchIdParam}`
       );
       const data = await res.json();
       this.metrics = data.data;
     },
+
     async fetchTrend() {
-      const token = localStorage.getItem("accessToken");
       const batchIdParam = this.selectedBatchId
         ? `?batchId=${this.selectedBatchId}`
         : "";
-      const res = await fetch(
-        `https://localhost:7157/api/v1/Dashboard/admin/batches/performance-trend${batchIdParam}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const res = await api.get(
+        `/Dashboard/admin/batches/performance-trend${batchIdParam}`
       );
       const data = await res.json();
       this.trendData = data.data;
@@ -84,7 +70,6 @@ function batchPage() {
     },
 
     async createBatch() {
-      const token = localStorage.getItem("accessToken");
       const payload = {
         name: this.newBatch.name,
         batchNumber: parseInt(this.newBatch.number),
@@ -92,14 +77,7 @@ function batchPage() {
         endDate: null,
       };
 
-      const res = await fetch("https://localhost:7157/api/v1/Batches", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
+      const res = await api.post("/Batches", payload);
 
       if (res.ok) {
         this.showCreateModal = false;
@@ -107,6 +85,7 @@ function batchPage() {
         await this.fetchBatchOptions();
         await this.fetchBatchList();
       } else {
+        // This is usually handled by `api` automatically
         alert("Failed to create batch.");
       }
     },
@@ -115,11 +94,11 @@ function batchPage() {
       this.trendChart = new Chart(document.getElementById("trendChart"), {
         type: "line",
         data: {
-          labels: this.trendData.labels || "",
+          labels: this.trendData.labels || [],
           datasets: [
             {
               label: "Avg Score",
-              data: this.trendData.scores || 0,
+              data: this.trendData.scores || [],
               fill: false,
               borderColor: "#3b82f6",
               tension: 0.4,
@@ -140,7 +119,7 @@ function batchPage() {
             labels: ["Easy", "Medium", "Hard"],
             datasets: [
               {
-                data: [35, 45, 20],
+                data: [35, 45, 20], // You can replace this with backend data
                 backgroundColor: ["#10b981", "#f59e0b", "#ef4444"],
               },
             ],
@@ -150,9 +129,4 @@ function batchPage() {
       );
     },
   };
-}
-
-async function loadComponent(id, path) {
-  const res = await fetch(path);
-  document.getElementById(id).innerHTML = await res.text();
 }

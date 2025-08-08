@@ -31,5 +31,7 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<PaginationDto<InstructorAssessmentPerformanceDetailDto>>> GetInstructorAssessmentDetail(Guid instructorId, PaginationRequest request);
         Task<BaseResponse<List<AssessmentDto>>> GetInstructorRecentAssessment();
         Task UpdateAssessmentStatusAsync(Guid assessmentId, AssessmentStatus newStatus);
+        Task<BaseResponse<PaginationDto<AdminAssessmentDto>>> GetAllAssessmentsAsync(
+    Guid? batchId, DateTime? startDate, DateTime? endDate, string search, PaginationRequest request);
     }
 }

@@ -1,18 +1,20 @@
-async function loadComponent(id, path) {
-  const res = await fetch(path);
-  const html = await res.text();
-  document.getElementById(id).innerHTML = html;
-}
-function viewSubmissionPage() {
+import { api, loadComponent, logOut } from "../shared/utils.js";
+
+window.viewSubmissionPage = function () {
   return {
     submissionId: new URLSearchParams(window.location.search).get("id"),
-    submission: {
-      submittedAnswers: [],
-    },
+    submission: { submittedAnswers: [] },
     sidebarOpen: true,
-    token: localStorage.getItem("accessToken"),
 
     async init() {
+      // ✅ Redirect if no submission ID
+      if (!this.submissionId) {
+        Swal.fire("Error", "No submission ID provided!", "error").then(() => {
+          window.location.href = "/public/shared/student-submission.html";
+        });
+        return;
+      }
+
       await this.loadLayout();
       await this.loadSubmission();
     },
@@ -20,38 +22,33 @@ function viewSubmissionPage() {
     async loadLayout() {
       const role = localStorage.getItem("userRole");
       const sidebar =
-        role == "Admin"
+        role === "Admin"
           ? "../components/sidebar.html"
           : "../components/instructor-sidebar.html";
       const navbar =
-        role == "Admin"
+        role === "Admin"
           ? "../components/nav.html"
           : "../components/instructor-nav.html";
 
-      await loadComponent("sidebar-placeholder", sidebar);
-      await loadComponent("navbar-placeholder", navbar);
+      await Promise.all([
+        loadComponent("sidebar-placeholder", sidebar),
+        loadComponent("navbar-placeholder", navbar),
+      ]);
     },
 
     async loadSubmission() {
       try {
-        const res = await fetch(
-          `https://localhost:7157/api/v1/students/${this.submissionId}/submission`,
-          {
-            headers: {
-              Authorization: `Bearer ${this.token}`,
-            },
-          }
-        );
-
+        const res = await api.get(`/students/${this.submissionId}/submission`);
         const data = await res.json();
+
         if (data.status) {
           this.submission = data.data;
         } else {
-          alert("Failed to load submission");
+          Swal.fire("Error", "Failed to load submission", "error");
         }
       } catch (err) {
         console.error("Error fetching submission:", err);
-        alert("Failed to load submission");
+        Swal.fire("Error", "Failed to load submission", "error");
       }
     },
 
@@ -68,5 +65,7 @@ function viewSubmissionPage() {
     formatDate(dateStr) {
       return new Date(dateStr).toLocaleString();
     },
+
+    logOut,
   };
-}
+};

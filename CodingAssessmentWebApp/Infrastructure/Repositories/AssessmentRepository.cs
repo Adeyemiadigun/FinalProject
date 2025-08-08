@@ -101,6 +101,7 @@ namespace Infrastructure.Repositories
                 .ThenInclude(x => x.Student)
                 .ThenInclude(x => x.Batch)
                 .Include(x => x.Instructor)
+                .Include(x => x.Questions)
                 .Where(exp);
             var totalRecord = query.Count();
             var totalPages = (int)Math.Ceiling((double)totalRecord / request.PageSize);
