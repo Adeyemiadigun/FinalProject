@@ -19,5 +19,6 @@ namespace Application.Interfaces.Repositories
         Task<PaginationDto<Submission>> GetStudentSubmissionsAsync(Guid studentId, PaginationRequest request);
         Task<ICollection<Submission>> GetSelectedIds(ICollection<Guid> ids);
         Task<List<Guid>> GetAllIdsAsync(Expression<Func<Submission, bool>> predicate);
+        Task<PaginationDto<Submission>> GetAllAsync(Expression<Func<Submission, bool>> exp, PaginationRequest request);
     }
 }

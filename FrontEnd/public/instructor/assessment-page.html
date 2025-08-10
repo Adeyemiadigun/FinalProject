@@ -5,6 +5,7 @@
   <meta charset="UTF-8" />
   <title>Instructor Assessments</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="/public/assets/js/instructor/assessment-page.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -12,13 +13,6 @@
       display: none !important;
     }
   </style>
-  <script>
-    async function loadComponent(id, url) {
-      const res = await fetch(url);
-      const html = await res.text();
-      document.getElementById(id).innerHTML = html;
-    }
-  </script>
 </head>
 
 <body class="bg-gray-100 text-gray-800">
@@ -164,7 +158,6 @@
   </div>
 
   <!-- Alpine Logic -->
-  <script type="module" src="/public/assets/js/instructor/assessment-page.js"></script>
-  </script>
+ 
 </body>
 </html>

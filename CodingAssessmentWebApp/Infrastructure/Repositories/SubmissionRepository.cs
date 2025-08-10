@@ -31,6 +31,28 @@ namespace Infrastructure.Repositories
                 CurrentPage = request.CurrentPage,
             };
         }
+        public async Task<PaginationDto<Submission>> GetAllAsync(Expression<Func<Submission,bool>> exp, PaginationRequest request)
+        {
+            var query = _context.Set<Submission>()
+                .Include(x => x.Student)
+                .Include(x => x.Assessment)
+                .Include(x => x.AnswerSubmissions)
+                .ThenInclude(x => x.Question)
+                .Where(exp);
+            var totalRecord = query.Count();
+            var totalPages = (int)Math.Ceiling((double)totalRecord / request.PageSize);
+            var result = await query.Skip((request.CurrentPage - 1) * request.PageSize).Take(request.PageSize)
+                .ToListAsync();
+            return new PaginationDto<Submission>
+            {
+                TotalItems = totalRecord,
+                TotalPages = totalPages,
+                Items = result,
+                HasNextPage = totalPages / request.CurrentPage == 1 ? false : true,
+                HasPreviousPage = request.CurrentPage - 1 == 0 ? false : true,
+                CurrentPage = request.CurrentPage,
+            };
+        }
 
         public async Task<ICollection<Submission>> GetAllAsync(Expression<Func<Submission, bool>> exp)
         {

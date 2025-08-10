@@ -33,5 +33,6 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<StudentDetail>> GetStudentDetail();
         Task<BaseResponse<StudentProfileMetrics>> GetStudentMetrics();
         Task<BaseResponse<PaginationDto<SubmissionsDto>>> GetStudentSubmissionsAsync(Guid studentId, PaginationRequest request);
+        Task<BaseResponse<List<StudentScoreByTypeDto>>> GetScoreByTypeAsync(Guid studentId, DateTime? startDate, DateTime? endDate);
     }
 }

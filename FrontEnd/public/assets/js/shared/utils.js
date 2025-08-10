@@ -23,10 +23,15 @@ async function handleResponse(response) {
       // Fallback if JSON parsing fails
     }
     Swal.fire({
+      toast: true,
+      position: "top-end",
       icon: "error",
-      title: "Request Failed",
-      text: errorMessage,
+      title: errorMessage,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
     });
+
     throw new Error(errorMessage);
   }
 

@@ -8,6 +8,7 @@ using Application.Interfaces.Services;
 using Domain.Entities;
 using Domain.Entitties;
 using Domain.Enum;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Application.Services
 {
@@ -345,22 +346,32 @@ namespace Application.Services
                 (batchId == null || x.BatchAssessment.Any(ba => ba.BatchId == batchId.Value)) &&
                 x.Submissions.Any(s => s.SubmittedAt.Month == targetMonth)
             );
+            // ✅ Determine total weeks in the target month
+            var daysInMonth = DateTime.DaysInMonth(DateTime.UtcNow.Year, targetMonth);
+            var totalWeeks = (int)Math.Ceiling(daysInMonth / 7.0);
 
             if (assessments == null || !assessments.Any())
-                throw new ApiException("No assessments found.", (int)HttpStatusCode.NotFound, "NoAssessmentsFound", null);
+                return new BaseResponse<List<ScoreTrenddto>>
+                {
+                    Message = "Score trend data generated.",
+                    Status = true,
+                    Data = Enumerable.Range(1, totalWeeks)
+                    .Select(week => new ScoreTrenddto
+                    {
+                        Label = $"Week {week}",
+                        AverageScore = 0
+                    })
+                    .ToList()
+                };
+            
 
-            // ✅ Group submissions by week
             var groupedTrends = assessments
                 .SelectMany(a => a.Submissions.Where(s => s.SubmittedAt.Month == targetMonth))
                 .GroupBy(s => (int)Math.Ceiling(s.SubmittedAt.Day / 7.0)) // Week number
                 .Select(g => new { Week = g.Key, AverageScore = Math.Round(g.Average(x => x.TotalScore), 2) })
                 .ToDictionary(x => x.Week, x => x.AverageScore);
 
-            // ✅ Determine total weeks in the target month
-            var daysInMonth = DateTime.DaysInMonth(DateTime.UtcNow.Year, targetMonth);
-            var totalWeeks = (int)Math.Ceiling(daysInMonth / 7.0);
-
-            // ✅ Ensure weeks with 0 score appear
+      
             var trends = Enumerable.Range(1, totalWeeks)
                 .Select(week => new ScoreTrenddto
                 {

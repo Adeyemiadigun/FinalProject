@@ -912,6 +912,47 @@ namespace Application.Services
                 Message = $"{newUsers.Count} student(s) registered successfully."
             };
         }
+        public async Task<BaseResponse<List<StudentScoreByTypeDto>>> GetScoreByTypeAsync(Guid studentId, DateTime? startDate, DateTime? endDate)
+        {
+            var submissions = await _submissionRepo.GetAllAsync(s =>
+                s.StudentId == studentId &&
+                (!startDate.HasValue || s.SubmittedAt.Date >= startDate.Value.Date) &&
+                (!endDate.HasValue || s.SubmittedAt.Date <= endDate.Value.Date)
+            );
+
+            if (submissions == null || !submissions.Any())
+                throw new ApiException("No submissions found for the student in the specified range.", 404, "NoSubmissionsFound", null);
+
+            var allAnswers = submissions
+                .SelectMany(s => s.AnswerSubmissions)
+                .Where(a => a.Question != null)
+                .ToList();
+
+            var grouped = allAnswers
+                .GroupBy(a => a.Question.QuestionType.ToString())
+                .Select(g =>
+                {
+                    var totalEarned = g.Sum(x => x.Score);
+                    var totalPossible = g.Sum(x => x.Question.Marks);
+
+                    return new StudentScoreByTypeDto
+                    {
+                        Type = g.Key,
+                        AverageScore = totalPossible > 0 ? Math.Round((double)(totalEarned / totalPossible) * 100, 2) : 0,
+                        AttemptCount = g.Count()
+                    };
+                })
+                .ToList();
+
+            return new BaseResponse<List<StudentScoreByTypeDto>>
+            {
+                Data = grouped,
+                Message = "Score by question type generated",
+                Status = true
+            };
+        }
+
+
 
     }
 }

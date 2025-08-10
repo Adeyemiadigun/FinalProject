@@ -141,6 +141,15 @@ namespace Application.Dtos
         public string Status { get; set; } 
     }
 
-  
+    public class AssessmentHistoryItemDto
+    {
+        public Guid AssessmentId { get; set; }
+        public string Title { get; set; }
+        public double Score { get; set; }
+        public int TotalQuestions { get; set; }
+        public DateTime SubmittedAt { get; set; }
+        public string FeedBack { get; set; }
+    }
+
 
 }

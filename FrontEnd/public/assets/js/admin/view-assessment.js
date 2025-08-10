@@ -16,6 +16,7 @@ window.assessmentsPage = function () {
       scoreTrendsChart: null,
       createdOverTimeChart: null,
     },
+    isInitialized: false,
 
     // State properties
     filters: {
@@ -32,6 +33,13 @@ window.assessmentsPage = function () {
 
     // Initialization
     async init() {
+       if (this.isInitialized) {
+         console.log("Component already initialized, skipping...");
+         return;
+       }
+
+       this.isInitialized = true;
+       console.log("Initializing assessments page...");
       await this.loadLayout();
       await this.loadFilters();
       await this.loadData();
@@ -77,114 +85,286 @@ window.assessmentsPage = function () {
       this.isLoading.charts = true;
       this.isLoading.assessments = true;
 
+      // Destroy existing charts before loading new data
+      this.destroyCharts();
+
+      const params = new URLSearchParams(this.filters).toString();
+
       try {
-        const params = new URLSearchParams(this.filters).toString();
+        // METRICS
+        await this.loadMetrics(params);
 
-        // Fetch all data in parallel
-        const [metricsRes, assessmentsRes, scoreTrendRes, createdTrendRes] =
-          await Promise.all([
-            api.get(`/dashboard/admin/assessments/metrics?${params}`),
-            api.get(`/Assessments/recents`),
-            api.get(
-              `/Dashboard/admin/analytics/assessments/score-trends?instructorId=${this.filters.instructorId}&batchId=${this.filters.batchId}&month=${this.filters.month}`
-            ),
-            api.get(
-              `/Dashboard/admin/analytics/assessments/created-trend?instructorId=${this.filters.instructorId}&batchId=${this.filters.batchId}&month=${this.filters.month}`
-            ),
-          ]);
-
-        if (
-          !metricsRes.ok ||
-          !assessmentsRes.ok ||
-          !scoreTrendRes.ok ||
-          !createdTrendRes.ok
-        ) {
-          throw new Error("Failed to fetch assessment data.");
-        }
-
-        const metricsData = await metricsRes.json();
-        const assessmentsData = await assessmentsRes.json();
-        const scoreTrendData = await scoreTrendRes.json();
-        const createdTrendData = await createdTrendRes.json();
-
-        // Set metrics
-        const metricsSource = metricsData.data;
-        this.metrics = [
-          { label: "Total Assessments", value: metricsSource.totalAssessments },
-          {
-            label: "Active Assessments",
-            value: metricsSource.activeAssessments,
-          },
-          { label: "Average Score", value: `${metricsSource.averageScore}%` },
-          { label: "Pass Rate", value: `${metricsSource.passRate}%` },
-          {
-            label: "Completion Rate",
-            value: `${metricsSource.completionRate}%`,
-          },
-        ];
-
-        // Process assessments
-        this.assessments = assessmentsData.data.map((a) => ({
-          ...a,
-          statusClass: this.getStatusClass(a.status),
-        }));
-
-        // Store chart configs
-        this.chartConfigs.scoreTrendsChart = {
-          type: "line",
-          labels: scoreTrendData.data.map((d) => d.label || d.Label),
-          datasets: [
-            {
-              label: "Avg. Score",
-              data: scoreTrendData.data.map(
-                (d) => d.averageScore ?? d.AverageScore
-              ),
-              borderColor: "#4f46e5",
-              tension: 0.4,
-            },
-          ],
-        };
-        this.chartConfigs.createdOverTimeChart = {
-          type: "line",
-          labels: createdTrendData.data.map((d) => d.label || d.Label),
-          datasets: [
-            {
-              label: "Assessments Created",
-              data: createdTrendData.data.map((d) => d.count ?? d.Count),
-              borderColor: "#10b981",
-              tension: 0.4,
-            },
-          ],
-        };
+        // CHARTS - Load chart data
+        await Promise.all([this.loadScoreTrends(), this.loadCreatedTrends()]);
+        await this.loadRecentAssessments(); 
       } catch (error) {
-        console.error("Data loading error:", error);
-        Swal.fire({
-          icon: "error",
-          title: "Failed to Load Data",
-          text: "Could not retrieve assessment data. Please try again later.",
-        });
+        console.error("loadData overall error:", error);
       } finally {
-        // Stop all loaders
         this.isLoading.metrics = false;
-        this.isLoading.charts = false;
         this.isLoading.assessments = false;
+        this.isLoading.charts = false;
 
+        // Render charts after a delay to ensure DOM is ready
         await this.$nextTick();
-
-        // Draw charts
-        if (this.chartConfigs.scoreTrendsChart) {
-          this.drawChart(
-            "scoreTrendsChart",
-            this.chartConfigs.scoreTrendsChart
-          );
-        }
-        if (this.chartConfigs.createdOverTimeChart) {
-          this.drawChart(
-            "createdOverTimeChart",
-            this.chartConfigs.createdOverTimeChart
-          );
-        }
+        setTimeout(() => {
+          this.renderCharts();
+        }, 150);
       }
+    },
+
+    async loadMetrics(params) {
+      try {
+        const res = await api.get(
+          `/dashboard/admin/assessments/metrics?${params}`
+        );
+        if (!res.ok) throw new Error("Failed to fetch metrics");
+        const data = await res.json();
+        const m = data.data;
+        this.metrics = [
+          { label: "Total Assessments", value: m.totalAssessments },
+          { label: "Active Assessments", value: m.activeAssessments },
+          { label: "Average Score", value: `${m.averageScore}%` },
+          { label: "Pass Rate", value: `${m.passRate}%` },
+          { label: "Completion Rate", value: `${m.completionRate}%` },
+        ];
+      } catch (err) {
+        console.warn("Metrics error:", err);
+        this.metrics = [
+          { label: "Total Assessments", value: 0 },
+          { label: "Active Assessments", value: 0 },
+          { label: "Average Score", value: "0%" },
+          { label: "Pass Rate", value: "0%" },
+          { label: "Completion Rate", value: "0%" },
+        ];
+      }
+    },
+
+    async loadScoreTrends() {
+      try {
+        const res = await api.get(
+          `/Dashboard/admin/analytics/assessments/score-trends?instructorId=${this.filters.instructorId}&batchId=${this.filters.batchId}&month=${this.filters.month}`
+        );
+        if (!res.ok) throw new Error("Failed to fetch score trends");
+        const data = await res.json();
+
+        if (data.data && data.data.length > 0) {
+          this.chartConfigs.scoreTrendsChart = {
+            type: "line",
+            labels: data.data.map((d) => d.label || d.Label),
+            datasets: [
+              {
+                label: "Avg. Score",
+                data: data.data.map((d) => d.averageScore ?? d.AverageScore),
+                borderColor: "#4f46e5",
+                backgroundColor: "rgba(79, 70, 229, 0.1)",
+                tension: 0.4,
+                fill: false,
+                pointBackgroundColor: "#4f46e5",
+                pointBorderColor: "#4f46e5",
+                pointRadius: 4,
+              },
+            ],
+          };
+        } else {
+          this.chartConfigs.scoreTrendsChart = null;
+        }
+      } catch (err) {
+        console.warn("Score trends error:", err);
+        this.chartConfigs.scoreTrendsChart = null;
+      }
+    },
+    async loadRecentAssessments() {
+      try{
+        const res = await api.get(`/Assessments/recents`);
+        if (!res.ok) throw new Error("Failed to fetch recent assessments");
+        const data = await res.json();
+        console.log("Recent assessments data:", data);
+        this.assessments = data.data || [];
+      }
+      catch{}
+    },
+
+    async loadCreatedTrends() {
+      try {
+        const res = await api.get(
+          `/Dashboard/admin/analytics/assessments/created-trend?instructorId=${this.filters.instructorId}&batchId=${this.filters.batchId}&month=${this.filters.month}`
+        );
+        if (!res.ok) throw new Error("Failed to fetch created trends");
+        const data = await res.json();
+
+        if (data.data && data.data.length > 0) {
+          this.chartConfigs.createdOverTimeChart = {
+            type: "line",
+            labels: data.data.map((d) => d.label || d.Label),
+            datasets: [
+              {
+                label: "Assessments Created",
+                data: data.data.map((d) => d.count ?? d.Count),
+                borderColor: "#10b981",
+                backgroundColor: "rgba(16, 185, 129, 0.1)",
+                tension: 0.4,
+                fill: false,
+                pointBackgroundColor: "#10b981",
+                pointBorderColor: "#10b981",
+                pointRadius: 4,
+              },
+            ],
+          };
+        } else {
+          this.chartConfigs.createdOverTimeChart = null;
+        }
+      } catch (err) {
+        console.warn("Created trends error:", err);
+        this.chartConfigs.createdOverTimeChart = null;
+      }
+    },
+
+    destroyCharts() {
+      Object.keys(this.charts).forEach((chartId) => {
+        if (this.charts[chartId]) {
+          try {
+            this.charts[chartId].destroy();
+          } catch (error) {
+            console.warn(`Error destroying chart ${chartId}:`, error);
+          }
+          this.charts[chartId] = null;
+        }
+      });
+    },
+
+    renderCharts() {
+      if (this.chartConfigs.scoreTrendsChart) {
+        this.drawChart("scoreTrendsChart", this.chartConfigs.scoreTrendsChart);
+      }
+      if (this.chartConfigs.createdOverTimeChart) {
+        this.drawChart(
+          "createdOverTimeChart",
+          this.chartConfigs.createdOverTimeChart
+        );
+      }
+    },
+
+    drawChart(canvasId, chartData) {
+      // Wait for element to be available and visible
+      const maxAttempts = 10;
+      let attempts = 0;
+
+      const attemptDraw = () => {
+        attempts++;
+        const canvas = document.getElementById(canvasId);
+
+        if (!canvas) {
+          console.warn(
+            `Canvas element #${canvasId} not found. Attempt ${attempts}/${maxAttempts}`
+          );
+          if (attempts < maxAttempts) {
+            setTimeout(attemptDraw, 100);
+          }
+          return;
+        }
+
+        // Check if canvas is visible and has dimensions
+        if (
+          canvas.offsetParent === null ||
+          canvas.clientWidth === 0 ||
+          canvas.clientHeight === 0
+        ) {
+          console.warn(
+            `Canvas #${canvasId} not visible or has no dimensions. Attempt ${attempts}/${maxAttempts}`
+          );
+          if (attempts < maxAttempts) {
+            setTimeout(attemptDraw, 100);
+          }
+          return;
+        }
+
+        try {
+          const ctx = canvas.getContext("2d");
+
+          if (!ctx) {
+            console.error(`Cannot get 2D context for canvas #${canvasId}`);
+            return;
+          }
+
+          // Destroy existing chart if it exists
+          if (this.charts[canvasId]) {
+            this.charts[canvasId].destroy();
+            this.charts[canvasId] = null;
+          }
+
+          // Create new chart
+          this.charts[canvasId] = new Chart(ctx, {
+            type: chartData.type,
+            data: {
+              labels: chartData.labels,
+              datasets: chartData.datasets,
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: {
+                intersect: false,
+                mode: "index",
+              },
+              plugins: {
+                legend: {
+                  display: true,
+                  position: "top",
+                  labels: {
+                    padding: 20,
+                    usePointStyle: true,
+                  },
+                },
+                tooltip: {
+                  backgroundColor: "rgba(0, 0, 0, 0.8)",
+                  titleColor: "white",
+                  bodyColor: "white",
+                  borderColor: "rgba(255, 255, 255, 0.1)",
+                  borderWidth: 1,
+                },
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  grid: {
+                    color: "rgba(0, 0, 0, 0.1)",
+                    drawBorder: false,
+                  },
+                  ticks: {
+                    color: "#6b7280",
+                  },
+                },
+                x: {
+                  grid: {
+                    color: "rgba(0, 0, 0, 0.1)",
+                    drawBorder: false,
+                  },
+                  ticks: {
+                    color: "#6b7280",
+                  },
+                },
+              },
+              elements: {
+                line: {
+                  borderWidth: 2,
+                },
+                point: {
+                  hoverRadius: 6,
+                },
+              },
+            },
+          });
+
+          console.log(`Chart ${canvasId} created successfully`);
+        } catch (error) {
+          console.error(`Error creating chart ${canvasId}:`, error);
+          if (attempts < maxAttempts) {
+            setTimeout(attemptDraw, 200);
+          }
+        }
+      };
+
+      attemptDraw();
     },
 
     getStatusClass(status) {
@@ -198,29 +378,6 @@ window.assessmentsPage = function () {
         default:
           return "bg-yellow-100 text-yellow-800";
       }
-    },
-
-    drawChart(canvasId, chartData) {
-      const ctx = document.getElementById(canvasId)?.getContext("2d");
-      if (!ctx) return;
-
-      // Destroy existing chart instance if it exists
-      if (this.charts[canvasId]) {
-        this.charts[canvasId].destroy();
-      }
-
-      this.charts[canvasId] = new Chart(ctx, {
-        type: chartData.type,
-        data: {
-          labels: chartData.labels,
-          datasets: chartData.datasets,
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: { y: { beginAtZero: true } },
-        },
-      });
     },
 
     logOut,

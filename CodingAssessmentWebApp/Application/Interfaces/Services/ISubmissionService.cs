@@ -16,5 +16,6 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<PaginationDto<SubmissionDto>>> GetAssessmentSubmissions(Guid assessmentId, PaginationRequest request);
         Task<BaseResponse<SubmissionDto>> GetSubmissionByIdAsync(Guid submissionId);
         Task<BaseResponse<List<StudentScoreTrendDto>>> GetStudentScoreTrendsAsync(Guid studentId, DateTime? date);
+        Task<BaseResponse<PaginationDto<AssessmentHistoryItemDto>>> GetStudentAssessmentHistoryAsync(Guid studentId, string? TitleSearch, PaginationRequest request);
     }
 }

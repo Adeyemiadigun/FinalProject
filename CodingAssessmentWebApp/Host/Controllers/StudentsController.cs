@@ -149,13 +149,30 @@ namespace Host.Controllers
             var result = await _userService.GetStudentMetrics();
             return Ok(result);
         }
-        [HttpGet("{studentId:guid}score-trends")]
+        [HttpGet("{studentId:guid}/score-trends")]
         public async Task<IActionResult> GetStudentScoreTrends(Guid studentId, [FromQuery] DateTime? date)
         {
             var result = await submissionService.GetStudentScoreTrendsAsync(studentId, date);
             return Ok(result);
         }
 
+        [HttpGet("{studentId}/score-by-type")]
+        public async Task<IActionResult> GetStudentScoreByType(Guid studentId, [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+        {
+            var result = await _userService.GetScoreByTypeAsync(studentId, startDate, endDate);
+            return Ok(result);
+        }
+        [HttpGet("{studentId:guid}/assessment-history")]
+        public async Task<IActionResult> GetStudentAssessmentHistory(
+        [FromRoute] Guid studentId,
+        [FromQuery] PaginationRequest request,
+        [FromQuery] string? titleSearch = null)
+        {
+           
+
+            var result = await submissionService.GetStudentAssessmentHistoryAsync(studentId,titleSearch,request);
+            return Ok(result);
+        }
 
     }
 }

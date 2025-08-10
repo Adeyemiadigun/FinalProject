@@ -4,14 +4,18 @@ window.instructorDetailsPage = function () {
   return {
     instructor: {},
     assessments: [],
+    currentPage: 1,
+    pageSize: 10,
+    totalPages: 1,
     sidebarOpen: true,
 
     async init() {
-      // Load layout components
       await loadComponent("sidebar-placeholder", "../components/sidebar.html");
       await loadComponent("navbar-placeholder", "../components/nav.html");
 
       const id = new URLSearchParams(window.location.search).get("id");
+      this.instructorId = id;
+
       if (!id) {
         Swal.fire({
           icon: "error",
@@ -22,49 +26,72 @@ window.instructorDetailsPage = function () {
       }
 
       try {
-        // Fetch profile and assessments in parallel
-        const [profileRes, assessmentRes] = await Promise.all([
+        const [profileRes] = await Promise.all([
           api.get(`/Instructors/${id}/details`),
-          api.get(
-            `/Instructors/${id}/assessment/details?pageSize=10&currentPage=1`
-          ),
         ]);
 
-        // Handle unauthorized globally in api wrapper
-        if (!profileRes.ok || !assessmentRes.ok) {
-          const profileErr = await profileRes.json();
-          const assessmentErr = await assessmentRes.json();
-          throw new Error(
-            profileErr?.detail ||
-              assessmentErr?.detail ||
-              "Failed to load instructor details."
-          );
+        if (!profileRes.ok) {
+          const err = await profileRes.json();
+          throw new Error(err?.detail || "Failed to load instructor details.");
         }
 
         const profileData = await profileRes.json();
-        const assessmentsData = await assessmentRes.json();
-
         this.instructor = profileData.data;
-        this.assessments =
-          assessmentsData.data?.items || assessmentsData.items || [];
+
+        await this.fetchAssessments(); // fetch page 1
       } catch (err) {
         console.error(err);
         Swal.fire({
           icon: "error",
           title: "Loading Error",
-          text:
-            err.message ||
-            "Unable to load instructor details. Please try again later.",
+          text: err.message || "Unable to load instructor details.",
         });
+      }
+    },
+
+    async fetchAssessments() {
+      try {
+        const res = await api.get(
+          `/Instructors/${this.instructorId}/assessment/details?pageSize=${this.pageSize}&currentPage=${this.currentPage}`
+        );
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err?.detail || "Failed to load assessments.");
+        }
+
+        const data = await res.json();
+        this.assessments = data.data?.items || [];
+        this.totalPages = data.data?.totalPages || 1;
+      } catch (err) {
+        console.error(err);
+        Swal.fire({
+          icon: "error",
+          title: "Loading Error",
+          text: err.message || "Unable to load assessments.",
+        });
+      }
+    },
+
+    nextPage() {
+      if (this.currentPage < this.totalPages) {
+        this.currentPage++;
+        this.fetchAssessments();
+      }
+    },
+
+    prevPage() {
+      if (this.currentPage > 1) {
+        this.currentPage--;
+        this.fetchAssessments();
       }
     },
 
     formatDate(date) {
       if (!date) return "N/A";
-      const d = new Date(date);
-      return d.toLocaleDateString();
+      return new Date(date).toLocaleDateString();
     },
 
-    logOut, // Use shared logOut
+    logOut,
   };
-}
+};

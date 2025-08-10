@@ -6,6 +6,7 @@
   <title>Instructor Details</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="/public/assets/js/admin/instructor-detail.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 
@@ -66,6 +67,19 @@
               </template>
             </tbody>
           </table>
+          <!-- Pagination Controls -->
+          <div class="mt-4 flex justify-between items-center text-sm" x-show="totalPages > 1">
+            <button @click="prevPage" :disabled="currentPage === 1"
+              class="px-3 py-1 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50">
+              Previous
+            </button>
+            <span>Page <span x-text="currentPage"></span> of <span x-text="totalPages"></span></span>
+            <button @click="nextPage" :disabled="currentPage === totalPages"
+              class="px-3 py-1 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50">
+              Next
+            </button>
+          </div>
+
         </div>
       </template>
       <template x-if="!assessments.length">
@@ -74,7 +88,6 @@
     </div>
   </div>
 
-  <script type="module" src="/public/assets/js/admin/instructor-detail.js"></script>
    
   </script>
 </body>

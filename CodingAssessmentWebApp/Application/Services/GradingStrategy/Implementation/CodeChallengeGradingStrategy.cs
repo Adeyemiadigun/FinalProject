@@ -55,7 +55,7 @@ namespace Application.Services.GradingStrategy.Implementation
             }
 
            await  testCaseResultRepository.CreateAsync(answerSubmission.TestCaseResults);
-            answerSubmission.Score = (short)totalWeight;
+            answerSubmission.Score = totalWeight == answerSubmission.Question.Tests.Sum(t => t.Weight)? (short)totalWeight :(short) 0 ;
             answerSubmission.IsCorrect = totalWeight == answerSubmission.Question.Tests.Sum(t => t.Weight);
         }
 

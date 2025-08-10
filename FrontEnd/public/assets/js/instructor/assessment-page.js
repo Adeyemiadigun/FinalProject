@@ -35,8 +35,13 @@ window.instructorAssessmentsPage = function () {
       );
 
       const batchRes = await api.get("/Batches/all");
-      if (batchRes.status) this.batches = batchRes.data;
+      if (batchRes.status) 
+        {
+          var batchData = await batchRes.json();
+          this.batches = batchData.data || [];
+      console.log("Batches:", batchData);
 
+        }
       await this.fetchPage();
     },
 
@@ -50,13 +55,16 @@ window.instructorAssessmentsPage = function () {
       const result = await api.get(
         `/Instructors/assessments?${params.toString()}`
       );
+      console.log("Assessments result:", result);
       if (result.status) {
-        this.assessments = result.data.items;
+       var res = await result.json();
+        console.log("Assessments data:", res.data);
+        this.assessments = res.data.items;
         this.pagination = {
-          currentPage: result.data.currentPage,
-          totalPages: result.data.totalPages,
-          hasNextPage: result.data.hasNextPage,
-          hasPreviousPage: result.data.hasPreviousPage,
+          currentPage: res.data.currentPage,
+          totalPages: res.data.totalPages,
+          hasNextPage: res.data.hasNextPage,
+          hasPreviousPage: res.data.hasPreviousPage,
         };
         this.drawAllCharts();
       } else {

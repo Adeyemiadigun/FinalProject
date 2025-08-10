@@ -110,5 +110,13 @@ namespace Application.Dtos
         public string Token { get; set; }
         public string NewPassword { get; set; }
     }
+    public class StudentScoreByTypeDto
+    {
+        public string Type { get; set; } = default!;
+        public double AverageScore { get; set; }
+
+        public int AttemptCount { get; set; }
+    }
+
 }
 

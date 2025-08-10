@@ -423,31 +423,47 @@ namespace Application.Services
         }
         public async Task<BaseResponse<List<StudentScoreTrendDto>>> GetStudentScoreTrendsAsync(Guid studentId, DateTime? date)
         {
+            if (studentId == Guid.Empty)
+                throw new ApiException("Student ID is required", 400, "InvalidStudentId");
+
             var targetDate = date ?? DateTime.UtcNow;
             var targetMonth = targetDate.Month;
             var targetYear = targetDate.Year;
 
-            // Fetch all submissions by student within the target month/year
+            var daysInMonth = DateTime.DaysInMonth(targetYear, targetMonth);
+            var totalWeeks = (int)Math.Ceiling(daysInMonth / 7.0);
+
             var submissions = await _submissionRepository.GetAllAsync(s =>
                 s.StudentId == studentId &&
                 s.SubmittedAt.Month == targetMonth &&
                 s.SubmittedAt.Year == targetYear);
 
+            // If no submissions, return zero scores
             if (submissions == null || !submissions.Any())
-                throw new ApiException("No submissions found for the student in the specified month.",
-                    (int)HttpStatusCode.NotFound, "NoSubmissionsFound", null);
+            {
+                var trends = Enumerable.Range(1, totalWeeks)
+                   .Select(week => new StudentScoreTrendDto
+                   {
+                       Labels = $"Week {week}",
+                       Scores = 0
+                   })
+                   .ToList();
 
-            // Group by week of the month
+                return new BaseResponse<List<StudentScoreTrendDto>>
+                {
+                    Status = true,
+                    Message = "No submissions found for student.",
+                    Data = trends
+                };
+            }
+
+            // Group by week number
             var groupedTrends = submissions
-                .GroupBy(s => (int)Math.Ceiling(s.SubmittedAt.Day / 7.0)) // week number (1–5)
+                .GroupBy(s => (int)Math.Ceiling(s.SubmittedAt.Day / 7.0))
                 .Select(g => new { Week = g.Key, AverageScore = Math.Round(g.Average(x => x.TotalScore), 2) })
                 .ToDictionary(x => x.Week, x => x.AverageScore);
 
-            var daysInMonth = DateTime.DaysInMonth(targetYear, targetMonth);
-            var totalWeeks = (int)Math.Ceiling(daysInMonth / 7.0);
-
-            // Fill in empty weeks with 0
-            var trends = Enumerable.Range(1, totalWeeks)
+            var filledTrends = Enumerable.Range(1, totalWeeks)
                 .Select(week => new StudentScoreTrendDto
                 {
                     Labels = $"Week {week}",
@@ -459,8 +475,49 @@ namespace Application.Services
             {
                 Status = true,
                 Message = "Student score trends loaded.",
-                Data = trends
+                Data = filledTrends
             };
         }
+        public async Task<BaseResponse<PaginationDto<AssessmentHistoryItemDto>>> GetStudentAssessmentHistoryAsync(Guid studentId, string? TitleSearch, PaginationRequest request)
+        {
+            if (studentId == Guid.Empty)
+                throw new ApiException("Student ID is required", 400, "InvalidStudentId");
+
+            var query = await _submissionRepository.GetAllAsync(
+                 x => x.StudentId == studentId &&
+                      (string.IsNullOrEmpty(TitleSearch) || x.Assessment.Title.Contains(TitleSearch)),
+                 request
+             );
+
+            var items = query.Items
+                .Select(s => new AssessmentHistoryItemDto
+                {
+                    AssessmentId = s.Id,
+                    Title = s.Assessment.Title,
+                    Score = s.TotalScore,
+                    TotalQuestions = s.Assessment.Questions.Count,
+                    SubmittedAt = s.SubmittedAt,
+                    FeedBack = s.FeedBack
+                });
+
+            var paged = new PaginationDto<AssessmentHistoryItemDto>
+            {
+                Items = items,
+                TotalItems = query.TotalItems,
+                CurrentPage = request.CurrentPage,
+                PageSize = request.PageSize,
+                TotalPages = query.TotalPages,
+                HasNextPage = query.HasNextPage,
+                HasPreviousPage = query.HasPreviousPage
+            };
+
+            return new BaseResponse<PaginationDto<AssessmentHistoryItemDto>>
+            {
+                Status = true,
+                Message = "Assessment history retrieved",
+                Data = paged
+            };
+        }
+
     }
 }
