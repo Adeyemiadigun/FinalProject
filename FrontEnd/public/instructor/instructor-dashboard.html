@@ -8,6 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script type="module" src="/public/assets/js/instructor/instructor-dashboard.js">
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -44,15 +45,47 @@
     </div>
 
     <!-- Charts -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="flex space-x-4 items-center mb-4">
+      <div>
+        <label class="text-sm text-gray-600">From</label>
+        <input type="date" x-model="filters.fromDate" class="border rounded px-2 py-1" />
+      </div>
+      <div>
+        <label class="text-sm text-gray-600">To</label>
+        <input type="date" x-model="filters.toDate" class="border rounded px-2 py-1" />
+      </div>
+      <button @click="loadScores()" class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Apply</button>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
       <div class="bg-white p-4 rounded shadow">
         <h4 class="font-medium mb-2">My Assessment Scores</h4>
         <canvas id="assessmentScoreChart"></canvas>
       </div>
+      
       <div class="bg-white p-4 rounded shadow">
         <h4 class="font-medium mb-2">Student Distribution by Batch</h4>
         <canvas id="studentBatchChart"></canvas>
       </div>
+      <div>
+        <label class="text-sm text-gray-600">Batch</label>
+        <select x-model="filters.batchId" class="border rounded px-2 py-1">
+          <option value="">All</option>
+          <template x-for="batch in batches" :key="batch.id">
+            <option :value="batch.id" x-text="batch.batchName"></option>
+          </template>
+        </select>
+      </div>
+
+        <!-- Score by Question Type -->
+        <div class="bg-white p-4 rounded shadow col-span-1 md:col-span-2">
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="text-lg font-semibold">Score by Question Type</h3>
+            <span class="text-sm text-gray-500">Hover to see attempts</span>
+          </div>
+          <canvas id="scoreByTypesChart" height="150"></canvas>
+        </div>
+
     </div>
 
     <!-- Quick Actions -->
@@ -74,6 +107,11 @@
             <span class="text-sm text-gray-500" x-text="a.createdDate"></span>
           </li>
         </template>
+        <tr x-show="recentAssessments.length === 0">
+          <p colspan="5" class="text-center text-gray-500 py-4" x-transition.opacity.duration.300ms>
+            No Recent Assessments.
+          </p>
+        </tr>
       </ul>
     </div>
 

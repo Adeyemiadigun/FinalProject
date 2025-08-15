@@ -37,12 +37,23 @@ namespace Infrastructure.Repositories
                 .FirstOrDefaultAsync(x => x.Id == id);
 
         }
+        
         public Task<Assessment?> GetAsync(Expression<Func<Assessment,bool>> exp)
         {
             return _context.Set<Assessment>()
                 .Include(x => x.AssessmentAssignments)
                 .Include(x => x.Submissions.Where(x => x.IsAutoSubmitted == false))
+                .Include(x => x.BatchAssessment)
                 .FirstOrDefaultAsync(exp);
+        }
+        public async Task<Assessment?> GetForOverview(Guid id)
+        {
+            return await _context.Assessments
+                .Include(x => x.BatchAssessment)
+                .ThenInclude(s => s.Batch)
+                .Include(x => x.Submissions)
+                .Include(x => x.AssessmentAssignments)
+                .FirstOrDefaultAsync(x => x.Id == id);
         }
         public async Task<PaginationDto<Assessment>> GetAllAsync(PaginationRequest request)
         {

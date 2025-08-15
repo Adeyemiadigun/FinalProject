@@ -21,6 +21,62 @@ window.studentsPage = function () {
     isLoading: true,
     isSubmitting: false,
     sidebarOpen: true,
+    uploadFile: null,
+    uploadBatchId: "",
+    isUploading: false,
+    showUploadModal: false,
+
+    handleFileChange(event) {
+      this.uploadFile = event.target.files[0];
+    },
+
+    async submitStudentCSV() {
+      if (!this.uploadFile || !this.uploadBatchId) {
+        Swal.fire("Error", "Please select a file and a batch.", "error");
+        return;
+      }
+
+      this.isUploading = true;
+
+      const formData = new FormData();
+      formData.append("StudentFile", this.uploadFile);
+
+      try {
+        const res = await api.postFormData(
+          `/Students/upload?BatchId=${this.uploadBatchId}`,
+          formData,
+        );
+
+        const data = await res.json();
+        if (data.status) {
+          Swal.fire(
+            "Success",
+            data.message || "Students uploaded successfully!",
+            "success"
+          );
+          this.closeUploadModal();
+          this.resetAndFetch();
+        } else {
+          Swal.fire(
+            "Error",
+            data.message || "Failed to upload students.",
+            "error"
+          );
+        }
+      } catch (err) {
+        console.error("Upload failed:", err);
+      } finally {
+        this.isUploading = false;
+      }
+    },
+    openUploadModal() {
+      this.showUploadModal = true;
+    },
+    closeUploadModal() {
+      this.showUploadModal = false;
+      this.uploadFile = null;
+      this.uploadBatchId = "";
+    },
 
     async init() {
       await this.loadSidebarAndNavbar();
@@ -28,12 +84,24 @@ window.studentsPage = function () {
       await this.fetchStudents();
       this.disableForInstructor();
     },
+    resetForm() {
+      this.newStudent = {
+        fullName: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        batchId: "",
+      };
+      this.uploadFile = null;
+      this.uploadBatchId = "";
+    },
 
     async loadBatches() {
       try {
         const res = await api.get("/batches/all");
         const data = await res.json();
         if (data.status) this.batches = data.data;
+        console.log("Batches loaded:", this.batches);
       } catch (err) {
         console.error("Failed to load batches:", err);
         Swal.fire("Error", "Could not load batch options.", "error");

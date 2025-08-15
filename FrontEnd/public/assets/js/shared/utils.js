@@ -19,6 +19,7 @@ async function handleResponse(response) {
     try {
       const errorData = await response.json();
       errorMessage = errorData.detail || errorData.title || errorMessage;
+      console.log("API Error:", errorData);
     } catch {
       // Fallback if JSON parsing fails
     }
@@ -37,25 +38,26 @@ async function handleResponse(response) {
 
   return response;
 }
-
- const api = {
-  async request(endpoint, method = "GET", body = null) {
+const api = {
+  async request(
+    endpoint,
+    method = "GET",
+    body = null,
+    contentType = "application/json"
+  ) {
     const token = localStorage.getItem("accessToken");
-    const headers = {
-      "Content-Type": "application/json",
-    };
+    const headers = {};
     if (token) headers["Authorization"] = `Bearer ${token}`;
+    if (contentType) headers["Content-Type"] = contentType;
 
     const config = { method, headers };
-    if (body) config.body = JSON.stringify(body);
 
-    try {
-      const res = await fetch(`${API_BASE_URL}${endpoint}`, config);
-      return await handleResponse(res); // central error handler
-    } catch (error) {
-      console.error(`API request failed: ${method} ${endpoint}`, error);
-      throw error;
+    if (body) {
+      config.body = contentType ? JSON.stringify(body) : body;
     }
+
+    const res = await fetch(`${API_BASE_URL}${endpoint}`, config);
+    return await handleResponse(res);
   },
 
   get(endpoint) {
@@ -63,6 +65,9 @@ async function handleResponse(response) {
   },
   post(endpoint, body) {
     return this.request(endpoint, "POST", body);
+  },
+  postFormData(endpoint, formData) {
+    return this.request(endpoint, "POST", formData,null); // contentType = null
   },
   put(endpoint, body) {
     return this.request(endpoint, "PUT", body);

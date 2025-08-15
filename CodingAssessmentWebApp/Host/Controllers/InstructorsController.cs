@@ -67,6 +67,15 @@ namespace Host.Controllers
             var result = await _assessmentService.GetInstructorAssessmentDetail(instructorId,request);
             return Ok(result);
         }
+        [HttpGet("assessments/score-by-types")]
+        public async Task<IActionResult> GetScoreByTypeForAllStudents(
+        [FromQuery] Guid? batchId,
+        [FromQuery] DateTime? startDate,
+        [FromQuery] DateTime? endDate)
+        {
+            var result = await _userService.GetScoreByTypeForInstructorAsync(batchId, startDate, endDate);
+            return Ok(result);
+        }
     }
 
 }

@@ -14,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Services
 {
-    public class AssessmentService(IUnitOfWork _unitOfWork, IAssessmentRepository _assessmentRepository, IUserRepository _userRepository, IBackgroundService _backgroundService, ICurrentUser _currentUser, IBatchRepository _batchRepository, IBatchService batchService,IReminderService reminderService) : IAssessmentService
+    public class AssessmentService(IUnitOfWork _unitOfWork, IAssessmentRepository _assessmentRepository, IUserRepository _userRepository, IBackgroundService _backgroundService, ICurrentUser _currentUser, IBatchRepository _batchRepository, IBatchService batchService, IReminderService reminderService) : IAssessmentService
     {
         //case 400: // Bad Request
         //   case 401: // Unauthorized
@@ -131,11 +131,11 @@ namespace Application.Services
                 service => service.ScoreZeroForUnsubmittedAsync(assessment.Id),
                 assessment.EndDate
             );
-           
+
             await _unitOfWork.SaveChangesAsync();
 
-            _backgroundService.Schedule<IAssessmentService>(service => service.UpdateAssessmentStatusAsync(assessment.Id,AssessmentStatus.InProgress),assessment.StartDate);
-            _backgroundService.Schedule<IAssessmentService>(service => service.UpdateAssessmentStatusAsync(assessment.Id,AssessmentStatus.Completed),assessment.EndDate);
+            _backgroundService.Schedule<IAssessmentService>(service => service.UpdateAssessmentStatusAsync(assessment.Id, AssessmentStatus.InProgress), assessment.StartDate);
+            _backgroundService.Schedule<IAssessmentService>(service => service.UpdateAssessmentStatusAsync(assessment.Id, AssessmentStatus.Completed), assessment.EndDate);
 
             return new BaseResponse<AssessmentDto>()
             {
@@ -143,6 +143,7 @@ namespace Application.Services
                 Message = "Assessment created successfully",
                 Data = new AssessmentDto()
                 {
+                    Id = assessment.Id,
                     Title = assessment.Title,
                     Description = assessment.Description,
                     TechnologyStack = assessment.TechnologyStack.ToString(),
@@ -407,7 +408,7 @@ namespace Application.Services
                 Data = paginationDto
             };
         }
-        
+
         public async Task<BaseResponse<PaginationDto<BatchAssessmentsOverview>>> GetAssessmentsByBatchIdDetails(Guid id, PaginationRequest request)
         {
             if (id == Guid.Empty)
@@ -585,19 +586,22 @@ namespace Application.Services
                 Data = assessmentDtos
             };
         }
-        public async Task<BaseResponse<List<AssessmentPerformanceDto>>> GetInstructorAssessmentScoresAsync()
+        public async Task<BaseResponse<List<AssessmentPerformanceDto>>> GetInstructorAssessmentScoresAsync(DateTime? fromDate, DateTime? toDate)
         {
             var currentUserId = _currentUser.GetCurrentUserId();
             if (currentUserId == Guid.Empty)
-            {
                 throw new ApiException("Current user ID is invalid", (int)HttpStatusCode.BadRequest, "INVALID_USER_ID", null);
-            }
+
             var check = await _userRepository.CheckAsync(x => x.Id == currentUserId);
             if (!check)
-            {
                 throw new ApiException("User not found", (int)HttpStatusCode.NotFound, "USER_NOT_FOUND", null);
-            }
-            var assessments = await _assessmentRepository.GetAllAsync(x => x.InstructorId == currentUserId);
+
+            var assessments = await _assessmentRepository.GetAllAsync(x =>
+                x.InstructorId == currentUserId &&
+                (!fromDate.HasValue || x.CreatedAt.Date >= fromDate.Value.Date) &&
+                (!toDate.HasValue || x.CreatedAt.Date <= toDate.Value.Date)
+            );
+
             var assessmentScores = assessments
                 .Select(x => new AssessmentPerformanceDto
                 {
@@ -606,6 +610,7 @@ namespace Application.Services
                     AverageScore = x.Submissions.Any() ? x.Submissions.Average(s => s.TotalScore) : 0,
                 })
                 .ToList();
+
             return new BaseResponse<List<AssessmentPerformanceDto>>
             {
                 Status = true,
@@ -613,6 +618,7 @@ namespace Application.Services
                 Data = assessmentScores
             };
         }
+
         public async Task<BaseResponse<PaginationDto<InstructorAssessmentDto>>> GetAssessmentsByInstructorAsync(Guid? batchId, AssessmentStatus? status, PaginationRequest request)
         {
             var userId = _currentUser.GetCurrentUserId();
@@ -893,7 +899,7 @@ namespace Application.Services
                     string.IsNullOrEmpty(search) ||
                     x.Title.Contains(search) || x.Instructor.FullName.Contains(search)
                 ), request);
-            
+
             var assessments = query.Items.Select(x => new AdminAssessmentDto
             {
                 Id = x.Id,
@@ -933,8 +939,112 @@ namespace Application.Services
                 Message = "Assessments fetched successfully"
             };
         }
-       
+        public async Task<AssessmentOverviewDto> GetAssessmentOverviewAsync(Guid assessmentId)
+        {
+            if (assessmentId == Guid.Empty)
+                throw new ApiException("Assessment ID is required", 400, "ASSESSMENT_ID_REQUIRED", null);
+            var assessment = await _assessmentRepository.GetForOverview(assessmentId);
 
+            if (assessment == null)
+                throw new ApiException("Assessment Not Found", 400, "ASSESSMENT_NOT_FOUND", null);
+
+            // Get assigned batch names (null-safe)
+            var batchesAssigned = assessment.BatchAssessment?
+                .Select(x => x?.Batch?.Name)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Distinct()
+                .ToList() ?? new List<string>();
+
+            var assignments = assessment.AssessmentAssignments ?? new List<AssessmentAssignment>();
+            var submissions = assessment.Submissions ?? new List<Submission>();
+
+            var totalAssigned = assignments.Count;
+            var submitted = submissions.Count(x => x.IsAutoSubmitted == false);
+
+            // Not submitted = assigned students that do not have a submission
+            var submittedStudentIds = submissions.Select(s => s.StudentId).ToHashSet(); 
+            var autoSubmittedStudentIds = submissions
+                .Where(s => s.IsAutoSubmitted)
+                .Select(s => s.StudentId)
+                .ToHashSet();
+
+            var notSubmitted = assignments.Count(a =>
+                !submittedStudentIds.Contains(a.StudentId) ||
+                !autoSubmittedStudentIds.Contains(a.StudentId));
+
+
+            var passed = submissions.Count(s => s.TotalScore >= assessment.PassingScore);
+            var failed = submissions.Count(s => s.TotalScore < assessment.PassingScore);
+
+            return new AssessmentOverviewDto
+            {
+                AssignedBatches = batchesAssigned,
+                TotalAssignedStudents = totalAssigned,
+                SubmittedCount = submitted,
+                NotSubmittedCount = notSubmitted,
+                PassedCount = passed,
+                FailedCount = failed
+            };
+        }
+            
+        public async Task<BaseResponse<PaginationDto<GroupedStudentDto>>> GetGroupedStudentsAsync(Guid assessmentId, AssessmentStudentGroupType type, PaginationRequest request)
+        {
+            var assessment = await _assessmentRepository.GetAsync(x => x.Id == assessmentId);
+            if (assessment == null)
+                throw new ApiException("Assessment not found", 404, "ASSESSMENT_NOT_FOUND");
+
+            var passingScore = assessment.PassingScore;
+
+            Expression<Func<User, bool>> filter = type switch
+            {
+                AssessmentStudentGroupType.Submitted => user =>
+                    user.Submissions.Any(sub => sub.AssessmentId == assessmentId && sub.IsAutoSubmitted == false),
+
+                AssessmentStudentGroupType.NotSubmitted => user =>
+                    user.AssessmentAssignments.Any(aa => aa.AssessmentId == assessmentId) &&
+                    user.Submissions.Any(sub => sub.AssessmentId == assessmentId && sub.IsAutoSubmitted == true),
+
+                AssessmentStudentGroupType.Passed => user =>
+                    user.Submissions.Any(sub => sub.AssessmentId == assessmentId && sub.TotalScore >= passingScore),
+
+                AssessmentStudentGroupType.Failed => user =>
+                    user.Submissions.Any(sub => sub.AssessmentId == assessmentId && sub.TotalScore < passingScore),
+
+                _ => throw new ApiException("Invalid group type", 400, "INVALID_GROUP_TYPE")
+            };
+
+            var students = await _userRepository.GetAllForGroupedStudentAsync(filter,request);
+
+            var studentsList = students.Items.Select(s =>
+            {
+                var submission = s.Submissions.FirstOrDefault(sub => sub.AssessmentId == assessmentId);
+
+                return new GroupedStudentDto
+                {
+                    StudentId = s.Id,
+                    FullName = s.FullName,
+                    Email = s.Email,
+                    BatchName = s.Batch?.Name,
+                    TotalScore = submission?.TotalScore
+                };
+            }).ToList();
+            var Paginated = new PaginationDto<GroupedStudentDto>()
+            {
+                TotalItems = students.TotalItems,
+                TotalPages = students.TotalPages,
+                HasNextPage = students.HasNextPage,
+                HasPreviousPage = students.HasPreviousPage,
+                Items = studentsList,
+                CurrentPage = request.CurrentPage,
+                PageSize = request.PageSize
+            };
+            return new BaseResponse<PaginationDto<GroupedStudentDto>>
+            {
+                Data = Paginated,
+                Message = "Grouped student Retrieved",
+                Status = true
+            };
+        }
 
 
     }

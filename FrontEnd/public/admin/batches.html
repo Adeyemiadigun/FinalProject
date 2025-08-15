@@ -64,6 +64,22 @@
       </template>
     </div>
 
+    <div class="flex gap-4 items-end">
+      <div>
+        <label class="block text-sm text-gray-600">From</label>
+        <input type="date" x-model="filters.fromDate" class="border rounded px-3 py-2 text-sm" />
+      </div>
+      <div>
+        <label class="block text-sm text-gray-600">To</label>
+        <input type="date" x-model="filters.toDate" class="border rounded px-3 py-2 text-sm" />
+      </div>
+      <button @click="fetchTrend()"
+        class="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">Apply</button>
+    </div>
+  <button @click="filters.fromDate=''; filters.toDate=''; fetchTrend()"
+  class="text-sm text-gray-500 underline">Reset</button>
+
+
     <!-- Charts -->
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
       <div class="bg-white p-4 rounded shadow">
@@ -90,12 +106,17 @@
             </tr>
           </thead>
           <tbody>
+            <tr x-show="batchList.length === 0">
+              <td colspan="4" class="text-center text-gray-500 py-4">
+                No batches found.
+              </td>
+            </tr>
             <template x-for="batch in batchList" :key="batch.id">
               <tr class="border-t">
                 <td class="p-2" x-text="batch.name"></td>
                 <td class="p-2 text-center" x-text="batch.studentCount"></td>
                 <td class="p-2 text-center" x-text="batch.assessmentCount"></td>
-                <td class="p-2 text-center" x-text="batch.passRate.toFixed(1) + '%' "></td>
+              <td class="p-2 text-center" x-text="(batch.passRate ?? 0).toFixed(1) + '%'"></td>
               </tr>
             </template>
           </tbody>

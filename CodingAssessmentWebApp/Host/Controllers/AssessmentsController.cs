@@ -1,6 +1,7 @@
 ﻿using Application.Dtos;
 using Application.Interfaces.Services;
 using Application.Services;
+using Domain.Enum;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 [Authorize]
@@ -98,11 +99,10 @@ public class AssessmentsController(IAssessmentService assessmentService, IQuesti
         var response = await assessmentService.GetRecentAssessment();
         return response.Status ? Ok(response) : NotFound(response);
     }
-
     [HttpGet("assessment-scores")]
-    public async Task<IActionResult> GetInstructorAssessmentScores()
+    public async Task<IActionResult> GetInstructorAssessmentScores([FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate)
     {
-        var result = await assessmentService.GetInstructorAssessmentScoresAsync();
+        var result = await assessmentService.GetInstructorAssessmentScoresAsync(fromDate, toDate);
         return Ok(result);
     }
     [HttpGet("{assessmentId:guid}/metrics")]
@@ -130,7 +130,19 @@ public class AssessmentsController(IAssessmentService assessmentService, IQuesti
         var result = await assessmentService.GetAssessmentScoreDistribution(assessmentId); 
         return Ok(result);
     }
-    
+    [HttpGet("{assessmentId}/overview")]
+    public async Task<ActionResult<AssessmentOverviewDto>> GetOverview(Guid assessmentId)
+    {
+        var result = await assessmentService.GetAssessmentOverviewAsync(assessmentId);
+        return Ok(result);
+    }
+    [HttpGet("{assessmentId}/students/grouped")]
+    public async Task<IActionResult> GetGroupedStudents(Guid assessmentId, [FromQuery] AssessmentStudentGroupType type, [FromQuery] PaginationRequest request)
+    {
+        var students = await assessmentService.GetGroupedStudentsAsync(assessmentId, type, request);
+        return Ok(students);
+        
+    }
 
 }
 

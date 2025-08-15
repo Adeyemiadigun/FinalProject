@@ -14,7 +14,8 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<PaginationDto<BatchAnalytics>>> BatchAnalytics(PaginationRequest request);
         Task<BaseResponse<string>> AssignAssessmentToBatchAsync(Guid batchId, Assessment assessment);
         Task<BaseResponse<BatchAnalyticsMetricsDto>> GetBatchAnalyticsMetrics(Guid? batchId);
-        Task<BaseResponse<BatchPerformanceTrendDto>> GetBatchPerformanceTrend(Guid? batchId);
+        Task<BaseResponse<BatchPerformanceTrendDto>> GetBatchPerformanceTrend(
+     Guid? batchId, DateTime? fromDate, DateTime? toDate);
         Task<BaseResponse<List<BatchSummaryDto>>> GetBatchSummariesAsync();
         Task<BaseResponse<List<BatchStudentCountDto>>> GetBatchStudentCountsAsync();
         Task<BaseResponse<BatchDetails>> GetBatchDetails(Guid batchId);

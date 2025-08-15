@@ -12,7 +12,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Application.Services
 {
-    public class DashboardService(ICurrentUser _currentUser, IAssessmentRepository _assessmentRepository, ISubmissionRepository _submissionRepository, IBatchRepository batchRepository) : IDashboardService
+    public class DashboardService(ICurrentUser _currentUser, IAssessmentRepository _assessmentRepository, ISubmissionRepository _submissionRepository, IBatchRepository batchRepository, IUserRepository _userRepository, ILeaderboardStore _leaderboardStore) : IDashboardService
     {
         public async Task<BaseResponse<AdminDashBoardOverview>> AdminDashBoardOverview()
         {
@@ -182,7 +182,7 @@ namespace Application.Services
             var totalSubmissionCount = submissions.Count;
             double averageScore = submissions.Average(s => s.TotalScore);
             double passRate = totalSubmissionCount > 0
-               ? (submissions.Count(s => s.TotalScore >= s.Assessment.PassingScore) * 100.0 / totalSubmissionCount)
+               ? Math.Round((submissions.Count(s => s.TotalScore >= s.Assessment.PassingScore) * 100.0 / totalSubmissionCount),2)
                : 0;
 
             var dashboardDto = new InstructorDashboardOverview
@@ -425,6 +425,43 @@ namespace Application.Services
             };
         }
 
+        public async Task<BaseResponse<LeaderboardSummaryDto>> GetStudentDashboardLeaderboardSummaryAsync()
+        {
+            var userId = _currentUser.GetCurrentUserId();
+
+            var student = await _userRepository.GetAsync(userId);
+            if (student == null || student.BatchId == null)
+            {
+                return new BaseResponse<LeaderboardSummaryDto>
+                {
+                    Status = false,
+                    Message = "Student not found or not assigned to a batch"
+                };
+            }
+
+            var batchId = student.BatchId.Value;
+
+            var leaderboard = await _leaderboardStore.GetLeaderBoardByBatchId(batchId);
+
+            var topThree = leaderboard.Take(3).ToList();
+
+            var studentIndex = leaderboard.FindIndex(l => l.Id == userId);
+            LeaderboardDto? studentData = studentIndex != -1 ? leaderboard[studentIndex] : null;
+
+            var response = new LeaderboardSummaryDto
+            {
+                TopThree = topThree,
+                StudentRank = studentIndex != -1 ? studentIndex + 1 : (int?)null,
+                CurrentStudent = studentData
+            };
+
+            return new BaseResponse<LeaderboardSummaryDto>
+            {
+                Status = true,
+                Message = "Student leaderboard summary retrieved",
+                Data = response
+            };
+        }
 
 
     }

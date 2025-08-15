@@ -64,7 +64,29 @@ namespace Infrastructure.Repositories
                .Where(exp);
             return await res.ToListAsync();           
 
-        } 
+        }
+        public async Task<PaginationDto<User>> GetAllForGroupedStudentAsync(Expression<Func<User, bool>> exp, PaginationRequest request)
+        {
+            var query = _context.Set<User>()
+                .Include(x => x.Submissions)
+                .Include(x => x.Batch)
+                .Where(exp);
+            var totalRecord = query.Count();
+            var totalPages = (int)Math.Ceiling((double)totalRecord / request.PageSize);
+            var result = await query.Skip((request.CurrentPage - 1) * request.PageSize).Take(request.PageSize)
+               .ToListAsync();
+            return new PaginationDto<User>
+            {
+                TotalPages = totalPages,
+                TotalItems = totalRecord,
+                Items = result,
+                HasNextPage = request.CurrentPage < totalPages,
+                HasPreviousPage = request.CurrentPage > 1,
+                PageSize = request.PageSize,
+                CurrentPage = request.CurrentPage
+
+            };
+        }
         public async Task<PaginationDto<User>> GetAllAsync(Expression<Func<User, bool>> exp,PaginationRequest request)
         {
             var query = _context.Set<User>()

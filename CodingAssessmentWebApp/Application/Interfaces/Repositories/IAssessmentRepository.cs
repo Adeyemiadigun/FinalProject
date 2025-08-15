@@ -16,5 +16,6 @@ namespace Application.Interfaces.Repositories
         Task<ICollection<Assessment>> GetAllAsync(Expression<Func<Assessment, bool>> exp);
         Task<ICollection<Assessment>> GetSelectedIds(ICollection<Guid> ids);
         Task<Assessment?> GetWithQuestionsAndOptionsAsync(Guid id);
+        Task<Assessment?> GetForOverview(Guid id);
     }
 }

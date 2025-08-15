@@ -24,7 +24,7 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<List<AssessmentPerformanceDto>>> GetTopAssessments();
         Task<BaseResponse<List<AssessmentPerformanceDto>>> GetLowestAssessments();
         Task<BaseResponse<List<AssessmentDto>>> GetRecentAssessment();
-        Task<BaseResponse<List<AssessmentPerformanceDto>>> GetInstructorAssessmentScoresAsync();
+        Task<BaseResponse<List<AssessmentPerformanceDto>>> GetInstructorAssessmentScoresAsync(DateTime? fromDate, DateTime? toDate);
         Task<BaseResponse<PaginationDto<InstructorAssessmentDto>>> GetAssessmentsByInstructorAsync(Guid? batchId, AssessmentStatus? status, PaginationRequest request);
         Task<BaseResponse<PaginationDto<BatchAssessmentsOverview>>> GetAssessmentsByBatchIdDetails(Guid id, PaginationRequest request);
         Task<BaseResponse<PaginationDto<StudentAssessmentDetail>>> GetStudentAssessmentDetails(Guid id,PaginationRequest request);
@@ -33,5 +33,7 @@ namespace Application.Interfaces.Services
         Task UpdateAssessmentStatusAsync(Guid assessmentId, AssessmentStatus newStatus);
         Task<BaseResponse<PaginationDto<AdminAssessmentDto>>> GetAllAssessmentsAsync(
     Guid? batchId, DateTime? startDate, DateTime? endDate, string search, PaginationRequest request);
+        Task<AssessmentOverviewDto> GetAssessmentOverviewAsync(Guid assessmentId);
+        Task<BaseResponse<PaginationDto<GroupedStudentDto>>> GetGroupedStudentsAsync(Guid assessmentId, AssessmentStudentGroupType type, PaginationRequest request);
     }
 }

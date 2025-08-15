@@ -422,7 +422,8 @@ namespace Application.Services
             };
         }
 
-        public async Task<BaseResponse<BatchPerformanceTrendDto>> GetBatchPerformanceTrend(Guid? batchId)
+        public async Task<BaseResponse<BatchPerformanceTrendDto>> GetBatchPerformanceTrend(
+    Guid? batchId, DateTime? fromDate, DateTime? toDate)
         {
             if (batchId.HasValue && batchId.Value != Guid.Empty)
             {
@@ -434,7 +435,10 @@ namespace Application.Services
             }
 
             var assessments = await assessmentRepository.GetAllAsync(
-                a => !batchId.HasValue || a.BatchAssessment.Any(ba => ba.BatchId == batchId.Value) 
+                a =>
+                    (!batchId.HasValue || a.BatchAssessment.Any(ba => ba.BatchId == batchId.Value)) &&
+                    (!fromDate.HasValue || a.CreatedAt >= fromDate.Value) &&
+                    (!toDate.HasValue || a.CreatedAt <= toDate.Value)
             );
 
             if (!assessments.Any())
@@ -447,7 +451,6 @@ namespace Application.Services
 
             foreach (var assessment in assessments)
             {
-                // 2. Correctly filter submissions for THIS assessment AND (if provided) THIS batch.
                 var relevantSubmissions = assessment.Submissions
                     .Where(s => !batchId.HasValue || s.Student.BatchId == batchId.Value)
                     .ToList();
@@ -472,6 +475,7 @@ namespace Application.Services
                 Data = dto
             };
         }
+
 
         public async Task<BaseResponse<List<BatchSummaryDto>>> GetBatchSummariesAsync()
         {

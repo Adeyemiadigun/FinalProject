@@ -13,7 +13,7 @@ namespace Host.Controllers
     [ApiController]
     [Route("api/v{version:apiVersion}/[controller]")]
     [ApiVersion("1.0")]
-    public class StudentsController(IUserService _userService, IAssessmentService _assementService,ISubmissionService submissionService) : ControllerBase
+    public class StudentsController(IUserService _userService, IAssessmentService _assementService,ISubmissionService submissionService, IDashboardService _dashboardService) : ControllerBase
     {
         [HttpPost]
         public async Task<IActionResult> RegisterStudents([FromBody] BulkRegisterUserRequestModel model)
@@ -97,14 +97,14 @@ namespace Host.Controllers
             return Ok(result);
         }
 
-        [HttpGet("ongoing")]
+        [HttpGet("ongoing-assessments")]
         public async Task<IActionResult> GetOngoingAssessments()
         {
             var result = await _userService.GetOngoingAssessmentsAsync();
             return Ok(result);
         }
 
-        [HttpGet("upcoming")]
+        [HttpGet("upcoming-assessments")]
         public async Task<IActionResult> GetUpcomingAssessments()
         {
             var result = await _userService.GetUpcomingAssessmentsAsync();
@@ -112,11 +112,12 @@ namespace Host.Controllers
         }
 
         [HttpGet("performance-trend")]
-        public async Task<IActionResult> GetPerformanceTrend()
+        public async Task<IActionResult> GetPerformanceTrend([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
         {
-            var result = await _userService.GetStudentScoreTrendsAsync();
+            var result = await _userService.GetStudentScoreTrendsAsync(startDate, endDate);
             return Ok(result);
         }
+
 
         [HttpGet("history")]
         public async Task<IActionResult> GetSubmittedAssessments()
@@ -173,6 +174,20 @@ namespace Host.Controllers
             var result = await submissionService.GetStudentAssessmentHistoryAsync(studentId,titleSearch,request);
             return Ok(result);
         }
+        [HttpGet("score-by-type")]
+        public async Task<IActionResult> GetScoreByType([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+        {
+            var result = await _userService.GetScoreByTypeForCurrentStudentAsync(startDate, endDate);
+            return Ok(result);
+        }
+        [HttpGet("leaderboard-summary")]
+        public async Task<IActionResult> GetLeaderboardSummary()
+        {
+            var result = await _dashboardService.GetStudentDashboardLeaderboardSummaryAsync();
+            return Ok(result);
+        }
+        
+
 
     }
 }

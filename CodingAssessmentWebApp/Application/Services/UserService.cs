@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net.WebSockets;
@@ -11,6 +12,7 @@ using Domain.Entities;
 using Domain.Entitties;
 using Domain.Enum;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 
 namespace Application.Services
 {
@@ -23,8 +25,10 @@ namespace Application.Services
         private readonly ISubmissionRepository _submissionRepo;
         private readonly IAssessmentRepository _assessmentRepository;
         private readonly ILeaderboardStore _leaderboardStore;
+        private readonly IConfiguration _config;
+        private readonly string Password;
 
-        public UserService(IUserRepository userRepository, IUnitOfWork unitOfWork, IBatchRepository batchRepository, ICurrentUser currentUser, ISubmissionRepository submissionRepo, IAssessmentRepository assessmentRepository, ILeaderboardStore leaderboardStore)
+        public UserService(IUserRepository userRepository, IUnitOfWork unitOfWork, IBatchRepository batchRepository, ICurrentUser currentUser, ISubmissionRepository submissionRepo, IAssessmentRepository assessmentRepository, ILeaderboardStore leaderboardStore, IConfiguration config)
         {
             _userRepository = userRepository;
             _unitOfWork = unitOfWork;
@@ -33,6 +37,8 @@ namespace Application.Services
             _submissionRepo = submissionRepo;
             _assessmentRepository = assessmentRepository;
             _leaderboardStore = leaderboardStore;
+            _config = config;
+            Password = _config.GetSection("UserPassword").Value!;
         }
 
         public async Task<BaseResponse<UserDto>> DeleteAsync(Guid id)
@@ -458,6 +464,7 @@ namespace Application.Services
 
 
 
+
         public async Task<BaseResponse<StudentDetail>> GetStudentDetail(Guid id)
         {
             if (Guid.Empty == id)
@@ -692,7 +699,7 @@ namespace Application.Services
             };
         }
 
-        public async Task<BaseResponse<List<StudentScoreTrendDto>>> GetStudentScoreTrendsAsync()
+        public async Task<BaseResponse<List<StudentScoreTrendDto>>> GetStudentScoreTrendsAsync(DateTime? startDate, DateTime? endDate)
         {
             var studentId = _currentUser.GetCurrentUserId();
 
@@ -700,7 +707,11 @@ namespace Application.Services
                 throw new ApiException("Invalid student ID.", 403, "InvalidStudent", null);
 
             var submissions = await _submissionRepo.GetAllAsync(s =>
-                s.StudentId == studentId && s.SubmittedAt != default(DateTime));
+                s.StudentId == studentId &&
+                s.SubmittedAt != default &&
+                (!startDate.HasValue || s.SubmittedAt.Date >= startDate.Value.Date) &&
+                (!endDate.HasValue || s.SubmittedAt.Date <= endDate.Value.Date)
+            );
 
             if (!submissions.Any())
             {
@@ -860,13 +871,22 @@ namespace Application.Services
             if (lines.Length <= 1)
                 throw new ApiException("The uploaded file contains no student data.", 400, "EmptyFile", null);
 
-            foreach (var line in lines.Skip(1)) // Skip header
+            var invalidRows = new List<string>();
+
+            foreach (var line in lines.Skip(1)) 
             {
                 var parts = line.Split(',', StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length < 2) continue;
 
                 var fullName = parts[0].Trim();
                 var email = parts[1].Trim();
+                var emailValidator = new EmailAddressAttribute();
+
+                if (!emailValidator.IsValid(email))
+                {
+                    invalidRows.Add(line); // record the bad line
+                    continue;
+                }
 
                 if (string.IsNullOrWhiteSpace(fullName) || string.IsNullOrWhiteSpace(email))
                     continue;
@@ -875,7 +895,7 @@ namespace Application.Services
                 {
                     FullName = fullName,
                     Email = email,
-                    Password = "password", // Consider generating random passwords or requiring reset
+                    Password = Password, 
                     BatchId = studentFile.BatchId
                 });
             }
@@ -887,7 +907,7 @@ namespace Application.Services
             var existingEmails = await _userRepository.CheckEmails(emails);
 
             if (existingEmails.Any())
-                throw new ApiException($"Duplicate emails found: {string.Join(", ", existingEmails)}", 400, "DuplicateEmails", null);
+                throw new ApiException($"Duplicate emails found: {string.Join(", ", existingEmails)}", 400, "DuplicateEmails", existingEmails);
 
             var batch = await _batchRepository.GetBatchByIdAsync(studentFile.BatchId);
             if (batch is null)
@@ -909,7 +929,7 @@ namespace Application.Services
             return new BaseResponse<UserDto>
             {
                 Status = true,
-                Message = $"{newUsers.Count} student(s) registered successfully."
+                Message = $"{newUsers.Count} student(s) registered successfully  {invalidRows.Count} row(s) skipped due to invalid data.."
             };
         }
         public async Task<BaseResponse<List<StudentScoreByTypeDto>>> GetScoreByTypeAsync(Guid studentId, DateTime? startDate, DateTime? endDate)
@@ -951,6 +971,101 @@ namespace Application.Services
                 Status = true
             };
         }
+        public async Task<BaseResponse<List<StudentScoreByTypeDto>>> GetScoreByTypeForCurrentStudentAsync(DateTime? startDate, DateTime? endDate)
+        {
+            var studentId = _currentUser.GetCurrentUserId();
+            if (studentId == Guid.Empty)
+                throw new ApiException("Invalid student ID", 400, "InvalidStudent", null);
+
+            var submissions = await _submissionRepo.GetAllAsync(s =>
+                s.StudentId == studentId &&
+                (!startDate.HasValue || s.SubmittedAt.Date >= startDate.Value.Date) &&
+                (!endDate.HasValue || s.SubmittedAt.Date <= endDate.Value.Date)
+            );
+
+            if (submissions == null || !submissions.Any())
+                throw new ApiException("No submissions found for the student in the specified range.", 404, "NoSubmissionsFound", null);
+
+            var allAnswers = submissions
+                .SelectMany(s => s.AnswerSubmissions)
+                .Where(a => a.Question != null)
+                .ToList();
+
+            var grouped = allAnswers
+                .GroupBy(a => a.Question.QuestionType.ToString())
+                .Select(g =>
+                {
+                    var totalEarned = g.Sum(x => x.Score);
+                    var totalPossible = g.Sum(x => x.Question.Marks);
+
+                    return new StudentScoreByTypeDto
+                    {
+                        Type = g.Key,
+                        AverageScore = totalPossible > 0 ? Math.Round((double)(totalEarned / totalPossible) * 100, 2) : 0,
+                        AttemptCount = g.Count()
+                    };
+                })
+                .ToList();
+
+            return new BaseResponse<List<StudentScoreByTypeDto>>
+            {
+                Data = grouped,
+                Message = "Score by question type retrieved successfully",
+                Status = true
+            };
+        }
+        public async Task<BaseResponse<List<StudentScoreByTypeDto>>> GetScoreByTypeForInstructorAsync(
+     Guid? batchId, DateTime? startDate, DateTime? endDate)
+        {
+            var instructorId = _currentUser.GetCurrentUserId();
+
+            var submissions = await _submissionRepo.GetAllAsync(s =>
+                s.Assessment.InstructorId == instructorId &&
+                (!batchId.HasValue || s.Student.BatchId == batchId) &&
+                (!startDate.HasValue || s.SubmittedAt.Date >= startDate.Value.Date) &&
+                (!endDate.HasValue || s.SubmittedAt.Date <= endDate.Value.Date)
+            );
+
+            if (!submissions.Any())
+            {
+                return new BaseResponse<List<StudentScoreByTypeDto>>
+                {
+                    Status = true,
+                    Message = "No submissions found.",
+                    Data = new List<StudentScoreByTypeDto>()
+                };
+            }
+
+            var allAnswers = submissions
+                .SelectMany(s => s.AnswerSubmissions)
+                .Where(a => a.Question != null)
+                .ToList();
+
+            var grouped = allAnswers
+                .GroupBy(a => a.Question.QuestionType.ToString())
+                .Select(g =>
+                {
+                    var totalEarned = g.Sum(x => x.Score);
+                    var totalPossible = g.Sum(x => x.Question.Marks);
+
+                    return new StudentScoreByTypeDto
+                    {
+                        Type = g.Key,
+                        AverageScore = totalPossible > 0 ? Math.Round((double)(totalEarned / totalPossible) * 100, 2) : 0,
+                        AttemptCount = g.Count()
+                    };
+                })
+                .ToList();
+
+            return new BaseResponse<List<StudentScoreByTypeDto>>
+            {
+                Data = grouped,
+                Message = "Score by question type retrieved successfully",
+                Status = true
+            };
+        }
+
+
 
 
 

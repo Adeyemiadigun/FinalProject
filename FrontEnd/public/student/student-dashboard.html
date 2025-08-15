@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en" x-data="dashboardApp()" x-init="initDashboard()">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,6 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
     <script type="module" src="/public/assets/js/student/student-dashboard.js">
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -40,39 +40,89 @@
       </section>
 
       <!-- Ongoing Assessments -->
-      <section class="bg-white p-6 rounded shadow" x-show="ongoing.length > 0">
-        <h2 class="text-xl font-semibold mb-4">🚀 Ongoing Assessments</h2>
-        <ul class="divide-y">
-          <template x-for="a in ongoing" :key="a.id">
-            <li class="flex justify-between items-center py-3">
-              <div>
-                <h3 class="font-medium" x-text="a.title"></h3>
-                <p class="text-sm text-gray-500" x-text="formatDate(a.startedDate) + ' • ' + a.type"></p>
-              </div>
-              <a :href="`/student/assessment.html?id=${a.id}`"
-                class="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700">Enter</a>
-            </li>
-          </template>
-        </ul>
-      </section>
+    <section class="bg-white p-6 rounded shadow">
+      <h2 class="text-xl font-semibold mb-4">🚀 Ongoing Assessments</h2>
+    
+      <!-- Loading -->
+      <template x-if="ongoingLoading">
+        <p class="text-gray-500">Loading ongoing assessments...</p>
+      </template>
+    
+      <!-- Error -->
+      <template x-if="ongoingError">
+        <p class="text-red-500">Failed to load ongoing assessments.</p>
+      </template>
+    
+      <!-- No Data -->
+      <template x-if="!ongoingLoading && !ongoingError && ongoing.length === 0">
+        <p class="text-gray-500">No ongoing assessments at the moment.</p>
+      </template>
+    
+      <!-- Data -->
+      <ul class="divide-y" x-show="ongoing.length > 0">
+        <template x-for="a in ongoing" :key="a.id">
+          <li class="flex justify-between items-center py-3">
+            <div>
+              <h3 class="font-medium" x-text="a.title"></h3>
+              <p class="text-sm text-gray-500" x-text="formatDate(a.startedDate) + ' • ' + a.type"></p>
+            </div>
+            <a :href="`/student/assessment.html?id=${a.id}`"
+              class="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700">Enter</a>
+          </li>
+        </template>
+      </ul>
+    </section>
+
 
       <!-- Upcoming Assessments -->
-      <section class="bg-white p-6 rounded shadow" x-show="upcoming.length > 0">
+      <section class="bg-white p-6 rounded shadow">
         <h2 class="text-xl font-semibold mb-4">🕒 Upcoming Assessments</h2>
-        <ul class="divide-y">
+      
+        <!-- Loading State -->
+        <template x-if="upcomingLoading">
+          <p class="text-gray-500">Loading upcoming assessments...</p>
+        </template>
+      
+        <!-- Error State -->
+        <template x-if="upcomingError">
+          <p class="text-red-500">Failed to load upcoming assessments.</p>
+        </template>
+      
+        <!-- Empty State -->
+        <template x-if="!upcomingLoading && !upcomingError && upcoming.length === 0">
+          <p class="text-gray-500">No upcoming assessments.</p>
+        </template>
+      
+        <!-- Data Display -->
+        <ul class="divide-y" x-show="!upcomingLoading && !upcomingError && upcoming.length > 0">
           <template x-for="a in upcoming" :key="a.id">
             <li class="flex justify-between items-center py-3">
               <div>
                 <h3 class="font-medium" x-text="a.title"></h3>
                 <p class="text-sm text-gray-500"
-                  x-text="formatDate(a.startedDate) + ' • ' + a.duration + ' mins • ' + a.type"></p>
+                  x-text="formatDate(a.startedDate) + ' • ' + a.duration + ' mins • ' + a.type">
+                </p>
               </div>
             </li>
           </template>
         </ul>
       </section>
 
+
       <!-- Score Trend -->
+      <section class="bg-white p-6 rounded shadow">
+        <h2 class="text-xl font-semibold mb-4">📈 Score Trend</h2>
+      
+        <!-- Filter UI -->
+        <div class="mb-4 flex gap-4 items-center">
+          <input type="date" x-model="trendStartDate" class="border px-3 py-1 rounded" />
+          <input type="date" x-model="trendEndDate" class="border px-3 py-1 rounded" />
+          <button @click="fetchTrend" class="px-4 py-1 bg-blue-600 text-white rounded">Filter</button>
+        </div>
+      
+        <canvas id="performanceChart" class="w-full h-56"></canvas>
+      </section>
+
       <section class="bg-white p-6 rounded shadow">
         <h2 class="text-xl font-semibold mb-4">📈 Score Trend</h2>
         <canvas id="performanceChart" class="w-full h-56"></canvas>
@@ -101,21 +151,61 @@
                 </tr>
               </template>
             </tbody>
-          </table>
+          </table> 
         </div>
       </section>
-
-      <!-- 🏆 Student Ranking (Pending API Integration) -->
+      <!-- Question Type Breakdown -->
       <section class="bg-white p-6 rounded shadow">
-        <h2 class="text-xl font-semibold mb-4">🏆 Student Ranking in Batch</h2>
-        <p class="text-sm text-gray-500">Coming soon...</p>
+        <h2 class="text-xl font-semibold mb-4">🧠 Score Breakdown by Question Type</h2>
+
+        <!-- Optional: Add date filter -->
+        <div class="mb-4 flex gap-4 items-center">
+          <input type="date" x-model="filterStartDate" class="border px-3 py-1 rounded" />
+          <input type="date" x-model="filterEndDate" class="border px-3 py-1 rounded" />
+          <button @click="fetchScoreByType" class="px-4 py-1 bg-blue-600 text-white rounded">Filter</button>
+        </div>
+
+        <canvas id="questionTypeChart" class="w-full h-64"></canvas>
       </section>
+
+    <!-- 🏆 Student Ranking -->
+    <section class="bg-white p-6 rounded shadow">
+      <h2 class="text-xl font-semibold mb-4">🏆 Student Ranking in Batch</h2>
+    
+      <!-- Top 3 Students -->
+      <h3 class="text-lg font-medium mb-2">Top Performers</h3>
+      <ul class="space-y-2 mb-4">
+        <template x-for="(s, index) in leaderboardTop" :key="s.id">
+          <li class="flex justify-between items-center bg-gray-50 p-2 rounded">
+            <div>
+              <p class="font-semibold" x-text="`${index + 1}. ${s.name}`"></p>
+              <p class="text-sm text-gray-500" x-text="`Avg: ${s.avgScore}% | Max: ${s.highestScore}%`"></p>
+            </div>
+            <span class="text-xs text-gray-400" x-text="`${s.completedAssessments} completed`"></span>
+          </li>
+        </template>
+      </ul>
+    
+      <!-- Current Student Info -->
+      <div class="border-t pt-4">
+        <h3 class="text-lg font-medium mb-2">Your Rank</h3>
+        <template x-if="studentLeaderboard">
+          <div class="bg-blue-50 p-3 rounded">
+            <p class="font-semibold" x-text="`#${studentRank} - ${studentLeaderboard.name}`"></p>
+            <p class="text-sm text-gray-600"
+              x-text="`Avg: ${studentLeaderboard.avgScore}% | Max: ${studentLeaderboard.highestScore}%`"></p>
+            <p class="text-sm text-gray-500" x-text="`${studentLeaderboard.completedAssessments} completed assessments`">
+            </p>
+          </div>
+        </template>
+        <template x-if="!studentLeaderboard">
+          <p class="text-gray-500">You are not yet ranked in this batch.</p>
+        </template>
+      </div>
+    </section>
 
     </main>
   </div>
-
-  <!-- JavaScript Logic -->
-
 </body>
 
 </html>

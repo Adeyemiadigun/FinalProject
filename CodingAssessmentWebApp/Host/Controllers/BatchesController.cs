@@ -103,9 +103,9 @@ namespace Host.Controllers
 
         }
         [HttpGet("{batchId}/performance-trend")]
-        public async Task<IActionResult> GetBatchPerformanceTrend(Guid batchId)
+        public async Task<IActionResult> GetBatchPerformanceTrend(Guid batchId, [FromQuery]DateTime? fromDate, [FromQuery]  DateTime? toDate)
         {
-            var result = await _batchService.GetBatchPerformanceTrend(batchId);
+            var result = await _batchService.GetBatchPerformanceTrend(batchId, fromDate, toDate);
             return Ok(result);
         }
         [HttpGet("students")]

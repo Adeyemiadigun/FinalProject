@@ -84,11 +84,15 @@ namespace Host.Controllers
             return Ok(result);
         }
         [HttpGet("admin/batches/performance-trend")]
-        public async Task<IActionResult> GetBatchPerformanceTrend([FromQuery] Guid? batchId)
+        public async Task<IActionResult> GetBatchPerformanceTrend(
+         [FromQuery] Guid? batchId,
+         [FromQuery] DateTime? fromDate,
+         [FromQuery] DateTime? toDate)
         {
-            var result = await _batchService.GetBatchPerformanceTrend(batchId);
+            var result = await _batchService.GetBatchPerformanceTrend(batchId, fromDate, toDate);
             return Ok(result);
         }
+
 
 
     }

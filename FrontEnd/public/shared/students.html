@@ -9,6 +9,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script type="module" src="/public/assets/js/shared/students.js">
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.jsdelivr.net/npm/jwt-decode@3.1.2/build/jwt-decode.min.js"></script>
@@ -27,11 +28,17 @@
 
     <div class="flex justify-between items-center">
       <h2 class="text-2xl font-bold">Students</h2>
-      <button id="addStudentBtn" @click="openCreateModal"
-        class="bg-indigo-600 text-white px-4 py-2 rounded text-sm hover:bg-indigo-700 disabled:opacity-50">
-        ➕ Add Student
-      </button>
+      <div class="space-x-2">
+        <button id="addStudentBtn" @click="openCreateModal"
+          class="bg-indigo-600 text-white px-4 py-2 rounded text-sm hover:bg-indigo-700 disabled:opacity-50">
+          ➕ Add Student
+        </button>
+        <button @click="openUploadModal" class="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">
+          📤 Upload CSV
+        </button>
+      </div>
     </div>
+
 
     <!-- Filters -->
     <div class="flex flex-wrap gap-4 items-center">
@@ -140,6 +147,41 @@
           <button type="submit" :disabled="isSubmitting" class="bg-indigo-600 text-white px-4 py-2 text-sm rounded hover:bg-indigo-700 disabled:opacity-50 w-24 text-center">
             <span x-show="!isSubmitting">Create</span>
             <span x-show="isSubmitting">Creating...</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Upload CSV Modal -->
+  <div x-show="showUploadModal" x-cloak
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg w-full max-w-lg p-6 space-y-4" @click.outside="closeUploadModal">
+      <h3 class="text-xl font-semibold text-gray-800">Upload Students via CSV</h3>
+      <form @submit.prevent="submitStudentCSV" enctype="multipart/form-data">
+        <div class="space-y-4">
+          <input type="file" @change="handleFileChange" accept=".csv"
+            class="w-full border px-3 py-2 rounded bg-white text-sm shadow-sm" />
+          <select x-model="uploadBatchId" required class="w-full border px-3 py-2 rounded">
+            <option value="" disabled>Select Batch</option>
+            <template x-for="batch in batches" :key="batch.id">
+              <option :value="batch.id" x-text="batch.name"></option>
+            </template>
+          </select>
+  
+          <div class="flex items-center justify-between mt-2">
+            <label class="text-sm text-gray-600">Need a format?</label>
+            <a href="/public/assets/files/sample-students.csv" download
+              class="text-blue-600 text-sm underline hover:text-blue-800">Download Sample CSV</a>
+          </div>
+        </div>
+  
+        <div class="flex justify-end mt-4 space-x-2">
+          <button type="button" @click="closeUploadModal" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
+          <button type="submit" :disabled="isUploading"
+            class="bg-green-600 text-white px-4 py-2 text-sm rounded hover:bg-green-700 disabled:opacity-50 w-28 text-center">
+            <span x-show="!isUploading">Upload CSV</span>
+            <span x-show="isUploading">Uploading...</span>
           </button>
         </div>
       </form>

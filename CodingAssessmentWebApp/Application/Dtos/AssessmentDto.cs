@@ -151,5 +151,22 @@ namespace Application.Dtos
         public string FeedBack { get; set; }
     }
 
+    public class AssessmentOverviewDto
+    {
+        public List<string> AssignedBatches { get; set; }
+        public int TotalAssignedStudents { get; set; }
+        public int SubmittedCount { get; set; }
+        public int NotSubmittedCount { get; set; }
+        public int PassedCount { get; set; }
+        public int FailedCount { get; set; }
+    }
+    public class GroupedStudentDto
+    {
+        public Guid StudentId { get; set; }
+        public string FullName { get; set; }
+        public string Email { get; set; }
+        public string BatchName { get; set; }
+        public double? TotalScore { get; set; } // null if not submitted
+    }
 
 }

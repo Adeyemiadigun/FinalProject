@@ -5,6 +5,8 @@
   <meta charset="UTF-8" />
   <title>Assessment Details</title>
   <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module" src="/public/assets/js/assessments/assessment-details.js">
+    </script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- SweetAlert2 -->
@@ -56,6 +58,121 @@
         <div class="text-xl font-semibold" x-text="metrics.completionRate + '%'"></div>
       </div>
     </div>
+    <!-- Assigned Batches and Student Count -->
+    <div class="mt-6 bg-gray-50 p-4 rounded border border-gray-200">
+      <h4 class="font-semibold text-gray-700 mb-2">🎯 Assigned Batches</h4>
+    
+      <template x-if="overview.assignedBatches && overview.assignedBatches.length">
+        <ul class="list-disc pl-5 text-sm text-gray-700">
+          <template x-for="batch in overview.assignedBatches" :key="batch">
+            <li x-text="batch"></li>
+          </template>
+        </ul>
+      </template>
+    
+      <template x-if="!overview.assignedBatches || overview.assignedBatches.length === 0">
+        <p class="text-gray-500 text-sm">No batches assigned</p>
+      </template>
+    
+      <div class="mt-2 text-sm text-gray-600">
+        👥 <span class="font-semibold" x-text="overview.totalAssignedStudents">0</span> students assigned
+      </div>
+    </div>
+<!-- Assessment Overview Section -->
+<div class="bg-white p-6 rounded shadow">
+  <h3 class="text-lg font-semibold mb-4">📋 Overview</h3>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+    <!-- Submitted -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 shadow-sm hover:shadow transition cursor-pointer"
+      @click="selectedGroupType = 1; selectedGroupLabel = 'Submitted'; groupedPage = 1; showGroupedStudents = true; fetchGroupedStudents()">
+      <div class="text-blue-600 font-bold text-xl" x-text="overview.submittedCount">0</div>
+      <div class="text-sm text-gray-600 mt-1">Submitted</div>
+    </div>
+
+    <!-- Not Submitted -->
+    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow transition cursor-pointer"
+      @click="selectedGroupType = 2; selectedGroupLabel = 'NotSubmitted'; groupedPage = 1; showGroupedStudents = true; fetchGroupedStudents()">
+      <div class="text-gray-700 font-bold text-xl" x-text="overview.notSubmittedCount">0</div>
+      <div class="text-sm text-gray-600 mt-1">Not Submitted</div>
+    </div>
+
+    <!-- Passed -->
+    <div class="bg-green-50 border border-green-200 rounded-lg p-4 shadow-sm hover:shadow transition cursor-pointer"
+      @click="selectedGroupType = 3; selectedGroupLabel = 'Passed'; groupedPage = 1; showGroupedStudents = true; fetchGroupedStudents()">
+      <div class="text-green-600 font-bold text-xl" x-text="overview.passedCount">0</div>
+      <div class="text-sm text-gray-600 mt-1">Passed</div>
+    </div>
+
+    <!-- Failed -->
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4 shadow-sm hover:shadow transition cursor-pointer"
+      @click="selectedGroupType = 4; selectedGroupLabel = 'Failed'; groupedPage = 1; showGroupedStudents = true; fetchGroupedStudents()">
+      <div class="text-red-600 font-bold text-xl" x-text="overview.failedCount">0</div>
+      <div class="text-sm text-gray-600 mt-1">Failed</div>
+    </div>
+  </div>
+</div>
+
+    
+    <!-- Grouped Students Section -->
+  <div class="bg-white p-6 rounded shadow" x-show="showGroupedStudents" x-transition>
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-semibold">
+        👥 Grouped Students
+        <template x-if="selectedGroupLabel">
+          <span class="text-gray-500 text-sm"> - <span x-text="selectedGroupLabel"></span></span>
+        </template>
+      </h3>
+      <button class="text-sm text-gray-400 hover:text-gray-600" @click="showGroupedStudents = false">✖</button>
+      <select x-model.number="selectedGroupType" @change="groupedPage = 1; fetchGroupedStudents()">
+        <option value="1">Submitted</option>
+        <option value="2">NotSubmitted</option>
+        <option value="3">Passed</option>
+        <option value="4">Failed</option>
+      </select>
+    </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="text-left p-2">Name</th>
+              <th class="text-left p-2">Email</th>
+              <th class="text-left p-2">Batch</th>
+              <th class="text-left p-2">Score</th>
+            </tr>
+          </thead>
+          <tbody>
+              <tr x-show="groupedStudents.length === 0">
+                <td colspan="5" class="text-center text-gray-500 py-4" x-transition.opacity.duration.300ms>
+                  No students found for this category.
+                </td>
+              </tr>
+            <template x-for="student in groupedStudents" :key="student.studentId">
+              <tr class="border-t">
+                <td class="p-2" x-text="student.fullName"></td>
+                <td class="p-2" x-text="student.email"></td>
+                <td class="p-2" x-text="student.batchName"></td>
+                <td class="p-2" x-text="student.totalScore ?? '—'"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+        <div class="flex justify-between items-center mt-4 text-sm">
+          <button class="px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+            :disabled="!groupedHasPreviousPage" @click="groupedPage--; fetchGroupedStudents()">
+            Previous
+          </button>
+        
+          <span>Page <span x-text="groupedPage"></span> of <span x-text="groupedTotalPages"></span></span>
+        
+          <button class="px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+            :disabled="!groupedHasNextPage" @click="groupedPage++; fetchGroupedStudents()">
+            Next
+          </button>
+        </div>
+
+      </div>
+    </div>
 
     <!-- Charts -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -84,7 +201,12 @@
             </tr>
           </thead>
           <tbody>
-            <template x-for="student in students" :key="student.studentId">
+              <tr x-show="studentPerformance.length === 0" x-transition.opacity.duration.300ms>
+                <td colspan="5" class="text-center text-gray-500 py-4">
+                  No student performance data available.
+                </td>
+              </tr>
+            <template x-for="student in students" :key="student.studentId" >
               <tr class="border-t">
                 <td class="p-2" x-text="student.name"></td>
                 <td class="p-2" x-text="student.batch"></td>
@@ -107,8 +229,7 @@
     </div>
   </div>
 
-  <script type="module" src="/public/assets/js/assessments/assessment-details.js">
-  </script>
+
 </body>
 
 </html>

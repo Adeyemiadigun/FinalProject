@@ -169,5 +169,11 @@ namespace Application.Dtos
         public List<string> Labels { get; set; }
         public List<double> Scores { get; set; }
     }
+    public class LeaderboardSummaryDto
+    {
+        public List<LeaderboardDto> TopThree { get; set; } = new();
+        public int? StudentRank { get; set; }
+        public LeaderboardDto? CurrentStudent { get; set; }
+    }
 
 }

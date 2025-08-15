@@ -12,6 +12,11 @@ import { api, loadComponent, logOut } from "../shared/utils.js";
     difficultyChart: null,
     trendData: null,
     sidebarOpen: true,
+    filters: {
+      fromDate: "",
+      toDate: "",
+    },
+    chartDrawn: false,
 
     async init() {
       await loadComponent("sidebar-placeholder", "../components/sidebar.html");
@@ -58,18 +63,67 @@ import { api, loadComponent, logOut } from "../shared/utils.js";
     },
 
     async fetchTrend() {
-      const batchIdParam = this.selectedBatchId
-        ? `?batchId=${this.selectedBatchId}`
-        : "";
-      const res = await api.get(
-        `/Dashboard/admin/batches/performance-trend${batchIdParam}`
-      );
-      const data = await res.json();
-      this.trendData = data.data;
-      console.log(this.trendData.labels);
+      try {
+        let query = [];
+
+        if (this.selectedBatchId) query.push(`batchId=${this.selectedBatchId}`);
+        if (this.filters.fromDate)
+          query.push(`fromDate=${this.filters.fromDate}`);
+        if (this.filters.toDate) query.push(`toDate=${this.filters.toDate}`);
+
+        const queryString = query.length ? "?" + query.join("&") : "";
+        const res = await api.get(
+          `/dashboard/admin/batches/performance-trend${queryString}`
+        );
+        const json = await res.json();
+        console.log(json);
+        if (json.status) {
+          this.trendData = json.data;
+          this.drawTrendChart();
+        } else {
+          console.error("Error loading trend data", json.message);
+        }
+      } catch (e) {
+        console.error("Error fetching trend", e);
+      }
+    },
+    drawTrendChart() {
+      if (this.chartDrawn) return;
+      this.chartDrawn = true;
+      if (this.trendChart) this.trendChart.destroy(); // Clean up previous chart
+
+      this.trendChart = new Chart(document.getElementById("trendChart"), {
+        type: "line",
+        data: {
+          labels: this.trendData.labels || [],
+          datasets: [
+            {
+              label: "Avg Score",
+              data: this.trendData.scores || [],
+              fill: false,
+              borderColor: "#3b82f6",
+              tension: 0.4,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          scales: { y: { beginAtZero: true, max: 100 } },
+        },
+      });
     },
 
     async createBatch() {
+      if (!this.newBatch.name || !this.newBatch.number) {
+        Swal.fire({
+          icon: "warning",
+          title: "Missing Information",
+          text: "Please enter both batch name and number.",
+          confirmButtonText: "OK",
+        });
+        return;
+      }
+
       const payload = {
         name: this.newBatch.name,
         batchNumber: parseInt(this.newBatch.number),

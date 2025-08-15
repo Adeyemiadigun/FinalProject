@@ -1,4 +1,4 @@
-import { api, loadComponent, logOut } from "../utils.js";
+import { api, loadComponent, logOut } from "../shared/utils.js";
 
 window.studentRanking = function () {
   return {
@@ -68,6 +68,7 @@ window.studentRanking = function () {
 
         const res = await api.get(endpoint);
         const json = await res.json();
+        
 
         if (json.status) {
           this.rankings = json.data.items.map((s) => ({

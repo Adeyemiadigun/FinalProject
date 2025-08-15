@@ -11,10 +11,18 @@ window.instructorDashboard = function () {
     batches: [],
     recentAssessments: [],
     assessmentScoreTrends: [],
-
+    scoreByTypes: [],
+    filters: {
+      fromDate: "",
+      toDate: "",
+    },
+    scoreChart: null,
+    scoreByTypesChart:null,
     async init() {
       await this.loadLayout();
       await this.loadData();
+      await this.loadScores();
+      await this.loadScoreByTypes();
     },
 
     async loadLayout() {
@@ -58,21 +66,111 @@ window.instructorDashboard = function () {
       } catch (error) {
         console.error("Failed to load recent assessments:", error);
       }
-
+      console.log(this.batches)
+      this.drawBatchChart();
+    },
+    async loadScores() {
       try {
-        const scoreTrendRes = await api.get("/Assessments/assessment-scores");
-        const scoreTrend = await scoreTrendRes.json();
-        if (scoreTrend.status) this.assessmentScoreTrends = scoreTrend.data;
-      } catch (error) {
-        console.error("Failed to load assessment score trends:", error);
-      }
+        let query = [];
+        if (this.filters.fromDate)
+          query.push(`fromDate=${this.filters.fromDate}`);
+        if (this.filters.toDate) query.push(`toDate=${this.filters.toDate}`);
+        const queryString = query.length ? `?${query.join("&")}` : "";
 
-      this.drawCharts();
+        const res = await api.get(
+          `/Assessments/assessment-scores${queryString}`
+        );
+        const json = await res.json();
+        if (json.status) {
+          this.assessmentScoreTrends = json.data;
+          this.drawScoreChart(); // only redraw score chart
+        }
+      } catch (err) {
+        console.error("Failed to load scores:", err);
+      }
     },
 
     drawCharts() {
-      // Assessment Scores Chart
-      new Chart(document.getElementById("assessmentScoreChart"), {
+      this.drawScoreChart();
+      this.drawBatchChart();
+    },
+async loadScoreByTypes() {
+  try {
+    let query = [];
+    if (this.filters.fromDate)
+      query.push(`startDate=${this.filters.fromDate}`);
+    if (this.filters.toDate)
+      query.push(`endDate=${this.filters.toDate}`);
+    if (this.filters.batchId)
+      query.push(`batchId=${this.filters.batchId}`);
+    const queryString = query.length ? `?${query.join("&")}` : "";
+
+    const res = await api.get(
+      `/Instructors/assessments/score-by-types${queryString}`
+    );
+    const json = await res.json();
+
+    if (json.status) {
+      this.scoreByTypes = json.data;
+      console.log("Score by types data:", this.scoreByTypes);
+      this.drawScoreByTypesChart();
+    }
+  } catch (err) {
+    console.error("Failed to load score by question type", err);
+  }
+},
+drawScoreByTypesChart() {
+  const ctx = document.getElementById("scoreByTypesChart");
+
+  if (this.scoreByTypesChart) this.scoreByTypesChart.destroy();
+
+  if (!this.scoreByTypes.length) {
+    ctx.parentElement.innerHTML += `<p class="text-gray-500 text-sm mt-2">No data available</p>`;
+    return;
+  }
+
+  this.scoreByTypesChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: this.scoreByTypes.map(x => x.type),
+      datasets: [{
+        label: "Average Score (%)",
+        data: this.scoreByTypes.map(x => x.averageScore),
+        backgroundColor: "#3b82f6",
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100
+        }
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const score = context.raw;
+              const index = context.dataIndex;
+              const attempts = this.scoreByTypes[index]?.attemptCount || 0;
+              return [
+                `Avg Score: ${score.toFixed(1)}%`,
+                `Attempts: ${attempts}`
+              ];
+            }
+          }
+        }
+      }
+    }
+  });
+},
+
+    drawScoreChart() {
+      const ctx = document.getElementById("assessmentScoreChart");
+      if (this.scoreChart) this.scoreChart.destroy();
+
+      this.scoreChart = new Chart(ctx, {
         type: "bar",
         data: {
           labels: this.assessmentScoreTrends.map((x) => x.assessmentTitle),
@@ -85,12 +183,13 @@ window.instructorDashboard = function () {
           ],
         },
       });
+    },
 
-      // Student Batch Distribution Chart
+    drawBatchChart() {
       new Chart(document.getElementById("studentBatchChart"), {
         type: "pie",
         data: {
-          labels: this.batches.map((b) => b.name),
+          labels: this.batches.map((b) => b.batchName),
           datasets: [
             {
               data: this.batches.map((b) => b.studentCount),

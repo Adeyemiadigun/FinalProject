@@ -28,11 +28,14 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<StudentDashboardSummaryDto>> GetSummaryAsync( );
         Task<BaseResponse<List<StudentAssessmentDto>>> GetOngoingAssessmentsAsync( );
         Task<BaseResponse<List<StudentAssessmentDto>>> GetUpcomingAssessmentsAsync();
-        Task<BaseResponse<List<StudentScoreTrendDto>>> GetStudentScoreTrendsAsync();
+        Task<BaseResponse<List<StudentScoreTrendDto>>> GetStudentScoreTrendsAsync(DateTime? startDate, DateTime? endDate);
         Task<BaseResponse<List<SubmissionDto>>> GetSubmittedAssessmentsAsync();
         Task<BaseResponse<StudentDetail>> GetStudentDetail();
         Task<BaseResponse<StudentProfileMetrics>> GetStudentMetrics();
         Task<BaseResponse<PaginationDto<SubmissionsDto>>> GetStudentSubmissionsAsync(Guid studentId, PaginationRequest request);
         Task<BaseResponse<List<StudentScoreByTypeDto>>> GetScoreByTypeAsync(Guid studentId, DateTime? startDate, DateTime? endDate);
+        Task<BaseResponse<List<StudentScoreByTypeDto>>> GetScoreByTypeForCurrentStudentAsync(DateTime? startDate, DateTime? endDate);
+        Task<BaseResponse<List<StudentScoreByTypeDto>>> GetScoreByTypeForInstructorAsync(
+      Guid? batchId, DateTime? startDate, DateTime? endDate);
     }
 }
