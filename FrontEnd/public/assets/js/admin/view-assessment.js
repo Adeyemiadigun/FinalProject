@@ -22,7 +22,7 @@ window.assessmentsPage = function () {
     filters: {
       instructorId: "",
       batchId: "",
-      month: new Date().getMonth() + 1, // 1-based month
+      date:null, // 1-based month
     },
     isLoading: {
       initial: true,
@@ -138,15 +138,37 @@ window.assessmentsPage = function () {
         ];
       }
     },
+   async loadTrend()
+    {
+       this.destroyCharts();  // Ensure old charts are removed
+      await this.loadScoreTrends();
+      await this.loadCreatedTrends();
+      await this.$nextTick();
+      setTimeout(() => {
+        this.renderCharts();
+      }, 100);
+    },
+
 
     async loadScoreTrends() {
       try {
-        const res = await api.get(
-          `/Dashboard/admin/analytics/assessments/score-trends?instructorId=${this.filters.instructorId}&batchId=${this.filters.batchId}&month=${this.filters.month}`
+        console.log("entered here")
+        const monthValue = this.filters.date;
+        console.log("Month value:", monthValue);
+        let url =`/Dashboard/admin/analytics/assessments/score-trends?instructorId=${this.filters.instructorId}&batchId=${this.filters.batchId}`
+          if (monthValue) {
+            const selectedDate = new Date(monthValue + "-01");
+            const isoDate = selectedDate.toISOString();
+            console.log("ISO Date:", isoDate);
+            url += ` &date=${isoDate}`;
+          }
+          console.log("URL for score trends:", url);
+        const res = await api.get(url
         );
+        console.log("Response:", res);
         if (!res.ok) throw new Error("Failed to fetch score trends");
         const data = await res.json();
-
+        console.log("Score trends data:", data);
         if (data.data && data.data.length > 0) {
           this.chartConfigs.scoreTrendsChart = {
             type: "line",
@@ -186,9 +208,14 @@ window.assessmentsPage = function () {
 
     async loadCreatedTrends() {
       try {
-        const res = await api.get(
-          `/Dashboard/admin/analytics/assessments/created-trend?instructorId=${this.filters.instructorId}&batchId=${this.filters.batchId}&month=${this.filters.month}`
-        );
+        const monthValue = this.filters.date;
+        let url = `/Dashboard/admin/analytics/assessments/created-trend?instructorId=${this.filters.instructorId}&batchId=${this.filters.batchId}`;
+         if (monthValue) {
+           const selectedDate = new Date(monthValue + "-01");
+           const isoDate = selectedDate.toISOString();
+           url += `&date=${isoDate}`;
+         }
+         const res = await api.get(url);
         if (!res.ok) throw new Error("Failed to fetch created trends");
         const data = await res.json();
 

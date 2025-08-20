@@ -12,6 +12,7 @@ window.adminStudentSubmissions = function () {
     pageSize: 5,
     hasNextPage: false,
     hasPreviousPage: false,
+    loading: true,
 
     async init() {
       const role = localStorage.getItem("userRole");
@@ -35,9 +36,11 @@ window.adminStudentSubmissions = function () {
     async fetchSubmissions(page) {
       this.currentPage = page;
 
+      this.loading = true;
+
       try {
         const res = await api.get(
-          `/Students/${this.studentId}/submissions?pageNumber=${page}&pageSize=${this.pageSize}`
+          `/Students/${this.studentId}/submissions?pageSize=${this.pageSize}&currentPage=${page}`
         );
         const json = await res.json();
 
@@ -60,6 +63,8 @@ window.adminStudentSubmissions = function () {
       } catch (error) {
         console.error("Error fetching submissions:", error);
         Swal.fire("Error", "Could not fetch submissions.", "error");
+      } finally {
+        this.loading = false;
       }
     },
 

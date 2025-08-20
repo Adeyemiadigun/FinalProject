@@ -7,8 +7,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script type="module" src="/public/assets/js/shared/assessment-submission.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body class="bg-gray-100 text-gray-800">
@@ -22,11 +22,29 @@
     <div class="max-w-5xl mx-auto">
       <h1 class="text-3xl font-bold mb-6">Assessment Submissions</h1>
 
-      <template x-if="submissions.length === 0">
+      <!-- Skeleton Loader -->
+      <template x-if="loading">
+        <div class="space-y-4 animate-pulse">
+          <template x-for="i in 5" :key="i">
+            <div class="bg-white p-4 rounded-xl shadow border border-gray-200">
+              <div class="flex justify-between items-center">
+                <div class="h-4 bg-gray-300 rounded w-1/3"></div>
+                <div class="h-4 bg-gray-300 rounded w-1/4"></div>
+              </div>
+              <div class="mt-2 h-4 bg-gray-300 rounded w-1/6"></div>
+              <div class="mt-1 h-4 bg-gray-300 rounded w-2/3"></div>
+              <div class="mt-3 h-8 bg-gray-300 rounded w-32"></div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Actual Content -->
+      <template x-if="!loading && submissions.length === 0">
         <p class="text-gray-500">No submissions found.</p>
       </template>
 
-      <div class="grid gap-4">
+      <div class="grid gap-4" x-show="!loading">
         <template x-for="submission in submissions" :key="submission.id">
           <div class="bg-white p-4 shadow rounded-xl border border-gray-200">
             <div class="flex justify-between items-center">
@@ -34,30 +52,39 @@
                 class="text-lg font-semibold text-blue-600 hover:underline" x-text="submission.studentName"></a>
               <span class="text-sm text-gray-500" x-text="formatDate(submission.submittedAt)"></span>
             </div>
-            <p class="mt-2 text-gray-700"><span class="font-medium">Score:</span> <span
-                x-text="submission.totalScore"></span></p>
-            <p class="text-gray-600"><span class="font-medium">Feedback:</span> <span
-                x-text="submission.feedBack || '—'"></span></p>
+            <p class="mt-2 text-gray-700">
+              <span class="font-medium">Score:</span>
+              <span x-text="submission.totalScore"></span>
+            </p>
+            <p class="text-gray-600">
+              <span class="font-medium">Feedback:</span>
+              <span x-text="submission.feedBack || '—'"></span>
+            </p>
             <div class="mt-3">
               <a :href="`/public/shared/view-submission-answers.html?id=${submission.id}`"
-                class="inline-block px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">View
-                Submission</a>
+                class="inline-block px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                View Submission
+              </a>
             </div>
           </div>
         </template>
       </div>
 
       <!-- Pagination -->
-      <div class="mt-6 flex justify-between items-center" x-show="totalPages > 1">
+      <div class="mt-6 flex justify-between items-center" x-show="!loading && totalPages > 1">
         <button :disabled="page === 1" @click="changePage(page - 1)"
-          class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50">Prev</button>
+          class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50">
+          Prev
+        </button>
         <span class="text-gray-700">Page <span x-text="page"></span> of <span x-text="totalPages"></span></span>
         <button :disabled="page === totalPages" @click="changePage(page + 1)"
-          class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50">Next</button>
+          class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50">
+          Next
+        </button>
       </div>
     </div>
   </div>
 
-  <script type="module" src="/public/assets/js/shared/assessment-submission.js"></script>
 </body>
+
 </html>

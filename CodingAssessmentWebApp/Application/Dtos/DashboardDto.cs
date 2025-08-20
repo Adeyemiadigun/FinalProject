@@ -9,6 +9,7 @@ namespace Application.Dtos
         public double AverageScore { get; set; }
         public double HighestScore { get; set; }
         public double CompletionRate { get; set; }
+        public double Completed { get; set; }
     }
     public class StudentDashBoardDto
     {

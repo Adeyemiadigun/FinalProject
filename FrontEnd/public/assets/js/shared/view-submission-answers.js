@@ -6,6 +6,8 @@ window.viewSubmissionPage = function () {
     submission: { submittedAnswers: [] },
     sidebarOpen: true,
 
+    loading: true,
+
     async init() {
       // ✅ Redirect if no submission ID
       if (!this.submissionId) {
@@ -37,6 +39,8 @@ window.viewSubmissionPage = function () {
     },
 
     async loadSubmission() {
+      
+      this.loading = true; 
       try {
         const res = await api.get(`/students/${this.submissionId}/submission`);
         const data = await res.json();
@@ -49,6 +53,8 @@ window.viewSubmissionPage = function () {
       } catch (err) {
         console.error("Error fetching submission:", err);
         Swal.fire("Error", "Failed to load submission", "error");
+      } finally {
+        this.loading = false; // <-- done loading
       }
     },
 

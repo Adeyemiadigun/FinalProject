@@ -8,6 +8,8 @@ window.assessmentSubmissionsPage = function () {
     perPage: 10,
     assessmentId: null,
 
+    isLoading: true,
+
     async init() {
       // Load sidebar & navbar dynamically based on user role
       await this.loadLayout();
@@ -46,6 +48,8 @@ window.assessmentSubmissionsPage = function () {
     },
 
     async fetchSubmissions() {
+      
+      this.isLoading = true;
       try {
         const res = await api.get(
           `/assessments/${this.assessmentId}/submissions?pageSize=${this.perPage}&currentPage=${this.page}`
@@ -69,6 +73,8 @@ window.assessmentSubmissionsPage = function () {
           "An error occurred while loading submissions.",
           "error"
         );
+      } finally {
+        this.isLoading = false;
       }
     },
 

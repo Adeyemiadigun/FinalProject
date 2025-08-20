@@ -30,10 +30,10 @@
       <h2 class="text-2xl font-bold">Students</h2>
       <div class="space-x-2">
         <button id="addStudentBtn" @click="openCreateModal"
-          class="bg-indigo-600 text-white px-4 py-2 rounded text-sm hover:bg-indigo-700 disabled:opacity-50">
+          class="bg-indigo-600 text-white px-4 py-2 rounded text-sm hover:bg-indigo-700 disabled:opacity-100">
           ➕ Add Student
         </button>
-        <button @click="openUploadModal" class="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">
+        <button @click="openUploadModal" id="uploadStudentBtn" class="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700 disabled:opacity-100">
           📤 Upload CSV
         </button>
       </div>
@@ -187,8 +187,6 @@
       </form>
     </div>
   </div>
-
- 
 </body>
 
 </html>

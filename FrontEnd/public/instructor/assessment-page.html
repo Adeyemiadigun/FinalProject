@@ -41,15 +41,31 @@
           New Assessment</button>
       </div>
     </div>
+<!-- Skeleton Loader -->
+<div class="bg-white p-6 rounded shadow" x-show="isLoading" x-transition.opacity
+>
+  <div class="space-y-4 animate-pulse">
+    <template x-for="n in 2" :key="n">
+      <div class="space-y-4">
+        <div class="h-5 bg-gray-200 rounded w-1/3"></div>
+        <div class="h-4 bg-gray-200 rounded w-1/4"></div>
+        <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+        <div class="h-40 bg-gray-200 rounded"></div>
+        <div class="h-24 bg-gray-200 rounded"></div>
+      </div>
+    </template>
+  </div>
+</div>
+
 
     <!-- Assessment List -->
-    <div class="bg-white p-6 rounded shadow">
+    <div class="bg-white p-6 rounded shadow" x-show="!isLoading">
       <template x-for="assessment in assessments" :key="assessment.id">
         <a :href="`/public/assessments/assessment-details.html?assessmentId=${assessment.id}`"
           class="block border rounded p-4 hover:shadow-lg transition">
           <div class="flex justify-between items-start">
             <div>
-              <h3 class="text-lg font-bold" x-text="assessment.title"></h3>
+              <h3 class="text-lg font-bold cursor-pointer" x-text="assessment.title"></h3>
               <p class="text-sm text-gray-500" x-text="assessment.technologyStack"></p>
               <p class="text-sm text-gray-400"
                 x-text="`🕒 ${assessment.durationInMinutes} mins | 📅 ${new Date(assessment.startDate).toLocaleString()} - ${new Date(assessment.endDate).toLocaleString()}`">
@@ -93,12 +109,6 @@
           </div>
         </a>
       </template>
-      
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </template>
 
           <!-- Pagination -->
           <div class="flex justify-end space-x-2 mt-4">

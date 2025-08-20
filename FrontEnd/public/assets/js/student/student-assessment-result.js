@@ -32,7 +32,6 @@ window.viewResultPage = function () {
       }
 
       try {
-        // ✅ Fetch student result
         const res = await api.get(
           `/Assessments/${assessmentId}/student-answers`
         );
@@ -45,7 +44,6 @@ window.viewResultPage = function () {
 
         const submission = json.data;
 
-        // ✅ Redirect if assessment is ongoing
         if (
           !submission.submittedAt ||
           new Date(submission.assessmentEndDate) > new Date()
@@ -58,11 +56,10 @@ window.viewResultPage = function () {
           return;
         }
 
-        // ✅ Prepare result display
         const submittedAnswers = submission.submittedAnswers || [];
         const correctCount = submittedAnswers.filter((q) => q.isCorrect).length;
         const wrongCount = submittedAnswers.length - correctCount;
-
+console.log("Submitted Answers:", submittedAnswers);
         this.result = {
           title: submission.title,
           date: new Date(submission.submittedAt).toLocaleDateString(),
@@ -73,11 +70,14 @@ window.viewResultPage = function () {
           questions: submittedAnswers.map((ans) => ({
             questionId: ans.questionId,
             questionText: ans.questionText,
-            questionType: ans.questionType,
+            questionType: this.mapQuestionType(ans.questionType),
             submittedAnswer: ans.submittedAnswer,
             isCorrect: ans.isCorrect,
+            score: ans.score,
+            options: ans.options || [],
+            selectedOptions: ans.selectedOptions || [],
             correctAnswerText: this.extractCorrectAnswer(ans),
-            testCases: ans.testCases,
+            testCases: ans.testCases || [],
           })),
         };
       } catch (error) {
@@ -90,10 +90,26 @@ window.viewResultPage = function () {
 
     logOut,
 
+    mapQuestionType(type) {
+      switch (type) {
+        case 1:
+          return "MCQ";
+        case 2:
+          return "Objective";
+        case 3:
+          return "Coding";
+        default:
+          return "Unknown";
+      }
+    },
+
     extractCorrectAnswer(ans) {
-      if (ans.questionType === "MCQ" || ans.questionType === "Objective") {
-        const correctOptions = ans.options.filter((o) => o.isCorrect);
-        return correctOptions.map((o) => o.optionText).join(", ");
+      if (ans.questionType === 1) {
+        // MCQ
+        return (ans.options || [])
+          .filter((o) => o.isCorrect)
+          .map((o) => o.optionText)
+          .join(", ");
       }
       return "";
     },

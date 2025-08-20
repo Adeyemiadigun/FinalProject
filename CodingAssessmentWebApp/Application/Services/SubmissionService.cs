@@ -189,7 +189,7 @@ namespace Application.Services
         {
             throw new NotImplementedException();
         }
-        public async Task<BaseResponse<SubmissionDto>> GetCurrentStudentSubmission(Guid assessmentId)
+        public async Task<BaseResponse<SubmissionDto>> GetCurrentStudentSubmission(Guid assessmentId)   
         {
             var userId = _currentUser.GetCurrentUserId();
             var submission = await _submissionRepository.GetAsync(s => s.AssessmentId == assessmentId && s.StudentId == userId);
@@ -221,7 +221,6 @@ namespace Application.Services
                     Order = a.Question.Order,
                     IsCorrect = a.IsCorrect,
                     Score = a.Score,
-
                     Options = a.Question.QuestionType == QuestionType.MCQ
                         ? a.Question.Options.Select(o => new OptionDto
                         {

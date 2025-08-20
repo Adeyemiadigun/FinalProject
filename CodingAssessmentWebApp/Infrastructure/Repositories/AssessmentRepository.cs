@@ -130,19 +130,59 @@ namespace Infrastructure.Repositories
 
             };
         }
+        public async Task<List<AssessmentPerformanceDto>> GetTopPerformingAssessmentsAsync(int count, int? month, int? year)
+        {
+            return await _context.Assessments
+                .Where(a => a.AssessmentAssignments.Any() && a.Submissions.Any(s =>
+                    (!month.HasValue || s.SubmittedAt.Month == month.Value) &&
+                    (!year.HasValue || s.SubmittedAt.Year == year.Value)))
+                .Select(a => new AssessmentPerformanceDto
+                {
+                    Id = a.Id,
+                    AssessmentTitle = a.Title,
+                    AverageScore = a.Submissions
+                        .Where(s => (!month.HasValue || s.SubmittedAt.Month == month.Value) &&
+                                    (!year.HasValue || s.SubmittedAt.Year == year.Value))
+                        .Average(s => s.TotalScore)
+                })
+                .OrderByDescending(a => a.AverageScore)
+                .Take(count)
+                .ToListAsync();
+        }
+
+        public async Task<List<AssessmentPerformanceDto>> GetLowPerformingAssessmentsAsync(int count, int? month, int? year)
+        {
+            return await _context.Assessments
+                .Where(a => a.AssessmentAssignments.Any() && a.Submissions.Any(s =>
+                    (!month.HasValue || s.SubmittedAt.Month == month.Value) &&
+                    (!year.HasValue || s.SubmittedAt.Year == year.Value)))
+                .Select(a => new AssessmentPerformanceDto
+                {
+                    Id = a.Id,
+                    AssessmentTitle = a.Title,
+                    AverageScore = a.Submissions
+                        .Where(s => (!month.HasValue || s.SubmittedAt.Month == month.Value) &&
+                                    (!year.HasValue || s.SubmittedAt.Year == year.Value))
+                        .Average(s => s.TotalScore)
+                })
+                .OrderBy(a => a.AverageScore)
+                .Take(count)
+                .ToListAsync();
+        }
+
 
         public async Task<ICollection<Assessment>> GetAllAsync(Expression<Func<Assessment, bool>> exp)
         {
             var query = _context.Set<Assessment>()
                 .Include(x => x.AssessmentAssignments)
                 .ThenInclude(x => x.Student)    
-                .Include(x => x.Submissions)
-                .ThenInclude(x => x.Student)
-                .Include(x => x.Questions)
-                .Where(exp);
-            return await query.ToListAsync();
+                    .Include(x => x.Submissions)
+                    .ThenInclude(x => x.Student)
+                    .Include(x => x.Questions)
+                    .Where(exp);
+                return await query.ToListAsync();
            
-        }
+            }
 
         public async Task<Assessment?> GetForSubmissionAsync(Guid id)
         {

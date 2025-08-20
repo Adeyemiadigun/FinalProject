@@ -5,12 +5,21 @@
   <meta charset="UTF-8" />
   <title>Assessment Details</title>
   <script src="https://cdn.tailwindcss.com"></script>
-    <script type="module" src="/public/assets/js/assessments/assessment-details.js">
-    </script>
+  <script type="module" src="/public/assets/js/assessments/assessment-details.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    [x-cloak] {
+      display: none !important;
+    }
+
+    .chart-container {
+      position: relative;
+      width: 100%;
+      min-height: 300px;
+    }
+  </style>
 </head>
 
 <body class="bg-gray-100 text-gray-800">
@@ -19,17 +28,43 @@
   <div class="md:ml-64 p-6 space-y-6" x-cloak>
     <div id="navbar-placeholder"></div>
 
-    <div class="flex justify-between items-center">
+    <!-- Skeleton: Title and View Submissions Button -->
+    <div class="flex justify-between items-center animate-pulse" x-show="isLoadingAssessment">
+      <div class="h-8 bg-gray-200 rounded w-1/3"></div>
+      <div class="flex justify-end space-x-4 gap-2">
+      <div class="h-8 bg-blue-200 rounded w-28"></div>
+      <div class="h-8 bg-blue-200 rounded w-28"></div>
+      </div>
+    </div>
+
+    <!-- Title and View Submissions Button -->
+    <div class="flex justify-between items-center" x-show="!isLoadingAssessment" x-transition.opacity>
       <h2 class="text-2xl font-bold">Assessment Details</h2>
-      <!-- Button to View Submissions -->
+      <div class="flex justify-end space-x-4 gap-2">
       <a :href="`/public/shared/assessment-submission.html?id=${assessment.id}`"
         class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded">
         View Submissions
       </a>
+      <a :href="`/public/assessments/assessments-questions.html?id=${assessment.id}`"
+        class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded">View Questions</a>
+        </div>
+    </div>
+
+    <!-- Skeleton: Metadata -->
+    <div class="bg-white p-6 rounded shadow space-y-2 animate-pulse" x-show="isLoadingAssessment">
+      <div class="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+      <div class="space-y-2">
+        <div class="h-4 bg-gray-200 rounded w-2/3"></div>
+        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+        <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+        <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+        <div class="h-4 bg-gray-200 rounded w-2/3"></div>
+        <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+      </div>
     </div>
 
     <!-- Metadata -->
-    <div class="bg-white p-6 rounded shadow space-y-2">
+    <div class="bg-white p-6 rounded shadow space-y-2" x-show="!isLoadingAssessment" x-transition.opacity>
       <h3 class="text-xl font-semibold mb-4">📄 Metadata</h3>
       <p><strong>Title:</strong> <span x-text="assessment.title"></span></p>
       <p><strong>Technology Stack:</strong> <span x-text="assessment.technologyStack"></span></p>
@@ -39,8 +74,18 @@
       <p><strong>End Date:</strong> <span x-text="assessment.endDate"></span></p>
     </div>
 
+    <!-- Skeleton: Performance Metrics -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 animate-pulse" x-show="isLoadingMetrics">
+      <template x-for="i in 4" :key="i">
+        <div class="bg-white p-4 rounded shadow h-20 space-y-2">
+          <div class="h-4 bg-gray-200 rounded w-2/3"></div>
+          <div class="h-6 bg-gray-300 rounded w-1/2"></div>
+        </div>
+      </template>
+    </div>
+
     <!-- Performance Metrics -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4" x-show="!isLoadingMetrics" x-transition.opacity>
       <div class="bg-white p-4 rounded shadow">
         <div class="text-sm text-gray-500">📊 Average Score</div>
         <div class="text-xl font-semibold" x-text="metrics.avgScore + '%'"></div>
@@ -58,10 +103,17 @@
         <div class="text-xl font-semibold" x-text="metrics.completionRate + '%'"></div>
       </div>
     </div>
+
+    <!-- Skeleton: Assigned Batches -->
+    <div class="mt-6 bg-gray-50 p-4 rounded border border-gray-200 animate-pulse" x-show="isLoadingOverview">
+      <div class="h-5 bg-gray-200 rounded w-1/4 mb-2"></div>
+      <div class="h-4 bg-gray-200 rounded w-2/3"></div>
+      <div class="h-4 bg-gray-200 rounded w-1/2 mt-2"></div>
+    </div>
+
     <!-- Assigned Batches and Student Count -->
-    <div class="mt-6 bg-gray-50 p-4 rounded border border-gray-200">
+    <div class="mt-6 bg-gray-50 p-4 rounded border border-gray-200" x-show="!isLoadingOverview" x-transition.opacity>
       <h4 class="font-semibold text-gray-700 mb-2">🎯 Assigned Batches</h4>
-    
       <template x-if="overview.assignedBatches && overview.assignedBatches.length">
         <ul class="list-disc pl-5 text-sm text-gray-700">
           <template x-for="batch in overview.assignedBatches" :key="batch">
@@ -69,68 +121,123 @@
           </template>
         </ul>
       </template>
-    
       <template x-if="!overview.assignedBatches || overview.assignedBatches.length === 0">
         <p class="text-gray-500 text-sm">No batches assigned</p>
       </template>
-    
       <div class="mt-2 text-sm text-gray-600">
         👥 <span class="font-semibold" x-text="overview.totalAssignedStudents">0</span> students assigned
       </div>
     </div>
-<!-- Assessment Overview Section -->
-<div class="bg-white p-6 rounded shadow">
-  <h3 class="text-lg font-semibold mb-4">📋 Overview</h3>
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
 
-    <!-- Submitted -->
-    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 shadow-sm hover:shadow transition cursor-pointer"
-      @click="selectedGroupType = 1; selectedGroupLabel = 'Submitted'; groupedPage = 1; showGroupedStudents = true; fetchGroupedStudents()">
-      <div class="text-blue-600 font-bold text-xl" x-text="overview.submittedCount">0</div>
-      <div class="text-sm text-gray-600 mt-1">Submitted</div>
-    </div>
-
-    <!-- Not Submitted -->
-    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow transition cursor-pointer"
-      @click="selectedGroupType = 2; selectedGroupLabel = 'NotSubmitted'; groupedPage = 1; showGroupedStudents = true; fetchGroupedStudents()">
-      <div class="text-gray-700 font-bold text-xl" x-text="overview.notSubmittedCount">0</div>
-      <div class="text-sm text-gray-600 mt-1">Not Submitted</div>
-    </div>
-
-    <!-- Passed -->
-    <div class="bg-green-50 border border-green-200 rounded-lg p-4 shadow-sm hover:shadow transition cursor-pointer"
-      @click="selectedGroupType = 3; selectedGroupLabel = 'Passed'; groupedPage = 1; showGroupedStudents = true; fetchGroupedStudents()">
-      <div class="text-green-600 font-bold text-xl" x-text="overview.passedCount">0</div>
-      <div class="text-sm text-gray-600 mt-1">Passed</div>
-    </div>
-
-    <!-- Failed -->
-    <div class="bg-red-50 border border-red-200 rounded-lg p-4 shadow-sm hover:shadow transition cursor-pointer"
-      @click="selectedGroupType = 4; selectedGroupLabel = 'Failed'; groupedPage = 1; showGroupedStudents = true; fetchGroupedStudents()">
-      <div class="text-red-600 font-bold text-xl" x-text="overview.failedCount">0</div>
-      <div class="text-sm text-gray-600 mt-1">Failed</div>
-    </div>
-  </div>
-</div>
-
-    
-    <!-- Grouped Students Section -->
-  <div class="bg-white p-6 rounded shadow" x-show="showGroupedStudents" x-transition>
-    <div class="flex justify-between items-center mb-4">
-      <h3 class="text-lg font-semibold">
-        👥 Grouped Students
-        <template x-if="selectedGroupLabel">
-          <span class="text-gray-500 text-sm"> - <span x-text="selectedGroupLabel"></span></span>
+    <!-- Skeleton: Assessment Overview -->
+    <div class="bg-white p-6 rounded shadow animate-pulse" x-show="isLoadingOverview">
+      <div class="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <template x-for="i in 4" :key="i">
+          <div class="bg-gray-50 p-4 rounded border border-gray-200">
+            <div class="h-6 bg-gray-200 rounded w-1/2"></div>
+            <div class="h-4 bg-gray-200 rounded w-2/3 mt-2"></div>
+          </div>
         </template>
-      </h3>
-      <button class="text-sm text-gray-400 hover:text-gray-600" @click="showGroupedStudents = false">✖</button>
-      <select x-model.number="selectedGroupType" @change="groupedPage = 1; fetchGroupedStudents()">
-        <option value="1">Submitted</option>
-        <option value="2">NotSubmitted</option>
-        <option value="3">Passed</option>
-        <option value="4">Failed</option>
-      </select>
+      </div>
     </div>
+
+    <!-- Assessment Overview Section -->
+    <div class="bg-white p-6 rounded shadow" x-show="!isLoadingOverview" x-transition.opacity>
+      <h3 class="text-lg font-semibold mb-4">📋 Overview</h3>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 shadow-sm hover:shadow transition cursor-pointer"
+          @click="selectedGroupType = 1; selectedGroupLabel = 'Submitted'; groupedPage = 1; showGroupedStudents = true; fetchGroupedStudents()">
+          <div class="text-blue-600 font-bold text-xl" x-text="overview.submittedCount">0</div>
+          <div class="text-sm text-gray-600 mt-1">Submitted</div>
+        </div>
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow transition cursor-pointer"
+          @click="selectedGroupType = 2; selectedGroupLabel = 'NotSubmitted'; groupedPage = 1; showGroupedStudents = true; fetchGroupedStudents()">
+          <div class="text-gray-700 font-bold text-xl" x-text="overview.notSubmittedCount">0</div>
+          <div class="text-sm text-gray-600 mt-1">Not Submitted</div>
+        </div>
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4 shadow-sm hover:shadow transition cursor-pointer"
+          @click="selectedGroupType = 3; selectedGroupLabel = 'Passed'; groupedPage = 1; showGroupedStudents = true; fetchGroupedStudents()">
+          <div class="text-green-600 font-bold text-xl" x-text="overview.passedCount">0</div>
+          <div class="text-sm text-gray-600 mt-1">Passed</div>
+        </div>
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4 shadow-sm hover:shadow transition cursor-pointer"
+          @click="selectedGroupType = 4; selectedGroupLabel = 'Failed'; groupedPage = 1; showGroupedStudents = true; fetchGroupedStudents()">
+          <div class="text-red-600 font-bold text-xl" x-text="overview.failedCount">0</div>
+          <div class="text-sm text-gray-600 mt-1">Failed</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Skeleton: Grouped Students -->
+    <div class="bg-white p-6 rounded shadow animate-pulse" x-show="isLoadingGrouped && showGroupedStudents">
+      <div class="flex justify-between items-center mb-4">
+        <div class="h-6 bg-gray-200 rounded w-1/3"></div>
+        <div class="h-6 bg-gray-200 rounded w-10"></div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="text-left p-2">
+                <div class="h-4 bg-gray-200 rounded w-20"></div>
+              </th>
+              <th class="text-left p-2">
+                <div class="h-4 bg-gray-200 rounded w-20"></div>
+              </th>
+              <th class="text-left p-2">
+                <div class="h-4 bg-gray-200 rounded w-20"></div>
+              </th>
+              <th class="text-left p-2">
+                <div class="h-4 bg-gray-200 rounded w-20"></div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="i in 3" :key="i">
+              <tr class="border-t">
+                <td class="p-2">
+                  <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                </td>
+                <td class="p-2">
+                  <div class="h-4 bg-gray-200 rounded w-2/3"></div>
+                </td>
+                <td class="p-2">
+                  <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+                </td>
+                <td class="p-2">
+                  <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+        <div class="flex justify-between items-center mt-4">
+          <div class="h-8 bg-gray-200 rounded w-20"></div>
+          <div class="h-4 bg-gray-200 rounded w-16"></div>
+          <div class="h-8 bg-gray-200 rounded w-20"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grouped Students Section -->
+    <div class="bg-white p-6 rounded shadow" x-show="showGroupedStudents && !isLoadingGrouped" x-transition>
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold">
+          👥 Grouped Students
+          <template x-if="selectedGroupLabel">
+            <span class="text-gray-500 text-sm"> - <span x-text="selectedGroupLabel"></span></span>
+          </template>
+        </h3>
+        <button class="text-sm text-gray-400 hover:text-gray-600" @click="showGroupedStudents = false">✖</button>
+        <select x-model.number="selectedGroupType"
+          @change="groupedPage = 1; isLoadingGrouped = true; fetchGroupedStudents().finally(() => isLoadingGrouped = false)">
+          <option value="1">Submitted</option>
+          <option value="2">NotSubmitted</option>
+          <option value="3">Passed</option>
+          <option value="4">Failed</option>
+        </select>
+      </div>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead class="bg-gray-100">
@@ -142,11 +249,11 @@
             </tr>
           </thead>
           <tbody>
-              <tr x-show="groupedStudents.length === 0">
-                <td colspan="5" class="text-center text-gray-500 py-4" x-transition.opacity.duration.300ms>
-                  No students found for this category.
-                </td>
-              </tr>
+            <tr x-show="groupedStudents.length === 0">
+              <td colspan="5" class="text-center text-gray-500 py-4" x-transition.opacity.duration.300ms>
+                No students found for this category.
+              </td>
+            </tr>
             <template x-for="student in groupedStudents" :key="student.studentId">
               <tr class="border-t">
                 <td class="p-2" x-text="student.fullName"></td>
@@ -159,35 +266,114 @@
         </table>
         <div class="flex justify-between items-center mt-4 text-sm">
           <button class="px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
-            :disabled="!groupedHasPreviousPage" @click="groupedPage--; fetchGroupedStudents()">
+            :disabled="!groupedHasPreviousPage"
+            @click="groupedPage--; isLoadingGrouped = true; fetchGroupedStudents().finally(() => isLoadingGrouped = false)">
             Previous
           </button>
-        
           <span>Page <span x-text="groupedPage"></span> of <span x-text="groupedTotalPages"></span></span>
-        
           <button class="px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
-            :disabled="!groupedHasNextPage" @click="groupedPage++; fetchGroupedStudents()">
+            :disabled="!groupedHasNextPage"
+            @click="groupedPage++; isLoadingGrouped = true; fetchGroupedStudents().finally(() => isLoadingGrouped = false)">
             Next
           </button>
         </div>
-
       </div>
     </div>
 
+    <!-- Skeleton: Charts -->
+     <div x-show="isLoadingStudents" class="grid grid-cols-1 md:grid-cols-2 gap-6 animate-pulse">
+      <div class="bg-white p-4 rounded shadow">
+        <div class="h-5 bg-gray-200 rounded w-1/4 mb-2"></div>
+        <div class="chart-container">
+          <div class="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <div class="h-5 bg-gray-200 rounded w-1/4 mb-2"></div>
+        <div class="chart-container">
+          <div class="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    </div> 
+
     <!-- Charts -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" x-show="!isLoadingStudents" x-transition.opacity>
       <div class="bg-white p-4 rounded shadow">
         <h4 class="font-medium mb-2">Score Distribution</h4>
-        <canvas id="scoreDistChart"></canvas>
+        <div class="chart-container">
+          <canvas id="scoreDistChart" width="400" height="300"></canvas>
+          <div x-show="!charts.scoreDistChart" class="text-center text-gray-500 py-4">
+            No score distribution data available.
+          </div>
+        </div>
       </div>
       <div class="bg-white p-4 rounded shadow">
         <h4 class="font-medium mb-2">Batch Performance</h4>
-        <canvas id="batchPerfChart"></canvas>
+        <div class="chart-container">
+          <canvas id="batchPerfChart" width="400" height="300"></canvas>
+          <div x-show="!charts.batchPerfChart" class="text-center text-gray-500 py-4">
+            No batch performance data available.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Skeleton: Student Performance -->
+    <div class="bg-white p-6 rounded shadow animate-pulse" x-show="isLoadingStudents">
+      <div class="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="text-left p-2">
+                <div class="h-4 bg-gray-200 rounded w-20"></div>
+              </th>
+              <th class="text-left p-2">
+                <div class="h-4 bg-gray-200 rounded w-20"></div>
+              </th>
+              <th class="text-left p-2">
+                <div class="h-4 bg-gray-200 rounded w-20"></div>
+              </th>
+              <th class="text-left p-2">
+                <div class="h-4 bg-gray-200 rounded w-20"></div>
+              </th>
+              <th class="text-left p-2">
+                <div class="h-4 bg-gray-200 rounded w-20"></div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="i in 3" :key="i">
+              <tr class="border-t">
+                <td class="p-2">
+                  <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                </td>
+                <td class="p-2">
+                  <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+                </td>
+                <td class="p-2">
+                  <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+                </td>
+                <td class="p-2">
+                  <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+                </td>
+                <td class="p-2">
+                  <div class="h-4 bg-gray-200 rounded w-2/3"></div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+        <div class="flex justify-between items-center mt-4">
+          <div class="h-8 bg-gray-200 rounded w-20"></div>
+          <div class="h-4 bg-gray-200 rounded w-16"></div>
+          <div class="h-8 bg-gray-200 rounded w-20"></div>
+        </div>
       </div>
     </div>
 
     <!-- Student Score Table -->
-    <div class="bg-white p-6 rounded shadow">
+    <div class="bg-white p-6 rounded shadow" x-show="!isLoadingStudents" x-transition.opacity>
       <h3 class="text-lg font-semibold mb-4">🧾 Student Performance</h3>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
@@ -201,12 +387,12 @@
             </tr>
           </thead>
           <tbody>
-              <tr x-show="studentPerformance.length === 0" x-transition.opacity.duration.300ms>
-                <td colspan="5" class="text-center text-gray-500 py-4">
-                  No student performance data available.
-                </td>
-              </tr>
-            <template x-for="student in students" :key="student.studentId" >
+            <tr x-show="students.length === 0" x-transition.opacity.duration.300ms>
+              <td colspan="5" class="text-center text-gray-500 py-4">
+                No student performance data available.
+              </td>
+            </tr>
+            <template x-for="student in students" :key="student.studentId">
               <tr class="border-t">
                 <td class="p-2" x-text="student.name"></td>
                 <td class="p-2" x-text="student.batch"></td>
@@ -218,8 +404,6 @@
           </tbody>
         </table>
       </div>
-
-      <!-- Pagination -->
       <div class="mt-4 flex justify-between items-center">
         <button @click="prevPage" class="px-3 py-1 text-sm bg-gray-200 rounded"
           :disabled="!hasPreviousPage">Previous</button>
@@ -228,8 +412,6 @@
       </div>
     </div>
   </div>
-
-
 </body>
 
 </html>

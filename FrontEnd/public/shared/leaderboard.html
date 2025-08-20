@@ -42,14 +42,26 @@
           </select>
         </div>
       </div>
+      <!-- Skeleton Loader -->
+      <div x-show="isLoading" class="space-y-2 animate-pulse">
+        <template x-for="n in 10" :key="n">
+          <div class="flex space-x-4 items-center border-b py-2">
+            <div class="h-4 w-10 bg-gray-300 rounded"></div>
+            <div class="h-4 w-40 bg-gray-300 rounded"></div>
+            <div class="h-4 w-20 bg-gray-300 rounded"></div>
+            <div class="h-4 w-20 bg-gray-300 rounded"></div>
+            <div class="h-4 w-20 bg-gray-300 rounded"></div>
+          </div>
+        </template>
+      </div>
 
       <!-- Leaderboard Table -->
-      <div class="bg-white p-4 rounded shadow overflow-x-auto">
+      <div class="bg-white p-4 rounded shadow overflow-x-auto" x-show="!isLoading">
         <table class="w-full text-sm text-left">
           <thead class="bg-gray-50 border-b">
             <tr>
               <th class="p-2">Rank</th>
-              <th class="p-2">Student</th>\
+              <th class="p-2">Student</th>
               <th class="p-2">Avg Score</th>
               <th class="p-2">Highest</th>
               <th class="p-2">Completed</th>

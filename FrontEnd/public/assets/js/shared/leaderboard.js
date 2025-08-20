@@ -13,6 +13,8 @@ window.leaderboardPage = function () {
       totalItems: 0,
     },
 
+    isLoading: true,
+
     async init() {
       const role = localStorage.getItem("userRole");
       const sidebar =
@@ -45,7 +47,8 @@ window.leaderboardPage = function () {
       }
     },
 
-    async loadLeaderboard() {
+    async loadLeaderboard() {    
+    this.isLoading = true;
       try {
         const query = new URLSearchParams({
           batchId: this.selectedBatch,
@@ -71,7 +74,8 @@ window.leaderboardPage = function () {
       } catch (error) {
         console.error("Failed to load leaderboard:", error);
         Swal.fire("Error", "Could not load leaderboard.", "error");
-      }
+      } 
+    this.isLoading = false;
     },
 
     viewStudentDetails(studentId) {

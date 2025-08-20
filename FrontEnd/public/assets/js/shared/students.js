@@ -227,6 +227,7 @@ window.studentsPage = function () {
         const role = localStorage.getItem("userRole");
         if (role?.toLowerCase() === "instructor") {
           document.getElementById("addStudentBtn").disabled = true;
+          document.getElementById("uploadStudentBtn").disabled = true;
         }
       } catch (err) {
         console.warn("Could not disable for instructor:", err);

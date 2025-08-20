@@ -28,7 +28,7 @@
       <!-- Page Header -->
       <div class="flex justify-between items-center">
         <h1 class="text-3xl font-bold">🏆 Student Rankings</h1>
-        <select x-model="viewMode" class="border px-3 py-2 rounded text-sm shadow">
+        <select x-model="viewMode" class="border px-3 py-2 rounded text-sm shadow" @change="fetchRankings">
           <option value="my-batch">My Batch</option>
           <option value="all">All Batches</option>
         </select>
@@ -47,20 +47,46 @@
             </tr>
           </thead>
           <tbody>
-            <template x-for="(student, index) in paginatedRankings" :key="student.id">
-              <tr :class="student.isCurrentUser ? 'bg-blue-50 font-semibold' : 'hover:bg-gray-50'">
-                <td class="px-4 py-2" x-text="(currentPage - 1) * pageSize + index + 1"></td>
-                <td class="px-4 py-2" x-text="student.name"></td>
-                <td class="px-4 py-2" x-text="student.batch"></td>
-                <td class="px-4 py-2 text-green-700" x-text="student.score + '%'"></td>
-                <td class="px-4 py-2" x-text="student.completed"></td>
-              </tr>
+            <!-- Skeleton Loader -->
+            <template x-if="loading">
+              <template x-for="i in pageSize" :key="i">
+                <tr class="animate-pulse border-t">
+                  <td class="px-4 py-2">
+                    <div class="h-4 bg-gray-200 rounded w-5"></div>
+                  </td>
+                  <td class="px-4 py-2">
+                    <div class="h-4 bg-gray-200 rounded w-32"></div>
+                  </td>
+                  <td class="px-4 py-2">
+                    <div class="h-4 bg-gray-200 rounded w-20"></div>
+                  </td>
+                  <td class="px-4 py-2">
+                    <div class="h-4 bg-gray-200 rounded w-16"></div>
+                  </td>
+                  <td class="px-4 py-2">
+                    <div class="h-4 bg-gray-200 rounded w-12"></div>
+                  </td>
+                </tr>
+              </template>
+            </template>
+
+            <!-- Real Data -->
+            <template x-if="!loading">
+              <template x-for="(student, index) in paginatedRankings" :key="student.id">
+                <tr :class="student.isCurrentUser ? 'bg-blue-50 font-semibold' : 'hover:bg-gray-50'">
+                  <td class="px-4 py-2" x-text="(currentPage - 1) * pageSize + index + 1"></td>
+                  <td class="px-4 py-2" x-text="student.name"></td>
+                  <td class="px-4 py-2" x-text="student.batch"></td>
+                  <td class="px-4 py-2 text-green-700" x-text="student.score + '%'"></td>
+                  <td class="px-4 py-2" x-text="student.completed"></td>
+                </tr>
+              </template>
             </template>
           </tbody>
         </table>
 
         <!-- Pagination -->
-        <div class="flex justify-between items-center mt-6">
+        <div class="flex justify-between items-center mt-6" x-show="!loading">
           <div class="text-sm text-gray-600">
             Showing <span x-text="(currentPage - 1) * pageSize + 1"></span>
             to <span x-text="Math.min(currentPage * pageSize, filteredRankings.length)"></span>
@@ -78,7 +104,6 @@
     </main>
   </div>
 
-  
 </body>
 
 </html>

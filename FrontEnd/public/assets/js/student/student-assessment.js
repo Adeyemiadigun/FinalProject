@@ -2,6 +2,7 @@ import { api, loadComponent, logOut } from "../shared/utils.js";
 
 window.studentAssessments = function () {
   return {
+    loading: true,
     assessments: [],
     status: "",
     page: 1,
@@ -10,6 +11,7 @@ window.studentAssessments = function () {
     interval: null,
 
     async init() {
+      this.loading = true;
       await loadComponent(
         "sidebar-placeholder",
         "/public/components/sidebar-student.html"
@@ -21,9 +23,12 @@ window.studentAssessments = function () {
 
       await this.fetchAssessments();
       this.startCountdown();
+      
+      this.loading = false;
     },
 
     async fetchAssessments() {
+      this.loading = true;
       try {
         const params = new URLSearchParams({
           pageSize: this.perPage,
@@ -63,6 +68,7 @@ window.studentAssessments = function () {
           text: "Something went wrong while fetching assessments.",
         });
       }
+      this.loading = false;
     },
 
     calculateCountdown(a, status) {

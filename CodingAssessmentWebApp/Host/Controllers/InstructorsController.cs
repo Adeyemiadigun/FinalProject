@@ -1,10 +1,7 @@
 ﻿using Application.Dtos;
 using Application.Interfaces.Services;
-using Application.Services;
 using Domain.Enum;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Host.Controllers
@@ -38,14 +35,11 @@ namespace Host.Controllers
         public async Task<IActionResult> GetInstructorAssessments([FromQuery] Guid? batchId,[FromQuery] AssessmentStatus? status,[FromQuery] PaginationRequest request)
         {
             var result = await _assessmentService.GetAssessmentsByInstructorAsync(batchId, status, request);
-         
             return Ok(result);
         }
         [HttpGet("search")]
         public async Task<IActionResult> SearchStudents([FromQuery] string? query, [FromQuery] string? status,[FromQuery]PaginationRequest request)
         {
-            
-
             var results = await _userService.SearchInstructorByNameOrEmailAsync(query,request,status);
             return Ok(results);
         }

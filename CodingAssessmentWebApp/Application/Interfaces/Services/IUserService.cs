@@ -13,8 +13,8 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<UserDto>> GetAsync(Guid id);
         Task<BaseResponse<PaginationDto<UserDto>>> GetAllByBatchId(Guid id, PaginationRequest request);
         Task<BaseResponse<PaginationDto<UserDto>>> GetAllByBatchId(Guid? batchId, PaginationRequest request);
-        
-            Task<BaseResponse<UserDto>> UpdateUser(UpdateUserRequsteModel model);
+
+        Task<BaseResponse<UserDto>> UpdateUser(UpdateUserRequestModel model);
         Task<BaseResponse<UserDto>> DeleteAsync(Guid id);
         Task<BaseResponse<PaginationDto<UserDto>>> SearchByNameOrEmailAsync(Guid? batchId,string? query, PaginationRequest request, string? status = null);
         Task<BaseResponse<PaginationDto<LeaderboardDto>>> GetLeaderboardAsync(Guid? batchId, PaginationRequest request);

@@ -102,7 +102,12 @@ namespace Infrastructure.Repositories
                 .Include(x => x.Student)
                .Include(x => x.AnswerSubmissions)
                .ThenInclude(x => x.Question)
+               .ThenInclude(a => a.Options)
                 .Include(x => x.Assessment)
+                .Include(x => x.AnswerSubmissions)
+                .ThenInclude(x => x.SelectedOptions)
+                 .Include(x => x.AnswerSubmissions)
+                .ThenInclude(x => x.TestCaseResults)
                .FirstOrDefaultAsync(exp);
         }
 
@@ -121,6 +126,7 @@ namespace Infrastructure.Repositories
                  .Include(x => x.Assessment)
                 .Include(x => x.AnswerSubmissions)
                 .ThenInclude(x => x.Question)
+                .Include(x => x.Student)
                 .OrderBy(x =>x.SubmittedAt)
                 .Where(x => x.StudentId == studentId);
             var totalRecord = query.Count();

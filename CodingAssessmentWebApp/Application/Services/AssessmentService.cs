@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using System.Net;
 using Application.Dtos;
 using Application.Exceptions;
@@ -9,8 +8,6 @@ using Application.Interfaces.Services;
 using Domain.Entities;
 using Domain.Entitties;
 using Domain.Enum;
-using Hangfire;
-using Microsoft.EntityFrameworkCore;
 
 namespace Application.Services
 {
@@ -456,52 +453,35 @@ namespace Application.Services
             };
         }
 
-        public async Task<BaseResponse<List<AssessmentPerformanceDto>>> GetTopAssessments()
+        public async Task<BaseResponse<List<AssessmentPerformanceDto>>> GetTopAssessments(int? month, int? year)
         {
-            var assessments = await _assessmentRepository.GetAllAsync(x => x.AssessmentAssignments.Any(), new PaginationRequest { PageSize = 3, CurrentPage = 1 });
-            if (assessments == null || !assessments.Items.Any())
+            var assessments = await _assessmentRepository.GetTopPerformingAssessmentsAsync(3,month,year);
+            if (assessments == null || !assessments.Any())
             {
                 throw new ApiException("No assessments found", (int)HttpStatusCode.NotFound, "ASSESSMENTS_NOT_FOUND", null);
             }
-            var assessmentPerformance = assessments.Items.Select(x => new AssessmentPerformanceDto
-            {
-                Id = x.Id,
-                AssessmentTitle = x.Title,
-                AverageScore = x.Submissions.Any() ? x.Submissions.Average(s => s.TotalScore) : 0,
-            }).ToList();
             return new BaseResponse<List<AssessmentPerformanceDto>>
             {
                 Status = true,
                 Message = "Top assessments retrieved successfully",
-                Data = assessmentPerformance
+                Data = assessments
             };
         }
 
-        public async Task<BaseResponse<List<AssessmentPerformanceDto>>> GetLowestAssessments()
+        public async Task<BaseResponse<List<AssessmentPerformanceDto>>> GetLowestAssessments(int? month, int? year)
         {
-            var assessments = await _assessmentRepository.GetAllAsync(
-                x => x.AssessmentAssignments.Any(),
-                new PaginationRequest { PageSize = 3, CurrentPage = 1 }
-            );
-            if (assessments == null || !assessments.Items.Any())
+            var assessments = await _assessmentRepository.GetLowPerformingAssessmentsAsync(3, month, year);
+            if (assessments == null || !assessments.Any())
             {
                 throw new ApiException("No assessments found", (int)HttpStatusCode.NotFound, "ASSESSMENTS_NOT_FOUND", null);
             }
-            var assessmentPerformance = assessments.Items
-                .Select(x => new AssessmentPerformanceDto
-                {
-                    Id = x.Id,
-                    AssessmentTitle = x.Title,
-                    AverageScore = x.Submissions.Any() ? x.Submissions.Average(s => s.TotalScore) : 0,
-                })
-                .OrderBy(x => x.AverageScore) // Sort by lowest scores
-                .ToList();
+            
 
             return new BaseResponse<List<AssessmentPerformanceDto>>
             {
                 Status = true,
                 Message = "Lowest assessments retrieved successfully",
-                Data = assessmentPerformance
+                Data = assessments
             };
         }
 
@@ -623,16 +603,11 @@ namespace Application.Services
         {
             var userId = _currentUser.GetCurrentUserId();
             var now = DateTime.UtcNow;
-
             var assessments = await _assessmentRepository.GetAllAsync(x =>
                 x.InstructorId == userId &&
                 (!batchId.HasValue || x.BatchAssessment.Any(b => b.BatchId == batchId)) &&
-               (
-             status == null ||
-                 (status == AssessmentStatus.Upcoming) ||
-                 (status == AssessmentStatus.InProgress) ||
-                 (status == AssessmentStatus.Completed)
-             ), request);
+                (status == null || x.Status == status),
+                request);
 
             var items = assessments.Items.Select(a => new InstructorAssessmentDto
             {

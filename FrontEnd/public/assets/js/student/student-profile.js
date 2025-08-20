@@ -1,10 +1,51 @@
-import { api, loadComponent, logOut } from "../utils.js";
+import { api, loadComponent, logOut } from "../shared/utils.js";
 
 window.studentProfile = function () {
   return {
     student: { name: "", email: "", batch: "", joinedAt: "" },
     summary: { avgScore: 0, completedAssessments: 0, passRate: 0, rank: 0 },
     history: [],
+
+    loading: true,
+    showEditModal: false,
+    editForm: {
+      name: "",
+      email: "",
+      currentPassword: "",
+      newPassword: "",
+    },
+
+    openEditModal() {
+      this.editForm.name = this.student.name;
+      this.editForm.email = this.student.email;
+      this.editForm.currentPassword = "";
+      this.editForm.newPassword = "";
+      this.showEditModal = true;
+    },
+
+    closeEditModal() {
+      this.showEditModal = false;
+    },
+    async submitUpdate() {
+      try {
+        const res = await api.put("/Users/update", {
+          fullName: this.editForm.name,
+          email: this.editForm.email,
+          currentPassword: this.editForm.currentPassword || null,
+          newPassword: this.editForm.newPassword || null,
+        });
+
+        const json = await res.json();
+        if (!res.ok) throw json;
+
+        Swal.fire("Success", "Profile updated successfully", "success");
+        this.student.name = this.editForm.name;
+        this.student.email = this.editForm.email;
+        this.closeEditModal();
+      } catch (err) {
+        Swal.fire("Error", err.message || "Failed to update profile", "error");
+      }
+    },
 
     logOut() {
       logOut(); // Use the shared logout function
@@ -65,6 +106,8 @@ window.studentProfile = function () {
       } catch (err) {
         console.error("Failed to load student profile", err);
         Swal.fire("Error", "Failed to load profile. Try again later.", "error");
+      } finally {
+        this.loading = false; // ✅ hide loader when done
       }
     },
   };

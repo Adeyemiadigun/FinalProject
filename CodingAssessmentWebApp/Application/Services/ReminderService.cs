@@ -10,11 +10,13 @@ namespace Application.Services
     {
         private readonly IAssessmentRepository _assessmentRepo;
         private readonly IEmailService _emailService;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public ReminderService(IAssessmentRepository assessmentRepo, IEmailService emailService)
+        public ReminderService(IAssessmentRepository assessmentRepo, IEmailService emailService, IUnitOfWork unitOfWork)
         {
             _assessmentRepo = assessmentRepo;
             _emailService = emailService;
+            _unitOfWork = unitOfWork;
         }
         public async Task CheckAssessmentsWithoutQuestions()
         {

@@ -1,21 +1,44 @@
 <!DOCTYPE html>
 <html lang="en" x-data="viewResultPage()" x-init="init()">
+
 <head>
   <meta charset="UTF-8" />
   <title>View Assessment Result</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Alpine.js -->
-   <script type="module" src="/public/assets/js/student/student-assessment-result.js">
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script type="module" src="/public/assets/js/student/student-assessment-result.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    .animate-pulse {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
+    }
+  </style>
 </head>
 
 <body class="bg-gray-100 text-gray-800" x-data="{ sidebarOpen: false }" x-init="loadLayout()">
-  <div x-show="!resultLoaded" class="fixed inset-0 bg-gray-200 bg-opacity-75 flex items-center justify-center z-50">Loading...</div>
+
+  <!-- Loader -->
+  <div x-show="!resultLoaded" class="fixed inset-0 bg-gray-200 bg-opacity-75 flex items-center justify-center z-50">
+    <div class="text-center space-y-4">
+      <div class="h-6 w-48 bg-gray-300 rounded animate-pulse mx-auto"></div>
+      <div class="h-4 w-32 bg-gray-300 rounded animate-pulse mx-auto"></div>
+      <div class="h-4 w-40 bg-gray-300 rounded animate-pulse mx-auto"></div>
+      <div class="h-4 w-64 bg-gray-300 rounded animate-pulse mx-auto"></div>
+    </div>
+  </div>
+
   <!-- Sidebar -->
   <div id="sidebar-placeholder"
     :class="sidebarOpen ? 'fixed inset-y-0 left-0 w-64 z-40 bg-white shadow' : 'hidden md:block fixed inset-y-0 left-0 w-64 z-40 bg-white shadow'">
@@ -27,7 +50,7 @@
     <div id="navbar-placeholder" class="shadow bg-white"></div>
 
     <!-- Page Content -->
-    <main class="flex-grow w-full p-6 max-w-6xl mx-auto space-y-10 bg-gray-50">
+    <main class="flex-grow w-full p-6 max-w-6xl mx-auto space-y-10 bg-gray-50" x-show="resultLoaded">
       <!-- Header -->
       <div>
         <h1 class="text-2xl font-bold">📄 Assessment Result</h1>
@@ -42,7 +65,7 @@
         </div>
       </template>
 
-      <!-- Score Summary -->
+      <!-- Summary -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
         <div class="bg-white p-4 rounded shadow">
           <div class="text-sm text-gray-500">Score</div>
@@ -62,7 +85,7 @@
         </div>
       </div>
 
-      <!-- Answers Review -->
+      <!-- Questions Review -->
       <div>
         <h2 class="text-lg font-semibold mb-4">📝 Answers Review</h2>
         <template x-for="(q, index) in result.questions" :key="q.questionId">
@@ -70,8 +93,10 @@
             <div class="text-sm text-gray-500 mb-1">Question <span x-text="index + 1"></span></div>
             <h3 class="text-base font-semibold mb-2 text-gray-800" x-text="q.questionText"></h3>
 
-            <!-- Objective / MCQ -->
-            <template x-if="q.questionType !== 'Coding'">
+            <p class="text-sm mb-1"><span class="font-semibold">Score Earned:</span> <span x-text="q.score"></span></p>
+
+            <!-- Objective -->
+            <template x-if="q.questionType === 'Objective'">
               <div class="space-y-1 text-sm">
                 <p><span class="font-semibold">Your Answer:</span>
                   <span :class="q.isCorrect ? 'text-green-600' : 'text-red-600'"
@@ -79,7 +104,7 @@
                 </p>
                 <template x-if="!q.isCorrect">
                   <p><span class="font-semibold">Correct Answer:</span>
-                    <span class="text-green-600" x-text="q.correctAnswerText"></span>
+                    <span class="text-green-600" x-text="q.correctAnswerText || 'Not provided'"></span>
                   </p>
                 </template>
                 <p><span class="font-semibold">Status:</span>
@@ -89,16 +114,46 @@
               </div>
             </template>
 
+            <!-- MCQ -->
+            <template x-if="q.questionType === 'MCQ'">
+              <div class="space-y-1 text-sm">
+                <p><span class="font-semibold">Your Choices:</span>
+                  <span x-text="q.selectedOptions.map(o => o.optionText).join(', ') || '—'"></span>
+                </p>
+                <p><span class="font-semibold">Correct Choices:</span>
+                  <span class="text-green-600" x-text="q.correctAnswerText || 'Not provided'"></span>
+                </p>
+                <p><span class="font-semibold">Status:</span>
+                  <span :class="q.isCorrect ? 'text-green-600' : 'text-red-600'"
+                    x-text="q.isCorrect ? 'Correct' : 'Wrong'"></span>
+                </p>
+              </div>
+              <template x-if="q.options && q.options.length > 0">
+                              <div class="mt-2">
+                                <p class="font-semibold">Options:</p>
+                                <ul class="list-disc list-inside text-sm mt-1 space-y-1">
+                                  <template x-for="(opt, index) in q.options" :key="index">
+                                    <li>
+                                      <span x-text="opt.optionText"></span>
+                                      <span class="text-xs text-gray-500 italic" x-show="opt.isCorrect"> (Correct)</span>
+                                    </li>
+                                  </template>
+                                </ul>
+                              </div>
+                              </template>
+            </template>
+
             <!-- Coding -->
             <template x-if="q.questionType === 'Coding'">
               <div class="space-y-4 text-sm mt-2">
                 <div>
                   <span class="font-semibold">Your Code:</span>
-                  <pre
-                    class="bg-black text-green-200 text-xs p-3 rounded overflow-auto mt-1"><code x-text="q.submittedAnswer"></code></pre>
+                  <pre class="bg-black text-green-200 text-xs p-3 rounded overflow-auto mt-1">
+<code x-text="q.submittedAnswer"></code>
+                  </pre>
                 </div>
                 <div>
-                  <span class="font-semibold">Test Cases:</span>
+                  <span class="font-semibold">Test Case Results:</span>
                   <div class="mt-2 space-y-2">
                     <template x-for="tc in q.testCases" :key="tc.id">
                       <div class="border rounded p-2 text-xs bg-gray-100">
@@ -120,12 +175,13 @@
         </template>
       </div>
 
-      <!-- Back -->
+      <!-- Back Link -->
       <div class="text-sm">
         <a href="/student/assessments.html" class="text-indigo-600 hover:underline">← Back to My Assessments</a>
       </div>
     </main>
   </div>
+
 </body>
 
 </html>

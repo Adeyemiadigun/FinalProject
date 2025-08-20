@@ -1,5 +1,4 @@
-import { api, loadComponent, logOut } from "../utils.js";
-
+import { api, loadComponent, logOut } from "../shared/utils.js";
 document.addEventListener("alpine:init", () => {
   Alpine.data("attemptAssessment", () => {
     // ===== Private Variables =====
@@ -42,6 +41,7 @@ document.addEventListener("alpine:init", () => {
       timerInterval: null,
       currentQuestionIndex: 0,
       questionNavigator: [],
+      elapsedTime: null,
 
       get currentQuestion() {
         return this.questions[this.currentQuestionIndex] || null;
@@ -76,10 +76,18 @@ document.addEventListener("alpine:init", () => {
         await this.fetchQuestions(token);
         await this.loadProgress(token);
         this.updateNavigator();
-
         if (this.assessment) {
-          this.startTimer(this.assessment.durationInMinutes * 60);
+          if (this.elapsedTime) {
+            const elapsedSeconds = this.parseElapsedTime(this.elapsedTime);
+            remainingSeconds = this.assessment.durationInMinutes * 60 - elapsedSeconds;
+            console.log("Remaining seconds:", remainingSeconds);
+            this.updateTimerText(remainingSeconds);
+            this.startTimer(remainingSeconds);
+          } else {
+            this.startTimer(this.assessment.durationInMinutes * 60);
+          }
         }
+
 
         await this.switchTo(0);
 
@@ -142,6 +150,8 @@ document.addEventListener("alpine:init", () => {
           const progress = await res.json();
           if (!progress.data?.answers) return;
 
+          console.log("Loaded progress:", progress.data);
+          this.elapsedTime = progress.data.elapsedTime || null;
           for (const ans of progress.data.answers) {
             const q = this.questions.find((q) => q.id === ans.questionId);
             if (!q) continue;
@@ -240,13 +250,21 @@ document.addEventListener("alpine:init", () => {
         requestAnimationFrame(() => editorInstance?.layout());
         this.isEditorLoading = false;
       },
-
+formatSecondsToTimeString(seconds) {
+  const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
+  const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+  const s = String(seconds % 60).padStart(2, '0');
+  return `${h}:${m}:${s}`;
+},
       // ===== Progress Saving =====
       saveProgress: debounce(async function () {
         const currentHash = computeAnswersHash(this.questions);
         if (currentHash === lastSavedHash) return; // Skip if no changes
-
+        console.log("Saving progress:", new Date().toLocaleTimeString());
         this.isSaving = true;
+        const totalDurationSeconds = this.assessment.durationInMinutes * 60;
+        const elapsedSeconds = totalDurationSeconds - remainingSeconds;
+
         const payload = {
           assessmentId: this.assessmentId,
           answers: this.questions.map((q) => ({
@@ -258,8 +276,9 @@ document.addEventListener("alpine:init", () => {
             selectedOptionIds: q.selectedOptionIds,
           })),
           currentSessionStart: new Date().toISOString(),
+          elapsedTime: this.formatSecondsToTimeString(elapsedSeconds),
         };
-
+        console.log(payload)
         try {
           const res = await api.post(
             "/AssessmentProgress/students/progress/save",
@@ -275,6 +294,13 @@ document.addEventListener("alpine:init", () => {
           this.isSaving = false;
         }
       }, 1000),
+      parseElapsedTime(timeString) {
+        const parts = timeString.split(":"); // ["00", "00", "31.1526480"]
+        const hours = parseInt(parts[0], 10);
+        const minutes = parseInt(parts[1], 10);
+        const seconds = parseFloat(parts[2]); // allows fractional seconds
+        return Math.floor(hours * 3600 + minutes * 60 + seconds);
+      },
 
       // ===== Submission =====
       async submitAssessment() {

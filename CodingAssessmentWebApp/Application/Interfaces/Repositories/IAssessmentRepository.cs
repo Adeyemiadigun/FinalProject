@@ -17,5 +17,7 @@ namespace Application.Interfaces.Repositories
         Task<ICollection<Assessment>> GetSelectedIds(ICollection<Guid> ids);
         Task<Assessment?> GetWithQuestionsAndOptionsAsync(Guid id);
         Task<Assessment?> GetForOverview(Guid id);
+        Task<List<AssessmentPerformanceDto>> GetTopPerformingAssessmentsAsync(int count, int? month, int? year);
+        Task<List<AssessmentPerformanceDto>> GetLowPerformingAssessmentsAsync(int count, int? month, int? year);
     }
 }

@@ -25,28 +25,34 @@ window.assessmentDetailsPage = function () {
     groupedTotalPages: 1,
     groupedHasNextPage: false,
     groupedHasPreviousPage: false,
-    batchChart : false,
-    perfChart : false,
-
+    batchChart: false,
+    perfChart: false,
+    isLoadingAssessment: true,
+    isLoadingMetrics: true,
+    isLoadingOverview: true,
+    isLoadingStudents: true,
+    isLoadingGrouped: false,
     async init() {
-      await Promise.all([
-        loadComponent("sidebar-placeholder", "../components/sidebar.html"),
-        loadComponent("navbar-placeholder", "../components/nav.html"),
-      ]);
+      this.loadSidebarAndNavbar();
       this.loadAssessment();
     },
 
     async loadAssessment() {
-      await Promise.all([
-        this.fetchAssessment(),
-        this.fetchMetrics(),
-        this.fetchScoreDistribution(),
-        this.fetchBatchPerformance(),
-        this.fetchStudentPerformance(),
-        this.fetchOverview(),
-        this.fetchGroupedStudents(),
-      ]);
-    },
+  this.isLoadingAssessment = true;
+  this.isLoadingMetrics = true;
+  this.isLoadingOverview = true;
+  this.isLoadingStudents = true;
+
+  await Promise.all([
+    this.fetchAssessment().finally(() => this.isLoadingAssessment = false),
+    this.fetchMetrics().finally(() => this.isLoadingMetrics = false),
+    this.fetchScoreDistribution(),
+    this.fetchBatchPerformance(),
+    this.fetchStudentPerformance().finally(() => this.isLoadingStudents = false),
+    this.fetchOverview().finally(() => this.isLoadingOverview = false),
+    this.fetchGroupedStudents(),
+  ]);
+},
 
     async fetchAssessment() {
       const res = await api.get(`/Assessments/${this.assessmentId}`);
@@ -136,8 +142,8 @@ window.assessmentDetailsPage = function () {
     },
 
     drawScoreDistributionChart(data) {
-      if(this.perfChart)return
-      this.perfChart = true
+      if (this.perfChart) return;
+      this.perfChart = true;
       const labels = data.map((x) => x.cap);
       const values = data.map((x) => x.count);
 
@@ -170,17 +176,35 @@ window.assessmentDetailsPage = function () {
         },
       });
     },
+    async loadSidebarAndNavbar() {
+      const role = localStorage.getItem("userRole");
+      const sidebar =
+        role === "Admin"
+          ? "../components/sidebar.html"
+          : "../components/instructor-sidebar.html";
+      const navbar =
+        role === "Admin"
+          ? "../components/nav.html"
+          : "../components/instructor-nav.html";
+
+      await Promise.all([
+        loadComponent("sidebar-placeholder", sidebar),
+        loadComponent("navbar-placeholder", navbar),
+      ]);
+    },
     drawBatchPerformanceChart(data) {
-       if (this.batchChart) return;
-       this.batchChart = true;
+      if (this.batchChart) return;
+      this.batchChart = true;
+
       const labels = data.map((x) => x.batchName);
-      const values = data.map((x) => x.averageScore);
+      const values = data.map((x) => x.averageScore ?? 0);
 
       this.drawChart("batchPerfChart", {
-        type: "doughnut",
+        type: "bar",
         labels,
         datasets: [
           {
+            label: "Batch Student Performance",
             data: values,
             backgroundColor: [
               "#3b82f6",
@@ -189,8 +213,28 @@ window.assessmentDetailsPage = function () {
               "#ef4444",
               "#6366f1",
             ],
+            borderColor: "#000",
+            borderWidth: 1,
+            minBarLength: 2, // 👈 This makes 0-value bars visible
           },
         ],
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true,
+              suggestedMax: 100,
+            },
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  return `Score: ${context.parsed.y}`;
+                },
+              },
+            },
+          },
+        },
       });
     },
 

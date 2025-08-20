@@ -6,42 +6,68 @@
   <title>Student Details</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script type="module" src="/public/assets/js/student/student-details-page.js">
-    </script>
+  <script type="module" src="/public/assets/js/student/student-details-page.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <style>
     [x-cloak] {
       display: none !important;
+    }
+
+    .chart-container {
+      position: relative;
+      width: 100%;
+      min-height: 300px;
     }
   </style>
 </head>
 
 <body class="bg-gray-100 text-gray-800" x-cloak>
+  <!-- Sidebar -->
   <div id="sidebar-placeholder"></div>
 
-  <div class="md:ml-64 p-6 space-y-6">
+  <main class="md:ml-64 p-6 space-y-8">
+    <!-- Navbar -->
     <div id="navbar-placeholder"></div>
 
-    <div class="flex justify-between items-center">
+    <!-- Page Heading -->
+    <header class="flex justify-between items-center">
       <h2 class="text-2xl font-bold">Student Details</h2>
-    </div>
+    </header>
 
-    <!-- Profile Section -->
-    <div class="bg-white p-6 rounded shadow grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- LOADING: PROFILE + ACTIONS SKELETON -->
+    <section x-show="loading" class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded shadow animate-pulse">
+      <div class="space-y-2">
+        <div class="h-5 bg-gray-200 rounded w-1/3"></div>
+        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+        <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+        <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+      </div>
+      <div class="space-y-2">
+        <div class="h-5 bg-gray-200 rounded w-1/3"></div>
+        <div class="h-8 bg-gray-200 rounded w-3/4"></div>
+        <div class="h-8 bg-gray-200 rounded w-1/2"></div>
+      </div>
+    </section>
+
+    <!-- PROFILE + ACTIONS -->
+    <section x-show="!loading" x-transition.opacity
+      class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded shadow">
+      <!-- Profile Info -->
       <div>
         <h3 class="text-lg font-semibold mb-2">👤 Profile</h3>
         <p><strong>Name:</strong> <span x-text="student.name"></span></p>
         <p><strong>Email:</strong> <span x-text="student.email"></span></p>
         <p><strong>Status:</strong>
           <span :class="student.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
-            class="text-xs font-medium px-2 py-1 rounded" x-text="student.status">
-          </span>
+            class="text-xs font-medium px-2 py-1 rounded" x-text="student.status"></span>
         </p>
         <p><strong>Batch:</strong> <span x-text="student.batch"></span></p>
         <p><strong>Joined:</strong> <span x-text="student.joinDate"></span></p>
       </div>
 
+      <!-- Action Buttons -->
       <div>
         <h3 class="text-lg font-semibold mb-2">⚙️ Actions</h3>
         <div class="space-x-2">
@@ -55,34 +81,47 @@
             <button class="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
               @click="updateStatus('Active')">Activate</button>
           </template>
-          <button class="px-3 py-1 bg-yellow-500 text-white text-sm rounded hover:bg-yellow-600" @click="navToStudentSubmissions">View
-            Submissions</button>
+          <button class="px-3 py-1 bg-yellow-500 text-white text-sm rounded hover:bg-yellow-600"
+            @click="navToStudentSubmissions">View Submissions</button>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Analytics Cards -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div class="bg-white p-4 rounded shadow">
-        <div class="text-sm text-gray-500">📘 Total Assessments</div>
-        <div class="text-xl font-semibold" x-text="analytics.totalAssessments"></div>
+    <!-- ANALYTICS -->
+    <section>
+      <!-- Loading -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 animate-pulse" x-show="loading">
+        <template x-for="i in 4" :key="i">
+          <div class="bg-white p-4 rounded shadow h-20 space-y-2">
+            <div class="h-4 bg-gray-200 rounded w-2/3"></div>
+            <div class="h-6 bg-gray-300 rounded w-1/2"></div>
+          </div>
+        </template>
       </div>
-      <div class="bg-white p-4 rounded shadow">
-        <div class="text-sm text-gray-500">✍️ Attempted</div>
-        <div class="text-xl font-semibold" x-text="analytics.attempted"></div>
-      </div>
-      <div class="bg-white p-4 rounded shadow">
-        <div class="text-sm text-gray-500">✅ Completion Rate</div>
-        <div class="text-xl font-semibold" x-text="completionRate + '%'"></div>
-      </div>
-      <div class="bg-white p-4 rounded shadow">
-        <div class="text-sm text-gray-500">📊 Average Score</div>
-        <div class="text-xl font-semibold" x-text="analytics.avgScore + '%'"></div>
-      </div>
-    </div>
 
-    <!-- Last Activity -->
-    <div class="bg-white p-4 rounded shadow">
+      <!-- Loaded Analytics -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4" x-show="!loading" x-transition.opacity>
+        <div class="bg-white p-4 rounded shadow">
+          <div class="text-sm text-gray-500">📘 Total Assessments</div>
+          <div class="text-xl font-semibold" x-text="analytics.totalAssessments"></div>
+        </div>
+        <div class="bg-white p-4 rounded shadow">
+          <div class="text-sm text-gray-500">✍️ Attempted</div>
+          <div class="text-xl font-semibold" x-text="analytics.attempted"></div>
+        </div>
+        <div class="bg-white p-4 rounded shadow">
+          <div class="text-sm text-gray-500">✅ Completion Rate</div>
+          <div class="text-xl font-semibold" x-text="completionRate + '%'"></div>
+        </div>
+        <div class="bg-white p-4 rounded shadow">
+          <div class="text-sm text-gray-500">📊 Average Score</div>
+          <div class="text-xl font-semibold" x-text="analytics.avgScore + '%'"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LAST ACTIVITY -->
+    <section x-show="!loading" class="bg-white p-4 rounded shadow">
       <h3 class="text-lg font-semibold mb-2">🕓 Last Activity</h3>
       <template x-if="submissions.length">
         <p><strong>Last Submission:</strong> <span x-text="submissions[0].submittedAt"></span></p>
@@ -90,89 +129,119 @@
       <template x-if="!submissions.length">
         <p>No submissions yet.</p>
       </template>
-    </div>
-<!-- Score Trend Filter -->
-<div class="bg-white p-4 rounded shadow">
-  <label for="trendMonth" class="font-medium block mb-2">📅 Filter Score Trend by Month</label>
-  <input type="month" id="trendMonth" class="border p-2 rounded" @change="fetchScoreTrend($event.target.value)" />
-  <div class="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
-    <label class="text-sm font-medium">📅 Filter by Date Range:</label>
-    <input type="date" class="border p-2 rounded" x-model="typeScoreStart" />
-    <input type="date" class="border p-2 rounded" x-model="typeScoreEnd" />
-    <button class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
-      @click="loadScoreByType(typeScoreStart, typeScoreEnd)">
-      Apply Filter
-    </button>
-  </div>
+    </section>
 
-</div>
-
-    <!-- Charts -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div class="bg-white p-4 rounded shadow">
-        <h4 class="font-medium mb-2">Score Trend</h4>
-        <canvas id="scoreTrendChart"></canvas>
-      </div>
-      
-      <!-- Score by Question Type Chart -->
-      <div class="mt-6 bg-white p-4 rounded shadow">
-        <h2 class="text-lg font-semibold mb-2">Average Scores by Question Type</h2>
-        <canvas id="scoreByTypeChart" height="300"></canvas>
+    <!-- CHARTS -->
+    <section>
+      <!-- Loading -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 animate-pulse" x-show="loading">
+        <div class="bg-white p-4 rounded shadow h-64"></div>
+        <div class="bg-white p-4 rounded shadow h-64"></div>
       </div>
 
-
-    </div>
-
-    <!-- Submissions Table -->
-    <div class="bg-white p-6 rounded shadow mt-4">
-      <h3 class="text-lg font-semibold mb-4">📄 Assessment History</h3>
-      <div class="mb-2">
-        <input type="text" placeholder="Search by title..." class="border p-2 rounded w-full md:w-1/3" x-model="searchText"
-          @input.debounce.500ms="loadAssessmentHistory(1)" />
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-gray-100">
-            <tr>
-              <th class="text-left p-2">Title</th>
-              <th class="text-left p-2">Score</th>
-              <th class="text-left p-2">Feedback</th>
-              <th class="text-left p-2">Assigned</th>
-              <th class="text-left p-2">Submitted</th>
-            </tr>
-          </thead>
-          <tbody>
-            <template x-for="a in assessmentHistory" :key="a.assessmentId">
-              <tr class="border-t">
-                <td class="p-2" x-text="a.title"></td>
-                <td class="p-2" x-text="a.score + '%'"></td>
-                <td class="p-2" x-text="a.feedBack || '-'"></td>
-                <td class="p-2" x-text="a.assignedDate || '-'"></td>
-                <td class="p-2" x-text="a.submittedAt"></td>
-              </tr>
-            </template>
-
-          </tbody>
-        </table>
-        <div class="flex justify-between items-center mt-4">
-          <button class="px-3 py-1 bg-gray-300 rounded disabled:opacity-50" :disabled="pagination.currentPage === 1"
-            @click="loadAssessmentHistory(pagination.currentPage - 1)">
-            Prev
-          </button>
-        
-          <span>Page <span x-text="pagination.currentPage"></span> of <span x-text="pagination.totalPages"></span></span>
-        
-          <button class="px-3 py-1 bg-gray-300 rounded disabled:opacity-50"
-            :disabled="pagination.currentPage === pagination.totalPages"
-            @click="loadAssessmentHistory(pagination.currentPage + 1)">
-            Next
-          </button>
+      <!-- Loaded -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6" x-show="!loading" x-transition.opacity>
+        <!-- Score Trend -->
+        <div class="bg-white p-4 rounded shadow">
+          <h4 class="text-lg font-semibold mb-2">📈 Score Trend</h4>
+          <label for="trendMonth" class="font-medium block mb-2">Filter by Month</label>
+          <input type="month" id="trendMonth" class="border p-2 rounded w-full md:w-1/2"
+            @change="fetchScoreTrend($event.target.value)" />
+          <div class="chart-container mt-4">
+            <canvas id="scoreTrendChart"></canvas>
+          </div>
         </div>
 
-      </div>
-    </div>
-  </div>
+        <!-- Score by Type -->
+        <div class="bg-white p-4 rounded shadow">
+          <h4 class="text-lg font-semibold mb-2">📊 Average Scores by Question Type</h4>
+          <div class="flex flex-col sm:flex-row sm:items-end sm:gap-2 gap-2 mb-4">
+            <!-- Label -->
+            <div class="flex flex-col">
+              <label class="text-sm font-medium mb-1 sm:mb-0">Filter by Date Range:</label>
+            </div>
+          
+            <!-- Start Date -->
+            <div class="flex flex-col w-full sm:w-auto">
+              <input type="date" class="border p-2 rounded w-full sm:w-auto" x-model="typeScoreStart" />
+            </div>
+          
+            <!-- End Date -->
+            <div class="flex flex-col w-full sm:w-auto">
+              <input type="date" class="border p-2 rounded w-full sm:w-auto" x-model="typeScoreEnd" />
+            </div>
+          
+            <!-- Button -->
+            <div class="flex flex-col">
+              <button class="bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700"
+                @click="loadScoreByType(typeScoreStart, typeScoreEnd)">
+                Apply Filter
+              </button>
+            </div>
+          </div>
 
+          <div class="chart-container">
+            <canvas id="scoreByTypeChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ASSESSMENT HISTORY -->
+    <section>
+      <!-- Loading -->
+      <div class="bg-white p-6 rounded shadow mt-4 animate-pulse space-y-4" x-show="loading">
+        <div class="h-5 bg-gray-200 rounded w-1/3"></div>
+        <div class="h-4 bg-gray-200 rounded w-full"></div>
+        <div class="h-4 bg-gray-200 rounded w-full"></div>
+        <div class="h-4 bg-gray-200 rounded w-2/3"></div>
+      </div>
+
+      <!-- Table -->
+      <div class="bg-white p-6 rounded shadow mt-4" x-show="!loading" x-transition.opacity>
+        <h3 class="text-lg font-semibold mb-4">📄 Assessment History</h3>
+        <div class="mb-2">
+          <input type="text" placeholder="Search by title..." class="border p-2 rounded w-full md:w-1/3"
+            x-model="searchText" @input.debounce.500ms="loadAssessmentHistory(1)" />
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="text-left p-2">Title</th>
+                <th class="text-left p-2">Score</th>
+                <th class="text-left p-2">Feedback</th>
+                <th class="text-left p-2">Assigned</th>
+                <th class="text-left p-2">Submitted</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="a in assessmentHistory" :key="a.assessmentId">
+                <tr class="border-t">
+                  <td class="p-2" x-text="a.title"></td>
+                  <td class="p-2" x-text="a.score + '%'"></td>
+                  <td class="p-2" x-text="a.feedBack || '-'"></td>
+                  <td class="p-2" x-text="a.assignedDate || '-'"></td>
+                  <td class="p-2" x-text="a.submittedAt"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+
+          <!-- Pagination -->
+          <div class="flex justify-between items-center mt-4">
+            <button class="px-3 py-1 bg-gray-300 rounded disabled:opacity-50" :disabled="pagination.currentPage === 1"
+              @click="loadAssessmentHistory(pagination.currentPage - 1)">Prev</button>
+            <span>Page <span x-text="pagination.currentPage"></span> of <span
+                x-text="pagination.totalPages"></span></span>
+            <button class="px-3 py-1 bg-gray-300 rounded disabled:opacity-50"
+              :disabled="pagination.currentPage === pagination.totalPages"
+              @click="loadAssessmentHistory(pagination.currentPage + 1)">Next</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
 </body>
 
 </html>

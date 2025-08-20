@@ -40,16 +40,16 @@ namespace Host.Controllers
         }
         //Endpoint: GET /api/v1/admin/analytics/assessments/top-performing
         [HttpGet("admin/analytics/assessments/top-performing")]
-        public async Task<IActionResult> GetTopPerformingAssessments()
+        public async Task<IActionResult> GetTopPerformingAssessments([FromQuery] int? month,[FromQuery]int? year)
         {
-            var result = await assessmentService.GetTopAssessments();
+            var result = await assessmentService.GetTopAssessments( month, year);
             return Ok(result);
         }
         //GET /api/v1/admin/analytics/assessments/lowest-performing
         [HttpGet("admin/analytics/assessments/lowest-performing")]
-        public async Task<IActionResult> GetLowestPerformingAssessments()
+        public async Task<IActionResult> GetLowestPerformingAssessments([FromQuery] int? month, [FromQuery] int? year)
         {
-            var result = await assessmentService.GetLowestAssessments();
+            var result = await assessmentService.GetLowestAssessments(month, year);
             return Ok(result);
         }
         [HttpGet("admin/assessments/metrics")]
@@ -65,16 +65,16 @@ namespace Host.Controllers
             return Ok(result);
         }
         [HttpGet("admin/analytics/assessments/score-trends")]
-        public async Task<IActionResult> GetScoreTrends([FromQuery] Guid? instructorId, [FromQuery] Guid? batchId, [FromQuery] int? month)
+        public async Task<IActionResult> GetScoreTrends([FromQuery] Guid? instructorId, [FromQuery] Guid? batchId, [FromQuery] DateTime? date)
         {
-            var result = await _dashBoardService.GetScoreTrendsAsync(instructorId, batchId, month);
+            var result = await _dashBoardService.GetScoreTrendsAsync(instructorId, batchId, date);
             return Ok(result);
         }
 
         [HttpGet("admin/analytics/assessments/created-trend")]
-        public async Task<IActionResult> GetAssessmentCreatedTrend([FromQuery] Guid? instructorId, [FromQuery] Guid? batchId, [FromQuery] int? month)
+        public async Task<IActionResult> GetAssessmentCreatedTrend([FromQuery] Guid? instructorId, [FromQuery] Guid? batchId, [FromQuery] DateTime? date)
         {
-            var result = await _dashBoardService.GetAssessmentsCreatedTrendAsync(instructorId, batchId, month);
+            var result = await _dashBoardService.GetAssessmentsCreatedTrendAsync(instructorId, batchId, date);
             return Ok(result);
         }
         [HttpGet("admin/batch/analytics")]

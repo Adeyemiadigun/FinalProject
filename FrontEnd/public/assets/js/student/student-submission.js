@@ -9,9 +9,12 @@ function submissionPage() {
       pageSize: 5,
     },
 
+    loading: false, // ⬅️ Added
+
     async init() {
       await this.loadSidebarNavbar();
       this.fetchSubmissions();
+
     },
 
     async loadSidebarNavbar() {
@@ -52,6 +55,7 @@ function submissionPage() {
       } else {
         this.submissions = [];
       }
+      this.loading = false; // ⬅️ Hide loader after fetching
     },
 
     nextPage() {

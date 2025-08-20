@@ -66,7 +66,7 @@ namespace Application.Services
 
             // Load existing progress with tracking
             var progress = await _progressRepository
-                .GetByStudentAndAssessmentAsync(userId, saveProgressDto.AssessmentId); // 👈 includes Answers & SelectedOptions
+                .GetByStudentAndAssessmentAsync(userId, saveProgressDto.AssessmentId); 
 
             if (progress == null)
             {
@@ -78,6 +78,7 @@ namespace Application.Services
                     StartedAt = DateTime.UtcNow,
                     CurrentSessionStart = saveProgressDto.CurrentSessionStart ?? DateTime.UtcNow,
                     LastSavedAt = DateTime.UtcNow,
+                    ElapsedTime = saveProgressDto.ElapsedTime ?? TimeSpan.Zero,
                     Answers = saveProgressDto.Answers.Select(a => new InProgressAnswer
                     {
                         QuestionId = a.QuestionId,
@@ -92,11 +93,14 @@ namespace Application.Services
             else
             {
                 // Update timing
-                if (progress.CurrentSessionStart.HasValue)
+                if (saveProgressDto.ElapsedTime.HasValue)
                 {
-                    var sessionDuration = DateTime.UtcNow - progress.CurrentSessionStart.Value;
-                    progress.ElapsedTime += sessionDuration;
+                    progress.ElapsedTime += saveProgressDto.ElapsedTime.Value;
                 }
+
+                progress.LastSavedAt = DateTime.UtcNow;
+                progress.CurrentSessionStart = null;
+
 
                 progress.CurrentSessionStart = null;
                 progress.LastSavedAt = DateTime.UtcNow;

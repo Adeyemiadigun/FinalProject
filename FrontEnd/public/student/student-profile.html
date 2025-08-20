@@ -1,17 +1,25 @@
 <!DOCTYPE html>
 <html lang="en" x-data="studentProfile()" x-init="init()">
-
 <head>
   <meta charset="UTF-8">
   <title>Student Profile</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
-  <script type="module" src="/public/assets/js/student/student-profile.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script type="module" src="/public/assets/js/student/student-profile.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] {
+      display: none !important;
+    }
+  </style>
 </head>
-
 <body class="bg-gray-100 text-gray-800" x-data="{ sidebarOpen: false }" x-init="loadLayout()">
+<!-- Loader Overlay -->
+<div x-show="loading" x-transition class="fixed inset-0 bg-white bg-opacity-80 z-50 flex items-center justify-center"
+  x-cloak>
+  <div class="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent"></div>
+</div>
 
   <!-- Sidebar -->
   <div id="sidebar-placeholder"
@@ -27,7 +35,7 @@
     <main class="p-8 max-w-6xl mx-auto space-y-8">
       <!-- Profile Header -->
       <div class="flex items-center space-x-6">
-        <img  src="https://api.dicebear.com/6.x/initials/svg?seed=student.name" alt="Avatar"
+        <img :src="`https://api.dicebear.com/6.x/initials/svg?seed=${student.name}`"  alt="Avatar"
           class="w-24 h-24 rounded-full border shadow">
         <div>
           <h1 class="text-2xl font-bold" x-text="student.name"></h1>
@@ -36,6 +44,9 @@
           <p class="text-sm text-gray-500">Joined: <span x-text="student.joinedAt"></span></p>
         </div>
       </div>
+<button @click="openEditModal" class="mt-4 px-4 py-2 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700">
+  ✏️ Edit Profile
+</button>
 
       <!-- Summary Cards -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
@@ -90,6 +101,43 @@
       </div>
     </main>
   </div>
+  <!-- Profile Update Modal -->
+  <div x-show="showEditModal" x-cloak class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    x-transition>
+    <div @click.away="closeEditModal" class="bg-white w-full max-w-md p-6 rounded-lg shadow-lg space-y-4">
+      <h2 class="text-xl font-semibold">Update Profile</h2>
+  
+      <div>
+        <label class="block text-sm font-medium">Full Name</label>
+        <input type="text" class="w-full mt-1 border rounded px-3 py-2" x-model="editForm.name">
+      </div>
+  
+      <div>
+        <label class="block text-sm font-medium">Email</label>
+        <input type="email" class="w-full mt-1 border rounded px-3 py-2" x-model="editForm.email">
+      </div>
+  
+      <hr class="my-4">
+  
+      <h3 class="text-sm font-medium text-gray-600">Optional: Change Password</h3>
+  
+      <div>
+        <label class="block text-sm font-medium">Current Password</label>
+        <input type="password" class="w-full mt-1 border rounded px-3 py-2" x-model="editForm.currentPassword">
+      </div>
+  
+      <div>
+        <label class="block text-sm font-medium">New Password</label>
+        <input type="password" class="w-full mt-1 border rounded px-3 py-2" x-model="editForm.newPassword">
+      </div>
+  
+      <div class="flex justify-end space-x-2 pt-4">
+        <button class="px-4 py-2 text-gray-600 hover:underline" @click="closeEditModal">Cancel</button>
+        <button class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700" @click="submitUpdate">Save</button>
+      </div>
+    </div>
+  </div>
+
 
   
 </body>

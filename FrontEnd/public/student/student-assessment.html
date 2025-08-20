@@ -6,17 +6,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Assessments</title>
   <script src="https://cdn.tailwindcss.com"></script>
-    <script type="module" src="/public/assets/js/student/student-assessment.js">
-    </script>
+  <script type="module" src="/public/assets/js/student/student-assessment.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <style>
+    [x-cloak] {
+      display: none !important;
+    }
+  </style>
 </head>
 
 <body class="bg-gray-100 text-gray-800" x-data="{ sidebarOpen: false }" x-init="initLayout()">
-
+  <!-- Sidebar -->
   <div id="sidebar-placeholder" class="fixed inset-y-0 left-0 w-64 z-40 hidden md:block"></div>
 
-  <div class="md:ml-64 flex flex-col min-h-screen">
+  <!-- Main Content Wrapper -->
+  <div class="md:ml-64 flex flex-col min-h-screen" x-cloak x-show="!loading">
+    <!-- Navbar -->
     <div id="navbar-placeholder"></div>
 
     <main class="flex-grow px-6 py-8 space-y-10">
@@ -53,36 +60,35 @@
                 <td class="p-2" x-text="formatDate(a.startDate)"></td>
                 <td class="p-2" x-text="formatDate(a.endDate)"></td>
                 <td class="p-2" x-text="a.status === 'Upcoming' ? a.countdown : '—'"></td>
-                <td class="p-2">
-                  <td class="p-2 text-center">
-                    <template x-if="a.status === 'Upcoming'">
-                      <span class="text-gray-400 italic">Not Yet Open</span>
-                    </template>
-                  
-                    <template x-if="a.status === 'InProgress' && !a.submitted">
-                      <button @click="startAssessment(a.id)" class="px-3 py-1 text-sm bg-indigo-600 text-white rounded">Start</button>
-                    </template>
-                  
-                    <template x-if="a.status === 'InProgress' && a.submitted">
-                      <span class="text-green-600 font-medium">Submitted</span>
-                    </template>
-                  
-                    <template x-if="a.status === 'Completed' && a.submitted">
-                      <button @click="viewResult(a.id)" class="px-3 py-1 text-sm bg-gray-300 text-gray-700 rounded">View</button>
-                    </template>
-                  
-                    <template x-if="a.status === 'Completed' && !a.submitted">
-                      <span class="text-red-500 font-semibold">Not Submitted</span>
-                    </template>
-                  </td>
-                  
+                <td class="p-2 text-center">
+                  <template x-if="a.status === 'Upcoming'">
+                    <span class="text-gray-400 italic">Not Yet Open</span>
+                  </template>
+
+                  <template x-if="a.status === 'InProgress' && !a.submitted">
+                    <button @click="startAssessment(a.id)"
+                      class="px-3 py-1 text-sm bg-indigo-600 text-white rounded">Start</button>
+                  </template>
+
+                  <template x-if="a.status === 'InProgress' && a.submitted">
+                    <span class="text-green-600 font-medium">Submitted</span>
+                  </template>
+
+                  <template x-if="a.status === 'Completed' && a.submitted">
+                    <button @click="viewResult(a.id)"
+                      class="px-3 py-1 text-sm bg-gray-300 text-gray-700 rounded">View</button>
+                  </template>
+
+                  <template x-if="a.status === 'Completed' && !a.submitted">
+                    <span class="text-red-500 font-semibold">Not Submitted</span>
+                  </template>
                 </td>
               </tr>
             </template>
           </tbody>
         </table>
 
-        <!-- Pagination Controls -->
+        <!-- Pagination -->
         <div class="flex justify-between items-center mt-4">
           <button @click="prevPage" :disabled="page === 1" class="px-3 py-1 bg-gray-200 rounded">Previous</button>
           <span class="text-sm">Page <span x-text="page"></span> of <span x-text="totalPages"></span></span>
@@ -90,6 +96,20 @@
         </div>
       </div>
     </main>
+  </div>
+
+  <!-- Skeleton Loader Overlay -->
+  <div x-show="loading" class="fixed inset-0 z-50 flex items-center justify-center bg-white bg-opacity-90" x-cloak
+    x-transition>
+    <div class="text-center space-y-4">
+      <svg class="animate-spin h-10 w-10 text-indigo-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none"
+        viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z">
+        </path>
+      </svg>
+      <p class="text-sm text-gray-600">Loading assessments...</p>
+    </div>
   </div>
 </body>
 

@@ -66,12 +66,11 @@
     </div>
     <!-- Filters for Charts -->
     <div class="flex items-center gap-4 mt-4">
-    <select x-model="filters.month" @change="loadData()" class="px-3 py-2 rounded border bg-white shadow-sm text-sm">
-      <option disabled value="">Select Month</option>
-      <template x-for="(m, index) in ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']">
-        <option :value="index + 1" x-text="m"></option>
-      </template>
-    </select>
+    <div>
+      <label for="trendMonth" class="font-medium block mb-2">Filter by Month</label>
+      <input type="month" id="trendMonth" class="border p-2 rounded w-full md:w-1/2"
+        @change="loadTrend()" x-model="filters.date" />
+    </div>
     </div>
 
     <!-- Chart Section -->

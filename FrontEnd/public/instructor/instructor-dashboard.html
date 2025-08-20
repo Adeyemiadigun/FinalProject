@@ -11,6 +11,11 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .skeleton {
+      @apply bg-gray-300 animate-pulse rounded;
+    }
+  </style>
 </head>
 
 <body class="bg-gray-100 text-gray-800">
@@ -67,15 +72,18 @@
         <h4 class="font-medium mb-2">Student Distribution by Batch</h4>
         <canvas id="studentBatchChart"></canvas>
       </div>
-      <div>
+      <div x-show="batches.length > 0" x-cloak>
         <label class="text-sm text-gray-600">Batch</label>
-        <select x-model="filters.batchId" class="border rounded px-2 py-1">
-          <option value="">All</option>
-          <template x-for="batch in batches" :key="batch.id">
-            <option :value="batch.id" x-text="batch.batchName"></option>
-          </template>
-        </select>
+      <select x-model="filters.batchId" class="border rounded px-2 py-1">
+        <option value="">All</option>
+        <template x-for="batch in batches" :key="batch.batchId">
+          <option :value="batch.batchId" x-text="batch.batchName"></option>
+        </template>
+
+      </select>
+
       </div>
+
 
         <!-- Score by Question Type -->
         <div class="bg-white p-4 rounded shadow col-span-1 md:col-span-2">
@@ -92,7 +100,9 @@
     <div class="bg-white p-6 rounded shadow">
       <h3 class="text-lg font-semibold mb-4">⚡ Quick Actions</h3>
       <div class="space-x-2">
-        <button class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">➕ Create Assessment</button>
+      <button class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700" @click="showCreateModal = true">
+        ➕ Create Assessment
+      </button>
         <button class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">📤 Assign Assessment</button>
       </div>
     </div>

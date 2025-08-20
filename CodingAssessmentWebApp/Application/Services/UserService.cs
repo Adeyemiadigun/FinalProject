@@ -197,30 +197,46 @@ namespace Application.Services
             };
         }
 
-        public async Task<BaseResponse<UserDto>> UpdateUser(UpdateUserRequsteModel model)
+        public async Task<BaseResponse<UserDto>> UpdateUser(UpdateUserRequestModel model)
         {
-            var user = await _userRepository.GetAsync(model.Id);
+            var userId = _currentUser.GetCurrentUserId();
+            var user = await _userRepository.GetAsync(userId);
             if (user == null)
                 throw new ApiException("User not found", 404, "UserNotFound", null);
 
-            var check = await _userRepository.CheckAsync(x => x.Email == model.Email && x.Id != user.Id);
-            if (check)
-                throw new ApiException("Email already exists for another user", 400, "DuplicateEmail", null); 
+            var emailTaken = await _userRepository.CheckAsync(x => x.Email == model.Email && x.Id != user.Id);
+            if (emailTaken)
+                throw new ApiException("Email already exists for another user", 400, "DuplicateEmail", null);
 
             user.FullName = model.FullName;
             user.Email = model.Email;
+
+            // Handle password change if requested
+            if (!string.IsNullOrWhiteSpace(model.NewPassword))
+            {
+                if (string.IsNullOrWhiteSpace(model.CurrentPassword))
+                    throw new ApiException("Current password is required to change your password", 400, "CurrentPasswordRequired", null);
+
+                var passwordValid = BCrypt.Net.BCrypt.Verify(model.CurrentPassword, user.PasswordHash);
+                if (!passwordValid)
+                    throw new ApiException("Current password is incorrect", 400, "IncorrectPassword", null);
+
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
+            }
+
             _userRepository.Update(user);
             await _unitOfWork.SaveChangesAsync();
+
             return new BaseResponse<UserDto>()
             {
-                Message = "User updated successfully",
                 Status = true,
+                Message = "User updated successfully",
                 Data = new UserDto()
                 {
                     Id = user.Id,
                     Email = user.Email,
-                    Role = user.Role,
                     FullName = user.FullName,
+                    Role = user.Role
                 }
             };
         }
@@ -622,9 +638,10 @@ namespace Application.Services
             var studentId = _currentUser.GetCurrentUserId();
             if (studentId == Guid.Empty)
                 throw new ApiException("Invalid student ID provided", 400, "InvalidId", null);
-            var submissions = await _submissionRepo.GetAllAsync(x => x.StudentId == studentId);
+            var submissions = await _submissionRepo.GetAllAsync(x => x.StudentId == studentId && x.IsAutoSubmitted == false);
             if (!submissions.Any())
             throw new ApiException("NoSubmissionForStudent", 500, "UnknownError", null);
+            var submissionCount = submissions.Count(); 
             return new BaseResponse<StudentDashboardSummaryDto>
             {
                 Message = "Student dashboard summary retrieved successfully",
@@ -634,7 +651,8 @@ namespace Application.Services
                     TotalAssessments = submissions.Count,
                     AverageScore = submissions.Average(s => s.TotalScore),
                     HighestScore = submissions.Max(s => s.TotalScore),
-                    CompletionRate = 100 * submissions.Count(s => s.SubmittedAt != null) / submissions.Count
+                    CompletionRate = 100 * submissions.Count(s => s.SubmittedAt != null) / submissionCount,
+                    Completed = submissionCount
                 }
             };
         }
@@ -647,7 +665,7 @@ namespace Application.Services
                 throw new ApiException("Student not found", 404, "StudentNotFound", null);
             if (studentId == Guid.Empty)
                 throw new ApiException("Invalid student ID provided", 400, "InvalidId", null);
-            var assessments = await _assessmentRepository.GetAllAsync(x => x.AssessmentAssignments.Any(x => x.StudentId == studentId)&& x != null && x.StartDate <= DateTime.UtcNow && x.EndDate >= DateTime.UtcNow, new PaginationRequest { CurrentPage = 1, PageSize = 4});
+            var assessments = await _assessmentRepository.GetAllAsync(x => x.AssessmentAssignments.Any(x => x.StudentId == studentId)&& x != null && x.Status == AssessmentStatus.InProgress, new PaginationRequest { CurrentPage = 1, PageSize = 4});
 
             if (!assessments.Items.Any())
                 throw new ApiException("No ongoing assessments found for the student", 404, "NoOngoingAssessments", null);
@@ -958,7 +976,7 @@ namespace Application.Services
                     return new StudentScoreByTypeDto
                     {
                         Type = g.Key,
-                        AverageScore = totalPossible > 0 ? Math.Round((double)(totalEarned / totalPossible) * 100, 2) : 0,
+                        AverageScore = totalPossible > 0 ? (double)(totalEarned / totalPossible) * 100 : 0,
                         AttemptCount = g.Count()
                     };
                 })

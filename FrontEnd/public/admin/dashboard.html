@@ -8,6 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="/public/assets/js/Auth/refreshTokenLogic.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <script type="module" src="/public/assets/js/admin/dashboard.js">
     </script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -42,7 +43,8 @@
         <template x-for="card in statCards" :key="card.label">
           <div class="bg-white p-4 rounded shadow flex items-center gap-4">
             <div :class="card.bg + ' p-2 rounded text-white'">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" :innerHTML="card.icon"></svg>
+              <div x-html="card.icon"></div>
+              </svg>
             </div>
             <div>
               <div class="text-sm text-gray-500" x-text="card.label"></div>
@@ -53,6 +55,13 @@
       </template>
     </div>
 
+      <div class="flex items-center gap-4 mt-4">
+        <div>
+          <label for="trendMonth" class="font-medium block mb-2">Filter by Month</label>
+          <input type="month" id="trendMonth" class="border p-2 rounded w-full md:w-1/2" @change="loadTrend()"
+            x-model="filter.date" />
+        </div>
+      </div>
     <!-- Charts -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div class="bg-white p-4 rounded shadow">

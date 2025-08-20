@@ -25,7 +25,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("update")]
-    public async Task<IActionResult> UpdateUser([FromBody] UpdateUserRequsteModel model)
+    public async Task<IActionResult> UpdateUser([FromBody] UpdateUserRequestModel model)
     {
         var response = await _userService.UpdateUser(model);
         return response.Status ? Ok(response) : BadRequest(response);

@@ -120,6 +120,11 @@ window.questionsPage = function () {
       this.showCreateModal = true;
       this.showAIPreviewModal = false;
     },
+    GotoAiGenModal()
+    {
+      this.showAIModal = true;
+      this.showCreateModal = false;
+    },
 
     async submitQuestion() {
       const payload = {
@@ -131,22 +136,29 @@ window.questionsPage = function () {
         testCases: this.questionForm.testCases,
         answer: this.questionForm.answer,
       };
-
+      console.log("Submitting question:", payload);
       const endpoint = this.showEditModal
         ? `/Questions/${this.questions[this.editIndex].id}`
         : `/Assessments/${this.assessmentId}/questions`;
 
       const body = this.showEditModal ? payload : [payload];
-      const method = this.showEditModal ? api.put : api.post;
+  
+
 
       try {
-        const res = await method(endpoint, body);
+           let res;
+           if (this.showEditModal) {
+             res = await api.put(endpoint, body);
+           } else {
+             res = await api.post(endpoint, body);
+           }
         if (res.ok) {
           await this.loadQuestions();
           if (this.showEditModal) this.closeModals();
           if (this.showCreateModal) this.resetForm();
         }
-      } catch {
+      } catch(error) {
+        console.error("Failed to submit question", error);
         Swal.fire("Error", "Failed to submit question", "error");
       }
     },

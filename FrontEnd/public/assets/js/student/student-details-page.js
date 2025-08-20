@@ -17,6 +17,9 @@ window.studentDetailsPage = function () {
       currentPage: 1,
       pageSize: 5,
     },
+    loading: true,
+    scoreTrendChartLoading: false,
+    scoreByTypeChartLoading: false,
     _scoreTrendChart: null,
     _scoreByTypeChart: null,
     get completionRate() {
@@ -53,14 +56,24 @@ window.studentDetailsPage = function () {
         this.loadStudent(),
         this.loadAnalytics(),
         // this.loadSubmissions(),
-
         this.fetchScoreTrend(),
         this.loadScoreByType(),
-
         this.loadAssessmentHistory(),
       ]);
+
+      this.loading = false;
+      this.$nextTick(() => {
+        this.drawCharts();
+        this.$nextTick(() => {
+          if (this._scoreTrendChart) this._scoreTrendChart.resize();
+          if (this._scoreByTypeChart) this._scoreByTypeChart.resize();
+        });
+      });
     },
+
     async fetchScoreTrend(monthValue = null) {
+      
+      this.scoreByTypeChartLoading = false;
       try {
         let url = `/Students/${this.studentId}/score-trends`;
         if (monthValue) {
@@ -73,36 +86,43 @@ window.studentDetailsPage = function () {
         const data = await res.json();
 
         this.scoreTrend = data.data || [];
-
-        this.drawScoreTrendChart(); // refresh the chart
+        console.log("Score Trend Data:", this.scoreTrend);
+        console.log(data.data);
+        
+         this.drawScoreTrendChart();
+         console.log("reached here")
       } catch (error) {
         console.error("Error fetching score trend:", error);
         Swal.fire("Error", "Failed to load score trend data.", "error");
       }
     },
+
     async loadAssessmentHistory(page = 1) {
-  try {
-    const params = new URLSearchParams({
-      pageSize: this.pagination.pageSize,
-      currentPage: page,
-    });
+      try {
+        const params = new URLSearchParams({
+          pageSize: this.pagination.pageSize,
+          currentPage: page,
+        });
 
-    if (this.searchText) {
-      params.append("titleSearch", this.searchText);
-    }
-console.log(params.toString());
-    const res = await api.get(`/Students/${this.studentId}/assessment-history?${params}`);
-    const data = await res.json();
+        if (this.searchText) {
+          params.append("titleSearch", this.searchText);
+        }
+        console.log(params.toString());
+        const res = await api.get(
+          `/Students/${this.studentId}/assessment-history?${params}`
+        );
+        const data = await res.json();
 
-    this.assessmentHistory = data.data.items || [];
-    this.pagination.totalItems = data.data.totalItems;
-    this.pagination.totalPages = data.data.totalPages;
-    this.pagination.currentPage = data.data.currentPage;
-  } catch (error) {
-    console.error("Error loading assessment history:", error);
-    Swal.fire("Error", "Could not load assessment history.", "error");
-  }
-},
+        this.assessmentHistory = data.data.items || [];
+        this.pagination.totalItems = data.data.totalItems;
+        this.pagination.totalPages = data.data.totalPages;
+        this.pagination.currentPage = data.data.currentPage;
+      } catch (error) {
+        console.error("Error loading assessment history:", error);
+        Swal.fire("Error", "Could not load assessment history.", "error");
+      }
+    },
+
     async loadStudent() {
       try {
         const res = await api.get(`/Students/${this.studentId}/details`);
@@ -174,6 +194,7 @@ console.log(params.toString());
         Swal.fire("Error", "Failed to reassign batch.", "error");
       }
     },
+
     async loadScoreByType(startDate = null, endDate = null) {
       try {
         let url = `/Students/${this.studentId}/score-by-type`;
@@ -189,11 +210,10 @@ console.log(params.toString());
         const data = await res.json();
 
         this.analytics.scoreByType = data.data || [];
-
-        // 🛠️ Delay drawing the chart until the DOM is fully rendered
-        setTimeout(() => {
-          this.drawScoreByTypeChart();
-        }, 100); // delay by 100ms
+        console.log('Data fetched for score by type:', data.data);
+        console.log("Score by Type Data:", this.analytics.scoreByType);
+        this.scoreByTypeChartLoading = false;
+        this.$nextTick(() => this.drawScoreByTypeChart());
       } catch (error) {
         console.error("Error fetching score-by-type:", error);
         Swal.fire("Error", "Failed to load score by question type.", "error");
@@ -201,20 +221,29 @@ console.log(params.toString());
     },
 
     drawCharts() {
-      this.drawScoreTrendChart();
-      this.drawScoreByTypeChart();
-    },
+  this.$nextTick(() => this.drawScoreTrendChart());
+  this.$nextTick(() => this.drawScoreByTypeChart());
+},
+
     drawScoreTrendChart() {
       const ctx1 = document.getElementById("scoreTrendChart");
-      if (!ctx1) return;
+      if (!ctx1 || this.scoreTrendChartLoading) return;
+      // if(this.scoreTrendChartLoading) return;
 
-      // Clear old canvas if any
+      this.scoreTrendChartLoading = true;
+
+
       if (this._scoreTrendChart) {
         this._scoreTrendChart.destroy();
       }
-
-      const labels = this.scoreTrend.map((s) => s.labels);
-      const scores = this.scoreTrend.map((s) => s.scores);
+      console.log("Drawing Score Trend Chart");
+      console.log("Score Trend Data:", this.scoreTrend);
+      const labels = this.scoreTrend.length
+        ? this.scoreTrend.map((s) => s.labels)
+        : ["No Data"];
+      const scores = this.scoreTrend.length
+        ? this.scoreTrend.map((s) => s.scores)
+        : [0];
 
       this._scoreTrendChart = new Chart(ctx1, {
         type: "line",
@@ -230,57 +259,78 @@ console.log(params.toString());
             },
           ],
         },
-      });
-    },
-drawScoreByTypeChart() {
-  const ctx = document.getElementById("scoreByTypeChart");
-  if (!ctx || !this.analytics.scoreByType) return;
-
-  if (this._scoreByTypeChart) {
-    this._scoreByTypeChart.destroy();
-  }
-
-  console.log(this.analytics.scoreByType);
-
-  const labels = this.analytics.scoreByType.map((t) => t.type);
-  const scores = this.analytics.scoreByType.map((t) => t.averageScore);
-  const attemptCounts = this.analytics.scoreByType.map((t) => t.attemptCount || 0);
-
-  this._scoreByTypeChart = new Chart(ctx, {
-    type: "pie",
-    data: {
-      labels,
-      datasets: [
-        {
-          data: scores,
-          backgroundColor: [
-            "#3b82f6",
-            "#f59e0b",
-            "#10b981",
-            "#ef4444",
-            "#8b5cf6",
-            "#14b8a6",
-          ],
-        },
-      ],
-    },
-    options: {
-      plugins: {
-        tooltip: {
-          callbacks: {
-            label: function (context) {
-              const index = context.dataIndex;
-              const label = context.label;
-              const score = context.raw.toFixed(1);
-              const count = attemptCounts[index];
-              return `${label}: ${score}% (${count} attempt${count === 1 ? '' : 's'})`;
+        options: {
+          plugins: {
+            title: {
+              display: !this.scoreTrend.length,
+              text: "No Score Trend Data Available",
             },
           },
         },
-      },
+      }); 
     },
-  });
-},
+
+    drawScoreByTypeChart() {
+      const ctx = document.getElementById("scoreByTypeChart");
+      if (!ctx || this.scoreByTypeChartLoading) return;
+      this.scoreByTypeChartLoading = true;
+
+      if (this._scoreByTypeChart) {
+        this._scoreByTypeChart.destroy();
+      }
+
+      const labels = this.analytics.scoreByType?.length
+        ? this.analytics.scoreByType.map((t) => t.type)
+        : ["No Data"];
+      const scores = this.analytics.scoreByType?.length
+        ? this.analytics.scoreByType.map((t) => t.averageScore)
+        : [0];
+      const attemptCounts = this.analytics.scoreByType?.length
+        ? this.analytics.scoreByType.map((t) => t.attemptCount || 0)
+        : [0];
+
+      this._scoreByTypeChart = new Chart(ctx, {
+        type: "pie",
+        data: {
+          labels,
+          datasets: [
+            {
+              data: scores,
+              backgroundColor: [
+                "#3b82f6",
+                "#f59e0b",
+                "#10b981",
+                "#ef4444",
+                "#8b5cf6",
+                "#14b8a6",
+              ],
+            },
+          ],
+        },
+        options: {
+          plugins: {
+            title: {
+              display: !this.analytics.scoreByType?.length,
+              text: "No Score by Type Data Available",
+            },
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  const index = context.dataIndex;
+                  const label = context.label;
+                  const score = context.raw.toFixed(1);
+                  const count = attemptCounts[index];
+                  return `${label}: ${score}% (${count} attempt${
+                    count === 1 ? "" : "s"
+                  })`;
+                },
+              },
+            },
+          },
+        },
+      });
+    },
+
     navToStudentSubmissions() {
       window.location.href = `/public/shared/student-submission.html?id=${this.studentId}`;
     },

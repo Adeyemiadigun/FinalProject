@@ -17,6 +17,7 @@ import { api, loadComponent, logOut } from "../shared/utils.js";
       toDate: "",
     },
     chartDrawn: false,
+    isLoading: true,
 
     async init() {
       await loadComponent("sidebar-placeholder", "../components/sidebar.html");
@@ -26,7 +27,9 @@ import { api, loadComponent, logOut } from "../shared/utils.js";
       await this.fetchBatchList();
       await this.fetchMetrics();
       await this.fetchTrend();
-      this.drawCharts();
+      // this.drawCharts();
+      
+      this.isLoading = false; 
     },
 
     logOut, // Use global logout function
@@ -88,31 +91,41 @@ import { api, loadComponent, logOut } from "../shared/utils.js";
       }
     },
     drawTrendChart() {
-      if (this.chartDrawn) return;
-      this.chartDrawn = true;
-      if (this.trendChart) this.trendChart.destroy(); // Clean up previous chart
+  if (this.chartDrawn) return;
+  this.chartDrawn = true;
 
-      this.trendChart = new Chart(document.getElementById("trendChart"), {
-        type: "line",
-        data: {
-          labels: this.trendData.labels || [],
-          datasets: [
-            {
-              label: "Avg Score",
-              data: this.trendData.scores || [],
-              fill: false,
-              borderColor: "#3b82f6",
-              tension: 0.4,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          scales: { y: { beginAtZero: true, max: 100 } },
-        },
-      });
-    },
+  Alpine.nextTick(() => {
+    const canvas = document.getElementById("trendChart");
+    if (!canvas) {
+      console.warn("Canvas element #trendChart not found.");
+      return;
+    }
 
+    if (this.trendChart) {
+      this.trendChart.destroy();
+    }
+
+    this.trendChart = new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: this.trendData.labels || [],
+        datasets: [
+          {
+            label: "Avg Score",
+            data: this.trendData.scores || [],
+            fill: false,
+            borderColor: "#3b82f6",
+            tension: 0.4,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        scales: { y: { beginAtZero: true, max: 100 } },
+      },
+    });
+  });
+},
     async createBatch() {
       if (!this.newBatch.name || !this.newBatch.number) {
         Swal.fire({
@@ -164,23 +177,6 @@ import { api, loadComponent, logOut } from "../shared/utils.js";
           scales: { y: { beginAtZero: true, max: 100 } },
         },
       });
-
-      this.difficultyChart = new Chart(
-        document.getElementById("difficultyChart"),
-        {
-          type: "pie",
-          data: {
-            labels: ["Easy", "Medium", "Hard"],
-            datasets: [
-              {
-                data: [35, 45, 20], // You can replace this with backend data
-                backgroundColor: ["#10b981", "#f59e0b", "#ef4444"],
-              },
-            ],
-          },
-          options: { responsive: true },
-        }
-      );
     },
   };
 }

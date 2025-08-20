@@ -1,6 +1,7 @@
 ﻿using Application.Interfaces.Services;
 using Application.Services;
 using Hangfire;
+using Hangfire.PostgreSql.Properties;
 
 namespace Infrastructure.ExternalServices
 {
@@ -13,10 +14,11 @@ namespace Infrastructure.ExternalServices
                 service => service.CheckAssessmentsWithoutQuestions(),
                 Cron.Daily()
             );
+          
             //RecurringJob.AddOrUpdate<IMissedSubmissionScoringService>(
             // "score-missed-submissions",
             // service => service.RunAsync(),
-                 //Cron.Hourly); // Adjust as needed
+            //Cron.Hourly); // Adjust as needed
 
 
             // Add more jobs here as needed

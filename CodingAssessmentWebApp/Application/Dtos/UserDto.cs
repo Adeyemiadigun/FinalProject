@@ -65,12 +65,16 @@ namespace Application.Dtos
     {
         public List<RegisterUserRequestModel> Users { get; set; } = [];
     }
-    public class UpdateUserRequsteModel
+    public class UpdateUserRequestModel
     {
-        public Guid Id { get; set; }
         public string FullName { get; set; }
         public string Email { get; set; }
+
+        // Password change
+        public string? CurrentPassword { get; set; }
+        public string? NewPassword { get; set; }
     }
+
     public class LeaderboardDto
     {
         public Guid Id { get; set; }

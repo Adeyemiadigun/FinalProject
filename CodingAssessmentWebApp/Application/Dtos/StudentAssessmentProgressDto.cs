@@ -14,6 +14,7 @@ namespace Application.Dtos
 
         // Optional: send from frontend to help with time-tracking
         public DateTime? CurrentSessionStart { get; set; }
+        public TimeSpan? ElapsedTime { get; set; }
     }
     public class InProgressAnswerDto
     {

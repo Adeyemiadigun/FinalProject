@@ -22,8 +22,12 @@ window.dashboardApp = function () {
     leaderboardTop: [],
     studentRank: null,
     studentLeaderboard: null,
+    
+    loading: true,
 
     async initDashboard() {
+      
+      this.loading = true; 
       await loadComponent(
         "sidebar-placeholder",
         "/public/components/sidebar-student.html"
@@ -70,7 +74,7 @@ window.dashboardApp = function () {
       }
       await this.fetchScoreByType();
       await this.fetchLeaderboardSummary();
-
+      this.loading = false;
     },
     async fetchScoreByType() {
       try {
@@ -121,6 +125,7 @@ window.dashboardApp = function () {
       const res = await api.get("/students/details");
       const data = await res.json();
       const d = data.data;
+      console.log(d)
       this.student.name = d.fullName;
       this.student.batch = d.batchName;
     },
@@ -142,11 +147,13 @@ window.dashboardApp = function () {
       const res = await api.get("/Students/summary");
       const data = await res.json();
       const d = data.data;
+      console.log(d);
       this.summaryCards = {
-        "Total Assessments": d.totalAssessments,
-        "Avg Score": `${Math.round(d.averageScore)}%`,
-        "Completion Rate": `${Math.round(d.completionRate)}%`,
-        Completed: d.completedAssessments,
+        "Total Assessments": d.totalAssessments ||0,
+        "Avg Score": `${Math.round(d.averageScore)||0}%`,
+        "Completion Rate": `${Math.round(d.completionRate)||0}%`,
+        "Highest Score": d.highestScore || 0,
+        "Completed": d.completed ||0,
       };
     },
 
@@ -154,7 +161,7 @@ window.dashboardApp = function () {
       this.ongoingLoading = true;
       this.ongoingError = false;
       try {
-        const res = await api.get("/Students/ongoing");
+        const res = await api.get("/Students/ongoing-assessments");
         const data = await res.json();
         this.ongoing = data.data || [];
       } catch (e) {
@@ -169,7 +176,7 @@ window.dashboardApp = function () {
       this.upcomingLoading = true;
       this.upcomingError = false;
       try {
-        const res = await api.get("/Students/upcoming");
+        const res = await api.get("/Students/upcoming-assessments");
         const data = await res.json();
         this.upcoming = data.data || [];
       } catch (e) {
