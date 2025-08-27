@@ -796,7 +796,7 @@ namespace Application.Services
                 Id = x.Id,
                 FullName = x.FullName,
                 Email = x.Email,
-
+                DateCreated = x.CreatedAt
             });
 
             return new BaseResponse<List<UserDto>>()
@@ -804,6 +804,27 @@ namespace Application.Services
                 Message = "Instructors Retreived",
                 Status = true,
                 Data = userDtos.ToList()
+            };
+        }
+        public async Task<BaseResponse<UserDto>> GetCurrentInstructorProfile()
+        {
+            var currentUser = _currentUser.GetCurrentUserId();
+            var users = await _userRepository.GetAsync(currentUser);
+            if (users is null)
+                throw new ApiException("No Instructor found", 404, "InstructorNotInSystem", null);
+            var userDto = new UserDto()
+            {
+                Id = users.Id,
+                FullName = users.FullName,
+                Email = users.Email,
+                DateCreated = users.CreatedAt
+            };
+
+            return new BaseResponse<UserDto>()
+            {
+                Message = "Instructors Retreived",
+                Status = true,
+                Data = userDto
             };
         }
         public async Task<BaseResponse<StudentProfileMetrics>> GetStudentMetrics()
@@ -978,7 +999,9 @@ namespace Application.Services
                     return new StudentScoreByTypeDto
                     {
                         Type = g.Key,
-                        AverageScore = totalPossible > 0 ? (double)(totalEarned / totalPossible) * 100 : 0,
+                        AverageScore = totalPossible > 0
+                    ? Math.Round(((double)totalEarned / totalPossible) * 100, 2)
+                    : 0,
                         AttemptCount = g.Count()
                     };
                 })

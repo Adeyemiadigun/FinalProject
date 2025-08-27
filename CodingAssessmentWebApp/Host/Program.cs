@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using Application.Services.AuthService.Configurations;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Host.Configurations;

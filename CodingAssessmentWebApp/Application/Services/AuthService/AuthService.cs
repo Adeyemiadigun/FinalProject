@@ -8,11 +8,11 @@ using Application.Interfaces.ExternalServices;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Application.Interfaces.Services.AuthService;
-using Infrastructure.Configurations;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Configuration;
 using System.Web;
+using Application.Services.AuthService.Configurations;
 
 namespace Application.Services.AuthService
 {

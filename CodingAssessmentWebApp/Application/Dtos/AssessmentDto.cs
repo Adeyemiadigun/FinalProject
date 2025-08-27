@@ -169,6 +169,15 @@ namespace Application.Dtos
         public string BatchName { get; set; }
         public double? TotalScore { get; set; } // null if not submitted
     }
+    public class InstructorAssessmentSummaryDto
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public int TotalStudents { get; set; }
+        public int Submissions { get; set; }
+        public double AvgScore { get; set; }
+    }
 
 
 }

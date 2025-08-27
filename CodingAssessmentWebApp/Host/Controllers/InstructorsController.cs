@@ -19,9 +19,15 @@ namespace Host.Controllers
             return response.Status ? Created("response", response) : BadRequest(response);
         }
         [HttpGet]
-        public async Task<IActionResult> GeetInstructors()
+        public async Task<IActionResult> GetInstructors()
         {
             var response = await _userService.GetInstructors();
+            return Ok(response);
+        }
+        [HttpGet("me")]
+        public async Task<IActionResult> GetCurrentInstructorProfile()
+        {
+            var response = await _userService.GetCurrentInstructorProfile();
             return Ok(response);
         }
 
@@ -37,6 +43,13 @@ namespace Host.Controllers
             var result = await _assessmentService.GetAssessmentsByInstructorAsync(batchId, status, request);
             return Ok(result);
         }
+        [HttpGet("assessments/summaries")]
+        public async Task<IActionResult> GetInstructorAssessments([FromQuery] PaginationRequest request)
+        {
+            var response = await _assessmentService.GetAllAssessmentsByInstructorIdAsync(request);
+            return Ok(response);
+        }
+
         [HttpGet("search")]
         public async Task<IActionResult> SearchStudents([FromQuery] string? query, [FromQuery] string? status,[FromQuery]PaginationRequest request)
         {

@@ -1,4 +1,4 @@
-﻿namespace Infrastructure.Configurations
+﻿namespace Application.Services.AuthService.Configurations
 {
     public class JwtSettings
     {

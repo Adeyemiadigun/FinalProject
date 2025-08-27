@@ -9,6 +9,7 @@ namespace Application.Interfaces.Services
         Task<BaseResponse<UserDto>> UploadStudentFileAsync(UploadFileDto studentFile);
         Task<BaseResponse<UserDto>> RegisterStudents(BulkRegisterUserRequestModel model);
         Task<BaseResponse<List<UserDto>>> GetInstructors();
+        Task<BaseResponse<UserDto>> GetCurrentInstructorProfile();
         Task<BaseResponse<UserDto>> RegisterStudent(RegisterUserRequestModel model);
         Task<BaseResponse<UserDto>> GetAsync(Guid id);
         Task<BaseResponse<PaginationDto<UserDto>>> GetAllByBatchId(Guid id, PaginationRequest request);
