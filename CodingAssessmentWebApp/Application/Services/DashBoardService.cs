@@ -117,7 +117,7 @@ namespace Application.Services
                 : 0;
 
             double passRate = totalSubmissions > 0
-                ? (allSubmissions.Count(s => s.TotalScore >= s.Assessment.PassingScore) * 100.0 / totalSubmissions)
+                ? (allSubmissions.Count(s => s.TotalScore >= s.Assessment.RequiredPassingScore) * 100.0 / totalSubmissions)
                 : 0;
 
             var assignedStudentCount = assessmentsQuery
@@ -183,7 +183,7 @@ namespace Application.Services
             var totalSubmissionCount = submissions.Count;
             double averageScore = submissions.Average(s => s.TotalScore);
             double passRate = totalSubmissionCount > 0
-               ? Math.Round((submissions.Count(s => s.TotalScore >= s.Assessment.PassingScore) * 100.0 / totalSubmissionCount),2)
+               ? Math.Round((submissions.Count(s => s.TotalScore >= s.Assessment.RequiredPassingScore) * 100.0 / totalSubmissionCount),2)
                : 0;
 
             var dashboardDto = new InstructorDashboardOverview
@@ -318,7 +318,7 @@ namespace Application.Services
 
                 double passRate = students.Any()
                     ? filteredStudentSubmissions
-                        .Count(ss => ss.Submissions.Any(sub => sub.TotalScore >= sub.Assessment.PassingScore))
+                        .Count(ss => ss.Submissions.Any(sub => sub.TotalScore >= sub.Assessment.RequiredPassingScore))
                         / (double)students.Count * 100
                     : 0;
 

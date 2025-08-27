@@ -61,6 +61,7 @@ window.leaderboardPage = function () {
 
         if (response.status && response.data) {
           this.leaderboard = response.data.items;
+          console.log(this.leaderboard)
           this.pagination.totalPages = response.data.totalPages;
           this.pagination.totalItems = response.data.totalItems;
         } else {

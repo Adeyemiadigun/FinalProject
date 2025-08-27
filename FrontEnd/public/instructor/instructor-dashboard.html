@@ -45,7 +45,7 @@
       </div>
       <div class="bg-white p-4 rounded shadow">
         <div class="text-sm text-gray-500">📊 Pass Rate</div>
-        <div class="text-xl font-semibold" x-text="summary.passRate || 0 + '%' "></div>
+        <div class="text-xl font-semibold" x-text="summary.passRate + '%' || 0 + '%' "></div>
       </div>
     </div>
 
@@ -72,29 +72,26 @@
         <h4 class="font-medium mb-2">Student Distribution by Batch</h4>
         <canvas id="studentBatchChart"></canvas>
       </div>
-      <div x-show="batches.length > 0" x-cloak>
-        <label class="text-sm text-gray-600">Batch</label>
-      <select x-model="filters.batchId" class="border rounded px-2 py-1">
-        <option value="">All</option>
-        <template x-for="batch in batches" :key="batch.batchId">
-          <option :value="batch.batchId" x-text="batch.batchName"></option>
-        </template>
-
-      </select>
-
-      </div>
-
-
-        <!-- Score by Question Type -->
-        <div class="bg-white p-4 rounded shadow col-span-1 md:col-span-2">
-          <div class="flex justify-between items-center mb-2">
-            <h3 class="text-lg font-semibold">Score by Question Type</h3>
-            <span class="text-sm text-gray-500">Hover to see attempts</span>
-          </div>
-          <canvas id="scoreByTypesChart" height="150"></canvas>
+      <!-- Score by Question Type -->
+      <div class="bg-white p-4 rounded shadow ">
+        <div x-show="batches.length > 0" x-cloak>
+          <label class="text-sm text-gray-600">Batch</label>
+          <select x-model="filters.batchId" class="border rounded px-2 py-1">
+            <option value="">All</option>
+            <template x-for="batch in batches" :key="batch.batchId">
+              <option :value="batch.batchId" x-text="batch.batchName"></option>
+            </template>
+          </select>
         </div>
-
+        <div class="flex justify-between items-center mb-2">
+          
+          <h3 class="text-lg font-semibold">Score by Question Type</h3>
+          <span class="text-sm text-gray-500">Hover to see attempts</span>
+        </div>
+        <canvas id="scoreByTypesChart" height="150"></canvas>
+      </div>
     </div>
+   
 
     <!-- Quick Actions -->
     <div class="bg-white p-6 rounded shadow">
@@ -102,15 +99,15 @@
       <div class="space-x-2">
       <button class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700" @click="showCreateModal = true">
         ➕ Create Assessment
-      </button>
-        <button class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">📤 Assign Assessment</button>
+      <!-- </button>
+        <button class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">📤 Assign Assessment</button> -->
       </div>
     </div>
 
     <!-- Recently Created Assessments (Optional) -->
     <div class="bg-white p-6 rounded shadow">
       <h3 class="text-lg font-semibold mb-4">📝 Recently Created Assessments</h3>
-      <ul class="space-y-2">
+      <!-- <ul class="space-y-2">
         <template x-for="a in recentAssessments" :key="a.id">
           <li class="flex justify-between items-center border-b pb-2">
             <span x-text="a.title"></span>
@@ -122,7 +119,40 @@
             No Recent Assessments.
           </p>
         </tr>
-      </ul>
+      </ul> -->
+      <Table>
+        <thead class="bg-gray-50 border-b">
+          <tr>
+            <th class="p-2 text-left">Title</th>
+            <th class="p-2 text-left">Start Date</th>
+            <th class="p-2 text-left">End Date</th>
+            <th class="p-2 text-left">Stack</th>
+            <th class="p-2 text-left">Passing Score</th>
+            <th class="p-2 text-left">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="assessment in recentAssessments" :key="assessment.id">
+            <tr class="border-t hover:bg-gray-50">
+              <td class="p-2" x-text="assessment.title"></td>
+              <td class="p-2" x-text="new Date(assessment.startDate).toLocaleDateString()"></td>
+              <td class="p-2" x-text="new Date(assessment.endDate).toLocaleDateString()"></td>
+              <td class="p-2" x-text="assessment.technologyStack"></td>
+              <td class="p-2" x-text="assessment.passingScore"></td>
+              <td class="p-2" x-text="assessment.totalQuestions"></td>
+              <td class="p-2">
+                <a :href="`/assessments/assessment-details.html?assessmentId=${assessment.id}`"
+                  class="text-blue-600 hover:underline">View</a>
+              </td>
+            </tr>
+          </template>
+          <tr x-show="recentAssessments.length === 0">
+            <td colspan="5" class="text-center text-gray-500 py-4" x-transition.opacity.duration.300ms>
+              No Recent Assessments.
+            </td>
+          </tr>
+        </tbody>
+      </Table>
     </div>
 
   </div>

@@ -37,13 +37,14 @@ window.viewResultPage = function () {
         );
         const json = await res.json();
 
+
         if (!json.status) {
           Swal.fire("Error", json.message || "Unable to load result.", "error");
           return;
         }
 
         const submission = json.data;
-
+        console.log("Submission Data:", submission);
         if (
           !submission.submittedAt ||
           new Date(submission.assessmentEndDate) > new Date()
@@ -65,6 +66,8 @@ console.log("Submitted Answers:", submittedAnswers);
           date: new Date(submission.submittedAt).toLocaleDateString(),
           score: submission.totalScore,
           feedback: submission.feedBack,
+          passingPercentage: submission.passingPercentage,
+          totalMarks: submission.totalMarks,
           correctCount,
           wrongCount,
           questions: submittedAnswers.map((ans) => ({

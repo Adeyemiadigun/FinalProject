@@ -435,8 +435,6 @@ namespace Application.Services
                 Data = paginatedResponse
             };
         }
-
-
         public async Task<BaseResponse<PaginationDto<LeaderboardDto>>> GetStudentBatchLeaderboardAsync(PaginationRequest request)
         {
             var userId = _currentUser.GetCurrentUserId();
@@ -541,7 +539,7 @@ namespace Application.Services
                 TotalAssessments = student.AssessmentAssignments.Count,
                 Attempted = student.Submissions.Count(),
                 AvgScore = student.Submissions.Any() ? Math.Round(student.Submissions.Average(s => s.TotalScore), 2) : 0,
-                PassRate = student.Submissions.Count(s => s.Assessment.PassingScore <= s.TotalScore) / (double)student.AssessmentAssignments.Count * 100
+                PassRate = student.Submissions.Count(s => s.Assessment.RequiredPassingScore <= s.TotalScore) / (double)student.AssessmentAssignments.Count * 100
             };
             return new BaseResponse<StudentAnalytics>
             {
@@ -638,9 +636,10 @@ namespace Application.Services
             var studentId = _currentUser.GetCurrentUserId();
             if (studentId == Guid.Empty)
                 throw new ApiException("Invalid student ID provided", 400, "InvalidId", null);
-            var submissions = await _submissionRepo.GetAllAsync(x => x.StudentId == studentId && x.IsAutoSubmitted == false);
+            var submissions = await _submissionRepo.GetAllAsync(x => x.StudentId == studentId);
             if (!submissions.Any())
             throw new ApiException("NoSubmissionForStudent", 500, "UnknownError", null);
+            var submissionsNotAutoSubmitted = submissions.Count(s => s.SubmittedAt != null && s.IsAutoSubmitted == false);
             var submissionCount = submissions.Count(); 
             return new BaseResponse<StudentDashboardSummaryDto>
             {
@@ -651,8 +650,8 @@ namespace Application.Services
                     TotalAssessments = submissions.Count,
                     AverageScore = submissions.Average(s => s.TotalScore),
                     HighestScore = submissions.Max(s => s.TotalScore),
-                    CompletionRate = 100 * submissions.Count(s => s.SubmittedAt != null) / submissionCount,
-                    Completed = submissionCount
+                    CompletionRate = 100 * submissionsNotAutoSubmitted / submissionCount,
+                    Completed = submissionsNotAutoSubmitted
                 }
             };
         }
@@ -818,9 +817,9 @@ namespace Application.Services
             var submissions = await _submissionRepo.GetAllAsync(x => x.StudentId == studentId);
             if (!submissions.Any())
                 throw new ApiException("NoSubmissionForStudent", 500, "UnknownError", null);
-            var assessmets = await _assessmentRepository.GetAllAsync(x => x.AssessmentAssignments.Any(x => x.StudentId == studentId));
             var studentBatchRanking = await _leaderboardStore.GetLeaderBoardByBatchId(student.BatchId.Value);
             var currentStudentRanking = studentBatchRanking.FindIndex(x => x.Id == studentId);
+   
             return new BaseResponse<StudentProfileMetrics>
             {
                 Message = "Student dashboard summary retrieved successfully",
@@ -829,7 +828,10 @@ namespace Application.Services
                 {
                     SubmmittedCount = submissions.Count,
                     AverageScore = submissions.Average(s => s.TotalScore),
-                    PassRate = submissions.Count(x => x.TotalScore >= x.Assessment.PassingScore)/assessmets.Count() * 100,
+                    PassRate = submissions.Any()
+                    ? (double)submissions.Count(x => x.TotalScore >= x.Assessment.RequiredPassingScore)
+                        / submissions.Count * 100
+                    : 0,
                     Rank = currentStudentRanking + 1
 
                 }
@@ -1019,7 +1021,9 @@ namespace Application.Services
                     return new StudentScoreByTypeDto
                     {
                         Type = g.Key,
-                        AverageScore = totalPossible > 0 ? Math.Round((double)(totalEarned / totalPossible) * 100, 2) : 0,
+                        AverageScore = totalPossible > 0
+                    ? Math.Round(((double)totalEarned / totalPossible) * 100, 2)
+                    : 0,
                         AttemptCount = g.Count()
                     };
                 })

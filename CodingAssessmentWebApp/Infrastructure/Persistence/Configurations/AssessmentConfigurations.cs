@@ -29,7 +29,7 @@ namespace Infrastructure.Persistence.Configurations
                         v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
             builder.Property(x => x.Status).IsRequired();
             builder.Property(x => x.CreatedAt);
-            builder.Property(x => x.PassingScore).IsRequired();
+            builder.Property(x => x.PassingPercentage).IsRequired();
             builder.Property(x => x.InstructorId).IsRequired();
             builder.HasOne(a => a.Instructor)
                 .WithMany(u => u.Assessments)

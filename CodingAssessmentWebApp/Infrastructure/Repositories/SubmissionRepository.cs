@@ -26,8 +26,8 @@ namespace Infrastructure.Repositories
                 TotalItems = totalRecord,
                 TotalPages = totalPages,
                 Items = result,
-                HasNextPage = totalPages / request.CurrentPage == 1 ? false : true,
-                HasPreviousPage = request.CurrentPage - 1 == 0 ? false : true,
+                HasNextPage = request.CurrentPage < totalPages,
+                HasPreviousPage = request.CurrentPage > 1,
                 CurrentPage = request.CurrentPage,
             };
         }
@@ -48,8 +48,8 @@ namespace Infrastructure.Repositories
                 TotalItems = totalRecord,
                 TotalPages = totalPages,
                 Items = result,
-                HasNextPage = totalPages / request.CurrentPage == 1 ? false : true,
-                HasPreviousPage = request.CurrentPage - 1 == 0 ? false : true,
+                HasNextPage = request.CurrentPage < totalPages,
+                HasPreviousPage = request.CurrentPage > 1,
                 CurrentPage = request.CurrentPage,
             };
         }
@@ -59,6 +59,7 @@ namespace Infrastructure.Repositories
 
             var result =  _context.Set<Submission>()
                 .Include(x => x.Assessment)
+                .ThenInclude(x => x.Questions)
                 .Include(x => x.Student)
                 .Include(x => x.AnswerSubmissions)
                 .ThenInclude(x => x.Question)
@@ -104,6 +105,7 @@ namespace Infrastructure.Repositories
                .ThenInclude(x => x.Question)
                .ThenInclude(a => a.Options)
                 .Include(x => x.Assessment)
+                .ThenInclude(x => x.Questions)
                 .Include(x => x.AnswerSubmissions)
                 .ThenInclude(x => x.SelectedOptions)
                  .Include(x => x.AnswerSubmissions)
@@ -138,8 +140,8 @@ namespace Infrastructure.Repositories
                 TotalItems = totalRecord,
                 TotalPages = totalPages,
                 Items = result,
-                HasNextPage = totalPages / request.CurrentPage == 1 ? false : true,
-                HasPreviousPage = request.CurrentPage - 1 == 0 ? false : true,
+                HasNextPage = request.CurrentPage < totalPages,
+                HasPreviousPage = request.CurrentPage > 1,
                 CurrentPage = request.CurrentPage,
             };
         }

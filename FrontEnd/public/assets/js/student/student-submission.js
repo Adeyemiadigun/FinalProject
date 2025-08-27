@@ -1,4 +1,6 @@
-function submissionPage() {
+import { api, loadComponent, logOut } from "../shared/utils.js";
+
+window.submissionPage = function () {
   return {
     submissions: [],
     pagination: {
@@ -9,12 +11,11 @@ function submissionPage() {
       pageSize: 5,
     },
 
-    loading: false, // ⬅️ Added
+    loading: false,
 
     async init() {
       await this.loadSidebarNavbar();
       this.fetchSubmissions();
-
     },
 
     async loadSidebarNavbar() {
@@ -29,33 +30,32 @@ function submissionPage() {
     },
 
     async fetchSubmissions() {
-      const token = localStorage.getItem("accessToken");
-      const params = new URLSearchParams({
-        pageSize: this.pagination.pageSize,
-        currentPage: this.pagination.currentPage,
-      });
+      this.loading = true;
+      try {
+        const params = new URLSearchParams({
+          pageSize: this.pagination.pageSize,
+          currentPage: this.pagination.currentPage,
+        });
 
-      const res = await fetch(
-        `https://localhost:7157/api/v1/Students/submissions?${params}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const res = await api.get(`/Students/submissions?${params}`);
+        const data = await res.json();
+
+        if (data?.status && data.data) {
+          this.submissions = data.data.items;
+
+          // keep currentPage controlled by frontend
+          this.pagination.totalPages = data.data.totalPages;
+          this.pagination.hasNextPage = data.data.hasNextPage;
+          this.pagination.hasPreviousPage = data.data.hasPreviousPage;
+        } else {
+          this.submissions = [];
         }
-      );
-
-      const data = await res.json();
-
-      if (data?.status && data.data) {
-        this.submissions = data.data.items;
-        this.pagination.currentPage = data.data.currentPage;
-        this.pagination.totalPages = data.data.totalPages;
-        this.pagination.hasNextPage = data.data.hasNextPage;
-        this.pagination.hasPreviousPage = data.data.hasPreviousPage;
-      } else {
+      } catch (error) {
+        console.error("Failed to fetch submissions:", error);
         this.submissions = [];
+      } finally {
+        this.loading = false;
       }
-      this.loading = false; // ⬅️ Hide loader after fetching
     },
 
     nextPage() {
@@ -71,10 +71,9 @@ function submissionPage() {
         this.fetchSubmissions();
       }
     },
+
     logOut() {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("userRole");
-      window.location.href = "/public/auth/login.html";
+      logOut();
     },
 
     formatDate(dateStr) {
@@ -82,10 +81,4 @@ function submissionPage() {
       return date.toLocaleString();
     },
   };
-}
-
-async function loadComponent(id, path) {
-  const res = await fetch(path);
-  const html = await res.text();
-  document.getElementById(id).innerHTML = html;
-}
+};

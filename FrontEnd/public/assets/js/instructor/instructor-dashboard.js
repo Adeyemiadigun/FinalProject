@@ -93,6 +93,7 @@ window.instructorDashboard = function () {
         const recentRes = await api.get("/Instructors/assessment/recents");
         const recent = await recentRes.json();
         if (recent.status) this.recentAssessments = recent.data;
+        console.log("Recent Assessments:", this.recentAssessments);
       } catch (error) {
         console.error("Failed to load recent assessments:", error);
       }

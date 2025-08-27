@@ -181,5 +181,10 @@ namespace Application.Services
             };
         }
 
+        public async Task DeleteProgressAsync(Guid progressId, Guid studentId)
+        {
+            await _progressRepository.DeleteAssessmentProgress(progressId, studentId);
+            await _unitOfWork.SaveChangesAsync();
+        }
     }
 }

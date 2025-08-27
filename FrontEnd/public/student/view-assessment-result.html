@@ -27,7 +27,7 @@
   </style>
 </head>
 
-<body class="bg-gray-100 text-gray-800" x-data="{ sidebarOpen: false }" x-init="loadLayout()">
+<body class="bg-gray-100 text-gray-800" x-data="{ sidebarOpen: false }" >
 
   <!-- Loader -->
   <div x-show="!resultLoaded" class="fixed inset-0 bg-gray-200 bg-opacity-75 flex items-center justify-center z-50">
@@ -69,7 +69,15 @@
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
         <div class="bg-white p-4 rounded shadow">
           <div class="text-sm text-gray-500">Score</div>
-          <div class="text-xl font-bold" x-text="result.score + '%'"></div>
+          <div class="text-xl font-bold" x-text="result.score"></div>
+        </div>
+        <div class="bg-white p-4 rounded shadow">
+          <div class="text-sm text-gray-500">Passing Percentage</div>
+          <div class="text-xl font-bold" x-text="result.passingPercentage + '%'"></div>
+        </div>
+        <div class="bg-white p-4 rounded shadow">
+          <div class="text-sm text-gray-500">Total Available Scores</div>
+          <div class="text-xl font-bold" x-text="result.totalMarks"></div>
         </div>
         <div class="bg-white p-4 rounded shadow">
           <div class="text-sm text-gray-500">Time</div>

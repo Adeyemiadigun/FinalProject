@@ -1,4 +1,5 @@
-﻿using Domain.Entities;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using Domain.Entities;
 using Domain.Enum;
 
 namespace Domain.Entitties
@@ -17,7 +18,14 @@ namespace Domain.Entitties
         public User Instructor { get; set; }
         public ICollection<BatchAssessment> BatchAssessment { get; set; } = [];
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public double PassingScore { get; set; } 
+        public double PassingPercentage { get; set; } // e.g., 60.0 for 60%
+
+        [NotMapped]
+        public double TotalAvailableMarks => Questions?.Sum(q => q.Marks) ?? 0;
+
+        [NotMapped]
+        public double RequiredPassingScore => TotalAvailableMarks * (PassingPercentage / 100.0);
+
         public ICollection<Question> Questions { get; set; } = [];
         public ICollection<Submission> Submissions { get; set; } = [];
         public ICollection<AssessmentAssignment> AssessmentAssignments { get; set; } = [];

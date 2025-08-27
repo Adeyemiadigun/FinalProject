@@ -7,6 +7,7 @@ namespace Application.Interfaces.Repositories
     {
         Task<StudentAssessmentProgress?> GetByStudentAndAssessmentAsync(Guid studentId, Guid assessmentId);
         Task RemoveAnswersAndOptionsAsync(StudentAssessmentProgress progress);
+        Task DeleteAssessmentProgress(Guid progressId, Guid studentId);
     }
 
 }

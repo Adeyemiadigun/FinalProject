@@ -13,6 +13,13 @@ namespace Infrastructure.Repositories
         {
         }
 
+        public async Task DeleteAssessmentProgress(Guid progressId, Guid studentId)
+        {
+             _context.StudentAssessmentProgresses
+                .Where(p => p.Id == progressId && p.StudentId == studentId)
+                .ExecuteDelete();
+        }
+
         public async Task<StudentAssessmentProgress?> GetByStudentAndAssessmentAsync(Guid studentId, Guid assessmentId)
         {
             return await _context.StudentAssessmentProgresses

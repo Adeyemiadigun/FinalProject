@@ -84,6 +84,7 @@ namespace Application.Dtos
         public double AvgScore { get; set; }
         public double HighestScore { get; set; }
         public int CompletedAssessments { get; set; }
+        public int AutoSubmitted { get; set; }
     }
     public class UpdateStudentStatusDto
     {

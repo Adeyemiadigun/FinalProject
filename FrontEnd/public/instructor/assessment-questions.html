@@ -24,7 +24,7 @@
     <div class="flex justify-between items-center mb-4">
       <div class="flex items-center space-x-4">
       <h2 class="text-2xl font-bold">Questions for Assessment: <span x-text="assessmentTitle"></span></h2>
-        <span class="text-sm text-gray-500">Passing Score: <span x-text="passingScore"></span></span>
+        <span class="text-sm text-gray-500">Passing Score percentage: <span x-text="passingScore + '%'"></span></span>
 
 </div>
       <button @click="showCreateModal = true" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">➕ Add
@@ -116,7 +116,7 @@
         <div class="grid grid-cols-3 gap-4 mb-4">
           <div>
             <label class="font-semibold block">Marks</label>
-            <input type="number" x-model="questionForm.marks" class="w-full border rounded px-2 py-1" />
+            <input :disabled="questionForm.questionType === 3" type="number" x-model="questionForm.marks" class="w-full border rounded px-2 py-1" />
           </div>
           <div>
             <label class="font-semibold block">Order</label>
@@ -175,11 +175,11 @@
                   <input type="text" x-model="test.input" placeholder="Input" class="border px-2 py-1 rounded" />
                   <input type="text" x-model="test.expectedOutput" placeholder="Expected Output"
                     class="border px-2 py-1 rounded" />
-                  <input type="number" x-model="test.weight" placeholder="Weight" class="border px-2 py-1 rounded" />
-                  <button @click="questionForm.testCases.splice(i, 1)" class="text-red-600 text-sm">✕</button>
+                  <input type="number" x-model="test.weight" placeholder="Weight" @change="totalWeights()" class="border px-2 py-1 rounded"/>
+                  <button @click="questionForm.testCases.splice(i, 1); totalWeights()" class="text-red-600 text-sm">✕</button>
                 </div>
               </template>
-              <button @click="questionForm.testCases.push({ input: '', expectedOutput: '', weight: 1 })"
+              <button @click="questionForm.testCases.push({ input: '', expectedOutput: '', weight: 1 }); totalWeights()"
                 class="text-blue-600 text-sm">+ Add Test Case</button>
             </div>
           </div>

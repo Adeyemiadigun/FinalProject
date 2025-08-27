@@ -5,6 +5,7 @@ using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Application.Interfaces.Services.GradingStrategyInterfaces.Interfaces;
 using Domain.Entitties;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace Application.Services
@@ -39,7 +40,11 @@ namespace Application.Services
                 totalScore += answer.Score;
             }
             submission.TotalScore = (short)totalScore;
-            submission.FeedBack = submission.TotalScore >= submission.Assessment.PassingScore ? "Passed" : "Failed";
+            var assessment = submission.Assessment;
+            var totalAvailableMarks = assessment.TotalAvailableMarks;
+            var requiredScoreToPass = totalAvailableMarks * (assessment.PassingPercentage / 100.0);
+
+            submission.FeedBack = submission.TotalScore >= requiredScoreToPass ? "Passed" : "Failed";
 
              answerSubmissionRepository.UpdateRange(submission.AnswerSubmissions);
             _submissionRepository.Update(submission);

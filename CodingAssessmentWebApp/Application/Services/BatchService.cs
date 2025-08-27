@@ -66,7 +66,8 @@ namespace Application.Services
                 DurationInMinutes = assessment.DurationInMinutes,
                 StartDate = assessment.StartDate,
                 EndDate = assessment.EndDate,
-                PassingScore = assessment.PassingScore
+                PassingScore = assessment.PassingPercentage,
+                TotalMarks = assessment.TotalAvailableMarks
             }));
             var reminderTime = assessment.StartDate.AddMinutes(-30);
             var delay = reminderTime - DateTime.UtcNow;
@@ -80,7 +81,8 @@ namespace Application.Services
                     DurationInMinutes = assessment.DurationInMinutes,
                     StartDate = assessment.StartDate,
                     EndDate = assessment.EndDate,
-                    PassingScore = assessment.PassingScore
+                    PassingScore = assessment.RequiredPassingScore,
+                    TotalMarks = assessment.TotalAvailableMarks
                 });
                 _backgroundService.Schedule<IEmailService>((emailService => emailService.SendBulkEmailAsync(validStudent, "Assessment Reminder", template)), reminderTime);
             }
@@ -143,7 +145,8 @@ namespace Application.Services
                 DurationInMinutes = assessment.DurationInMinutes,
                 StartDate = assessment.StartDate,
                 EndDate = assessment.EndDate,
-                PassingScore = assessment.PassingScore
+                PassingScore = assessment.PassingPercentage,
+                TotalMarks = assessment.TotalAvailableMarks
             }));
             // Update the batch in the repository  
             await batchRepository.UpdateAsync(batch);
@@ -179,7 +182,7 @@ namespace Application.Services
                 PassRate = x.Students.Count == 0 ? 0
                              : x.Students
                              .Where(student => student.Submissions.Any())
-                             .Count(student => student.Submissions.Any(sub => sub.TotalScore >= sub.Assessment.PassingScore))
+                             .Count(student => student.Submissions.Any(sub => sub.TotalScore >= sub.Assessment.RequiredPassingScore))
                          / (double)x.Students.Count * 100
                            }).ToList();
 
@@ -345,7 +348,7 @@ namespace Application.Services
             }
 
             var totalSubmissions = submissions.Count;
-            var passedSubmissions = submissions.Count(s => s.TotalScore >= s.Assessment.PassingScore);
+            var passedSubmissions = submissions.Count(s => s.TotalScore >= s.Assessment.RequiredPassingScore);
             var averageScore = submissions.Average(s => s.TotalScore);
 
             var assignedStudentsCount = assessments
@@ -389,7 +392,7 @@ namespace Application.Services
                 .DefaultIfEmpty(0)
                 .Average();
             var passRate = batch.Students.Where(s => s.Submissions.Any())
-                .Count(s => s.Submissions.Any(sub => sub.TotalScore >= sub.Assessment.PassingScore))
+                .Count(s => s.Submissions.Any(sub => sub.TotalScore >= sub.Assessment.RequiredPassingScore))
                 / (double)batch.Students.Count * 100;
             var completionRate = batch.Students
                 .Where(s => s.Submissions.Any())
@@ -494,7 +497,7 @@ namespace Application.Services
                 double passRate = 0;
                 if (allSubmissions.Any())
                 {
-                    var passed = allSubmissions.Count(s => s.TotalScore >= s.Assessment.PassingScore);
+                    var passed = allSubmissions.Count(s => s.TotalScore >= s.Assessment.RequiredPassingScore);
                     passRate = passed * 100.0 / allSubmissions.Count;
                 }
 

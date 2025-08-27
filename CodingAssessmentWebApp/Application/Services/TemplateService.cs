@@ -26,6 +26,7 @@ namespace Application.Services
                       <li><strong>Start Date:</strong> {assessment.StartDate}</li>
                       <li><strong>End Date:</strong> {assessment.EndDate}</li>
                       <li><strong>Duration:</strong> {assessment.DurationInMinutes} minutes</li>
+                       <li><strong>Passing Percentage:</strong> {assessment.PassingScore}</li>
                     </ul>
                     <p>
                       Please click the link below to access the assessment:
@@ -58,6 +59,8 @@ namespace Application.Services
                        </p>
                     <h4>Submission Details:</h4>
                     <ul>
+                    <li><strong>Assessment Total Marks:</strong> {submission.Assessment.TotalAvailableMarks}</li>
+                       <li><strong>Passing Score:</strong> {submission.Assessment.RequiredPassingScore}</li>
                       <li><strong>Submitted At:</strong> {submission.SubmittedAt}</li>
                       <li><strong>Total Score:</strong> {submission.TotalScore}</li>
                       <li><strong>Feedback:</strong> {submission.FeedBack}</li>

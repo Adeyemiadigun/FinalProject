@@ -11,6 +11,8 @@ namespace Application.Dtos
         public string AssessmentTitle { get; set; }
         public DateTime SubmittedAt { get; set; }
         public string Title { get; set; }
+        public double PassingPercentage { get; set; }
+        public double TotalMarks { get; set; }
         public int TotalScore { get;set; }
         public string FeedBack { get; set; }
         public Guid StudentId { get; set; }

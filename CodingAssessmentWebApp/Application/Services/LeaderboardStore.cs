@@ -18,7 +18,6 @@ namespace Application.Services
             _batchRepository = batchRepository;
             _userRepository = userRepository;
         }
-
         private string GetBatchKey(Guid batchId) => $"leaderboard_batch_{batchId}";
 
         public async Task<List<LeaderboardDto>> GetLeaderBoardByBatchId(Guid batchId)
@@ -55,7 +54,8 @@ namespace Application.Services
                         BatchId = batchId,
                         AvgScore = avgScore,
                         HighestScore = highestScore,
-                        CompletedAssessments = submissions.Count
+                        CompletedAssessments = submissions.Count(x => !x.IsAutoSubmitted || x.SubmittedAt != null),
+                        AutoSubmitted = submissions.Count(x => x.IsAutoSubmitted),
                     };
                 })
                 .OrderByDescending(l => l.AvgScore)

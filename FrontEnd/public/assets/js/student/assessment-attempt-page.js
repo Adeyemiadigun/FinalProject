@@ -79,7 +79,8 @@ document.addEventListener("alpine:init", () => {
         if (this.assessment) {
           if (this.elapsedTime) {
             const elapsedSeconds = this.parseElapsedTime(this.elapsedTime);
-            remainingSeconds = this.assessment.durationInMinutes * 60 - elapsedSeconds;
+            remainingSeconds =
+              this.assessment.durationInMinutes * 60 - elapsedSeconds;
             console.log("Remaining seconds:", remainingSeconds);
             this.updateTimerText(remainingSeconds);
             this.startTimer(remainingSeconds);
@@ -87,7 +88,6 @@ document.addEventListener("alpine:init", () => {
             this.startTimer(this.assessment.durationInMinutes * 60);
           }
         }
-
 
         await this.switchTo(0);
 
@@ -250,18 +250,16 @@ document.addEventListener("alpine:init", () => {
         requestAnimationFrame(() => editorInstance?.layout());
         this.isEditorLoading = false;
       },
-formatSecondsToTimeString(seconds) {
-  const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
-  const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
-  const s = String(seconds % 60).padStart(2, '0');
-  return `${h}:${m}:${s}`;
-},
+      formatSecondsToTimeString(seconds) {
+        const h = String(Math.floor(seconds / 3600)).padStart(2, "0");
+        const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, "0");
+        const s = String(seconds % 60).padStart(2, "0");
+        return `${h}:${m}:${s}`;
+      },
       // ===== Progress Saving =====
       saveProgress: debounce(async function () {
         const currentHash = computeAnswersHash(this.questions);
-        if (currentHash === lastSavedHash) return; // Skip if no changes
-        console.log("Saving progress:", new Date().toLocaleTimeString());
-        this.isSaving = true;
+        const hasAnswerChanged = currentHash !== lastSavedHash;
         const totalDurationSeconds = this.assessment.durationInMinutes * 60;
         const elapsedSeconds = totalDurationSeconds - remainingSeconds;
 
@@ -278,14 +276,22 @@ formatSecondsToTimeString(seconds) {
           currentSessionStart: new Date().toISOString(),
           elapsedTime: this.formatSecondsToTimeString(elapsedSeconds),
         };
-        console.log(payload)
+
+        // Always send time, even if no answer has changed
+        console.log("Saving progress:", new Date().toLocaleTimeString());
+        console.log(payload);
+
+        this.isSaving = true;
+
         try {
           const res = await api.post(
             "/AssessmentProgress/students/progress/save",
             payload
           );
           if (res.ok) {
-            lastSavedHash = currentHash;
+            if (hasAnswerChanged) {
+              lastSavedHash = currentHash;
+            }
             console.log("Progress autosaved:", new Date().toLocaleTimeString());
           }
         } catch (err) {
@@ -294,6 +300,7 @@ formatSecondsToTimeString(seconds) {
           this.isSaving = false;
         }
       }, 1000),
+
       parseElapsedTime(timeString) {
         const parts = timeString.split(":"); // ["00", "00", "31.1526480"]
         const hours = parseInt(parts[0], 10);
@@ -324,6 +331,36 @@ formatSecondsToTimeString(seconds) {
             (ans) =>
               ans.submittedAnswer?.trim() || ans.selectedOptionIds?.length
           );
+          if ((filtered.length === 0) == 0 && remainingSeconds <= 0) {
+            swal.fire(
+              "Time's Up!",
+              "You did not attempt any question and your submission would be flagged as AutoSubmitted. Redirecting to dashboard.",
+              "warning"
+            );
+            window.location.href = "/public/student/student-dashboard.html";
+          }
+          const unansweredQuestions = this.questions.filter((q) => {
+            if (q.type === "Coding") {
+              return !editorContentStore[q.id]?.trim();
+            } else if (q.type === "MCQ" || q.type === "Objective") {
+              return !q.selectedOptionIds?.length && !q.answerText?.trim();
+            }
+            return false;
+          });
+
+
+          if (unansweredQuestions.length > 0 && filtered.length > 0) {
+            const confirm = await Swal.fire({
+              icon: "warning",
+              title: "Some questions are unanswered",
+              text: "Are you sure you want to submit anyway?",
+              showCancelButton: true,
+              confirmButtonText: "Yes, submit",
+            });
+
+            if (!confirm.isConfirmed) return;
+          }
+
 
         if (!filtered.length) {
           Swal.fire(

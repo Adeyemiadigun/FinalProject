@@ -44,6 +44,7 @@
               <th class="px-4 py-3">Batch</th>
               <th class="px-4 py-3">Total Score</th>
               <th class="px-4 py-3">Assessments Completed</th>
+              <th class="px-4 py-3">Assessments Auto Submitted</th>
             </tr>
           </thead>
           <tbody>
@@ -79,6 +80,7 @@
                   <td class="px-4 py-2" x-text="student.batch"></td>
                   <td class="px-4 py-2 text-green-700" x-text="student.score + '%'"></td>
                   <td class="px-4 py-2" x-text="student.completed"></td>
+                  <td class="px-4 py-2" x-text="student.autoSubmitted"></td>
                 </tr>
               </template>
             </template>

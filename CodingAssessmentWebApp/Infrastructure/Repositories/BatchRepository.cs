@@ -33,7 +33,10 @@ namespace Infrastructure.Repositories
                 .Include(x => x.Students)
                 .Include(x => x.AssessmentAssignments)
                 .ThenInclude(x => x.Assessment)
-                .ThenInclude(x =>x.Submissions)
+                .ThenInclude(s => s.Questions)
+                .Include(x => x.AssessmentAssignments)
+                .ThenInclude(x => x.Assessment)
+                .ThenInclude(s =>s.Submissions)
                 .Where(exp);
             return await result.ToListAsync();
         }
@@ -87,6 +90,7 @@ namespace Infrastructure.Repositories
                 .Include(x => x.Students)
                 .ThenInclude(x => x.Submissions)
                 .ThenInclude(x => x.Assessment)
+                .ThenInclude(x => x.Questions)
                 .FirstOrDefaultAsync(x => x.Id == id);
 
             return batch;

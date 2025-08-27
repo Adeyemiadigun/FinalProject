@@ -58,6 +58,7 @@ window.assessmentDetailsPage = function () {
       const res = await api.get(`/Assessments/${this.assessmentId}`);
       const data = await res.json();
       this.assessment = data.data;
+      console.log("Assessment data:", this.assessment);
     },
 
     async fetchMetrics() {

@@ -65,6 +65,7 @@
               <th class="p-2">Avg Score</th>
               <th class="p-2">Highest</th>
               <th class="p-2">Completed</th>
+              <th class="p-2">Auto Submitted Assessments</th>
             </tr>
           </thead>
           <tbody>
@@ -75,6 +76,7 @@
                 <td class="p-2" x-text="student.avgScore + '%'"></td>
                 <td class="p-2" x-text="student.highestScore + '%'"></td>
                 <td class="p-2" x-text="student.completedAssessments"></td>
+                <td class="p-2" x-text="student.autoSubmitted"></td>
               </tr>
             </template>
             <tr x-show="leaderboard.length === 0">

@@ -43,6 +43,7 @@ window.adminAssessmentsPage = function () {
 
       if (res.ok) {
         this.assessments = result.data.items;
+        console.log(this.assessments);
         this.pagination = {
           currentPage: result.data.currentPage,
           totalPages: result.data.totalPages,

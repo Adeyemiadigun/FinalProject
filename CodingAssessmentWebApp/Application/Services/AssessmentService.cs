@@ -93,6 +93,11 @@ namespace Application.Services
                 throw new ApiException("No valid batches found", (int)HttpStatusCode.BadRequest, "NO_VALID_BATCHES", null);
             if (batches.Count != model.BatchIds.Count)
                 throw new ApiException("Some batch IDs are invalid", (int)HttpStatusCode.BadRequest, "INVALID_BATCH_IDS", null);
+            if (model.PassingScore < 0 || model.PassingScore > 100)
+            {
+                throw new ApiException("Passing percentage must be between 0 and 100.", 400, "INVALID_PASSING_PERCENTAGE", null);
+            }
+
             var assessment = new Assessment()
             {
                 Title = model.Title,
@@ -102,7 +107,7 @@ namespace Application.Services
                 StartDate = model.StartDate,
                 EndDate = model.EndDate,
                 Status = AssessmentStatus.Upcoming,
-                PassingScore = model.PassingScore,
+                PassingPercentage = model.PassingScore,
                 InstructorId = user.Id,
                 Instructor = user,
             };
@@ -178,7 +183,8 @@ namespace Application.Services
                     DurationInMinutes = x.DurationInMinutes,
                     StartDate = x.StartDate,
                     EndDate = x.EndDate,
-                    PassingScore = x.PassingScore
+                    PassingScore = x.PassingPercentage,
+                    TotalMarks = x.TotalAvailableMarks
                 }).ToList(),
                 TotalItems = assessments.TotalItems, // Corrected property name
                 CurrentPage = assessments.CurrentPage,
@@ -205,14 +211,15 @@ namespace Application.Services
 
             // Build the complete filter with status included directly
             Expression<Func<Assessment, bool>> filter = x =>
-             x.AssessmentAssignments.Any(a => a.StudentId == userId) &&
-             (
-             status == null ||
-                 (status == AssessmentStatus.Upcoming) ||
-                 (status == AssessmentStatus.InProgress) ||
-                 (status == AssessmentStatus.Completed)
-             ) &&
-             x.Questions.Count() > 0;
+     x.AssessmentAssignments.Any(a => a.StudentId == userId) &&
+     (
+         status == null ||
+         (status == AssessmentStatus.Upcoming && x.StartDate > now) ||
+         (status == AssessmentStatus.InProgress && x.StartDate <= now && x.EndDate >= now) ||
+         (status == AssessmentStatus.Completed && x.EndDate < now)
+     ) &&
+     x.Questions.Count() > 0;
+
             var assessments = await _assessmentRepository.GetAllAsync(filter, request);
 
             var paginationDto = new PaginationDto<AssessmentDto>
@@ -226,8 +233,9 @@ namespace Application.Services
                     DurationInMinutes = x.DurationInMinutes,
                     StartDate = x.StartDate,
                     EndDate = x.EndDate,
-                    PassingScore = x.PassingScore,
-                    Submitted = x.Submissions.Any(x => x.StudentId == userId)
+                    PassingScore = x.PassingPercentage,
+                    Submitted = x.Submissions.Any(x => x.StudentId == userId),
+                    TotalMarks = x.TotalAvailableMarks
                 }).ToList(),
                 TotalItems = assessments.TotalItems,
                 CurrentPage = assessments.CurrentPage,
@@ -274,7 +282,8 @@ namespace Application.Services
                     DurationInMinutes = x.DurationInMinutes,
                     StartDate = x.StartDate,
                     EndDate = x.EndDate,
-                    PassingScore = x.PassingScore
+                    PassingScore = x.PassingPercentage,
+                    TotalMarks = x.TotalAvailableMarks
                 }).ToList(),
                 TotalItems = assessments.TotalItems,
                 CurrentPage = assessments.CurrentPage,
@@ -306,7 +315,8 @@ namespace Application.Services
                 DurationInMinutes = assessment.DurationInMinutes,
                 StartDate = assessment.StartDate,
                 EndDate = assessment.EndDate,
-                PassingScore = assessment.PassingScore
+                PassingScore = assessment.PassingPercentage,
+                TotalMarks = assessment.TotalAvailableMarks
             };
 
             return new BaseResponse<AssessmentDto>
@@ -336,8 +346,12 @@ namespace Application.Services
             assessment.DurationInMinutes = model.DurationInMinutes;
             assessment.StartDate = model.StartDate;
             assessment.EndDate = model.EndDate;
-            assessment.PassingScore = model.PassingScore;
+            assessment.PassingPercentage = model.PassingScore;
+            assessment.Status = AssessmentStatus.Upcoming;
             _assessmentRepository.Update(assessment);
+            _backgroundService.Schedule<IAssessmentService>(service => service.UpdateAssessmentStatusAsync(assessment.Id, AssessmentStatus.InProgress), assessment.StartDate);
+            _backgroundService.Schedule<IAssessmentService>(service => service.UpdateAssessmentStatusAsync(assessment.Id, AssessmentStatus.Completed), assessment.EndDate);
+
             await _unitOfWork.SaveChangesAsync();
 
             return new BaseResponse<AssessmentDto>()
@@ -353,7 +367,8 @@ namespace Application.Services
                     DurationInMinutes = assessment.DurationInMinutes,
                     StartDate = assessment.StartDate,
                     EndDate = assessment.EndDate,
-                    PassingScore = assessment.PassingScore
+                    PassingScore = assessment.PassingPercentage,
+                    TotalMarks = assessment.TotalAvailableMarks
                 }
             };
         }
@@ -385,7 +400,8 @@ namespace Application.Services
                 DurationInMinutes = x.DurationInMinutes,
                 StartDate = x.StartDate,
                 EndDate = x.EndDate,
-                PassingScore = x.PassingScore
+                PassingScore = x.PassingPercentage,
+                TotalMarks = x.TotalAvailableMarks
             }).ToList();
             var paginationDto = new PaginationDto<AssessmentDto>()
             {
@@ -513,7 +529,8 @@ namespace Application.Services
                 StartDate = x.StartDate,
                 EndDate = x.EndDate,
                 CreatedAt = x.CreatedAt,
-                PassingScore = x.PassingScore,
+                PassingScore = x.PassingPercentage,
+                TotalMarks = x.TotalAvailableMarks,
                 Status = x.Status.ToString()
             }).ToList();
 
@@ -556,7 +573,8 @@ namespace Application.Services
                 StartDate = x.StartDate,
                 EndDate = x.EndDate,
                 CreatedAt = x.CreatedAt,
-                PassingScore = x.PassingScore
+                PassingScore = x.PassingPercentage,
+                TotalMarks = x.TotalAvailableMarks
             }).ToList();
 
             return new BaseResponse<List<AssessmentDto>>
@@ -734,12 +752,12 @@ namespace Application.Services
             var assessment = await _assessmentRepository.GetAsync(x => x.Id == id);
             if (assessment is null)
                 throw new ApiException("Assessment Not Found", (int)HttpStatusCode.BadRequest, "ASSESSMENT_NOT_FOUND", null);
-            var totalSubmission = assessment.Submissions.Count;
+            var totalSubmission = assessment.Submissions.Count(x => x.IsAutoSubmitted == false);
             var assignedStudent = assessment.AssessmentAssignments.Count;
             var assessmentMetrics = new AssessmentMetrics()
             {
                 AvgScore = totalSubmission > 0 ? Math.Round(assessment.Submissions.Average(x => x.TotalScore)) : 0,
-                PassRate = totalSubmission > 0 ? Math.Round((assessment.Submissions.Count(s => s.TotalScore >= assessment.PassingScore) * 100.0 / totalSubmission))
+                PassRate = totalSubmission > 0 ? Math.Round((assessment.Submissions.Count(s => s.TotalScore >= assessment.RequiredPassingScore) * 100.0 / totalSubmission))
                 : 0,
 
                 TotalSubmissions = totalSubmission,
@@ -805,7 +823,7 @@ namespace Application.Services
                     Score = hasSubmission ? submission.TotalScore : 0,
                     SubmittedAt = hasSubmission ? submission.SubmittedAt : (DateTime?)null,
                     Status = hasSubmission
-                        ? (submission.TotalScore >= assessment.PassingScore ? "Passed" : "Failed")
+                        ? submission.FeedBack
                         : "Not Submitted"
                 };
             }).ToList();
@@ -882,9 +900,9 @@ namespace Application.Services
                 TechnologyStack = x.TechnologyStack.ToString(),
                 DurationInMinutes = x.DurationInMinutes,
                 StartDate = x.StartDate,
-                TotalScore = x.Questions.Sum(b => b.Marks),
                 EndDate = x.EndDate,
-                PassingScore = x.PassingScore,
+                PassingScore = x.PassingPercentage,
+                TotalScore = x.TotalAvailableMarks,
                 Status = x.Status.ToString(),
                 InstructorName = x.Instructor.FullName,
                 Batches = x.BatchAssessment.Select(b => new BatchDto
@@ -948,8 +966,8 @@ namespace Application.Services
                 !autoSubmittedStudentIds.Contains(a.StudentId));
 
 
-            var passed = submissions.Count(s => s.TotalScore >= assessment.PassingScore);
-            var failed = submissions.Count(s => s.TotalScore < assessment.PassingScore);
+            var passed = submissions.Count(s => s.TotalScore >= assessment.RequiredPassingScore);
+            var failed = submissions.Count(s => s.TotalScore < assessment.RequiredPassingScore);
 
             return new AssessmentOverviewDto
             {
@@ -968,7 +986,7 @@ namespace Application.Services
             if (assessment == null)
                 throw new ApiException("Assessment not found", 404, "ASSESSMENT_NOT_FOUND");
 
-            var passingScore = assessment.PassingScore;
+            var passingScore = assessment.RequiredPassingScore;
 
             Expression<Func<User, bool>> filter = type switch
             {
@@ -980,7 +998,7 @@ namespace Application.Services
                     user.Submissions.Any(sub => sub.AssessmentId == assessmentId && sub.IsAutoSubmitted == true),
 
                 AssessmentStudentGroupType.Passed => user =>
-                    user.Submissions.Any(sub => sub.AssessmentId == assessmentId && sub.TotalScore >= passingScore),
+                    user.Submissions.Any(sub => sub.AssessmentId == assessmentId && sub.TotalScore >= passingScore && passingScore > 0),
 
                 AssessmentStudentGroupType.Failed => user =>
                     user.Submissions.Any(sub => sub.AssessmentId == assessmentId && sub.TotalScore < passingScore),

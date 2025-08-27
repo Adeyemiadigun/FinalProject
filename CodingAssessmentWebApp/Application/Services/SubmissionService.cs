@@ -116,7 +116,6 @@ namespace Application.Services
                         throw new ApiException("Unsupported question type.", 400, "INVALID_QUESTION_TYPE", null);
                 }
             }
-
             submissionEntity.AnswerSubmissions = answerSubmissions;
 
             await _submissionRepository.CreateAsync(submissionEntity);
@@ -125,6 +124,7 @@ namespace Application.Services
             _leaderboardStore.Invalidate(student.Batch!.Id);
             _backgroundService.Enqueue<IGradingService>(g =>
                 g.GradeSubmissionAndNotifyAsync(submissionEntity.Id, studentId));
+            _backgroundService.Enqueue<IStudentProgressService>(g => g.DeleteProgressAsync(assessmentId, studentId));
 
             return new BaseResponse<SubmissionDto>
             {
@@ -212,6 +212,8 @@ namespace Application.Services
                 SubmittedAt = submission.SubmittedAt,
                 TotalScore = submission.TotalScore,
                 FeedBack = submission.FeedBack,
+                PassingPercentage = submission.Assessment.PassingPercentage,
+                TotalMarks = submission.Assessment.TotalAvailableMarks,
                 SubmittedAnswers = submission.AnswerSubmissions.Select(a => new SubmittedAnswerDto
                 {
                     QuestionId = a.QuestionId,

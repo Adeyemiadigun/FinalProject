@@ -18,6 +18,7 @@ namespace Infrastructure.Repositories
                 .Include(x => x.AssessmentAssignments)
                 .ThenInclude( a => a.Student)
                 .Include(x => x.Submissions)
+                .Include(x => x.Questions)
                 .FirstOrDefaultAsync(x => x.Id == id);
         } 
         public async Task<Assessment?> GetForBatchPerformanceAsync(Guid id)
@@ -41,6 +42,7 @@ namespace Infrastructure.Repositories
         public Task<Assessment?> GetAsync(Expression<Func<Assessment,bool>> exp)
         {
             return _context.Set<Assessment>()
+                .Include(x => x.Questions)
                 .Include(x => x.AssessmentAssignments)
                 .Include(x => x.Submissions.Where(x => x.IsAutoSubmitted == false))
                 .Include(x => x.BatchAssessment)

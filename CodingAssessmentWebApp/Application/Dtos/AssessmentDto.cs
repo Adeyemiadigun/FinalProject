@@ -14,6 +14,7 @@ namespace Application.Dtos
         public DateTime EndDate { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public double PassingScore { get; set; }
+        public double TotalMarks { get; set; }
         public bool Submitted { get; set; }
         public string Status { get; set; }
     }
@@ -137,7 +138,7 @@ namespace Application.Dtos
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public double PassingScore { get; set; }
-        public int TotalScore { get; set; }
+        public double TotalScore { get; set; }
         public string Status { get; set; } 
     }
 
@@ -168,5 +169,6 @@ namespace Application.Dtos
         public string BatchName { get; set; }
         public double? TotalScore { get; set; } // null if not submitted
     }
+
 
 }

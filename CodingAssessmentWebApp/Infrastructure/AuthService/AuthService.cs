@@ -38,6 +38,7 @@ namespace Application.Services.AuthService
             _emailService = emailService;
             _config = config;
             _unitOfWork = unitOfWork;
+            resetLink = _config["ClientUrl"];
         }
 
         public string GenerateJwtToken(UserDto userDto)

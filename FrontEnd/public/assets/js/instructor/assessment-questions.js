@@ -27,7 +27,14 @@ window.questionsPage = function () {
     },
     showAIPreviewModal: false,
     aiPreviewData: {},
-
+    totalWeights() {
+      if (this.questionForm.questionType === 3) {
+        this.questionForm.marks = this.questionForm.testCases.reduce(
+          (sum, test) => sum + (parseFloat(test.weight) || 0),
+          0
+        );
+      }
+    },
     async init() {
       await loadComponent(
         "sidebar-placeholder",
@@ -120,8 +127,7 @@ window.questionsPage = function () {
       this.showCreateModal = true;
       this.showAIPreviewModal = false;
     },
-    GotoAiGenModal()
-    {
+    GotoAiGenModal() {
       this.showAIModal = true;
       this.showCreateModal = false;
     },
@@ -142,22 +148,20 @@ window.questionsPage = function () {
         : `/Assessments/${this.assessmentId}/questions`;
 
       const body = this.showEditModal ? payload : [payload];
-  
-
 
       try {
-           let res;
-           if (this.showEditModal) {
-             res = await api.put(endpoint, body);
-           } else {
-             res = await api.post(endpoint, body);
-           }
+        let res;
+        if (this.showEditModal) {
+          res = await api.put(endpoint, body);
+        } else {
+          res = await api.post(endpoint, body);
+        }
         if (res.ok) {
           await this.loadQuestions();
           if (this.showEditModal) this.closeModals();
           if (this.showCreateModal) this.resetForm();
         }
-      } catch(error) {
+      } catch (error) {
         console.error("Failed to submit question", error);
         Swal.fire("Error", "Failed to submit question", "error");
       }
