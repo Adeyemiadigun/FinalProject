@@ -232,7 +232,18 @@ namespace Application.Services
                 throw new ApiException("Assessment has Ended yet.", 404, "ASSESMENT_NOT_STARTED", null);
             var questions = await _questionRepository.GetAllAsync(assessmentId);
             if (questions == null || !questions.Any())
-                throw new ApiException("No questions found for the given assessment.", 404, "NO_QUESTIONS_FOUND", null);
+                return new BaseResponse<StudentQuestionAssessmentDto>
+                {
+                    Status = true,
+                    Message = "Assessment for student loaded",
+                    Data = new StudentQuestionAssessmentDto
+                    {
+                        Id = assessment.Id,
+                        Title = assessment.Title,
+                        DurationInMinutes = assessment.DurationInMinutes,
+                        Questions = new()
+                    }
+                };
             var questionDtos = questions.Select(q => new StudentQuestionDto
             {
                 Id = q.Id,

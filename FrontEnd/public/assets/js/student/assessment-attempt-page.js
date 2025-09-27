@@ -1,4 +1,3 @@
-import { api, loadComponent, logOut } from "../shared/utils.js";
 document.addEventListener("alpine:init", () => {
   Alpine.data("attemptAssessment", () => {
     // ===== Private Variables =====
@@ -46,16 +45,17 @@ document.addEventListener("alpine:init", () => {
       get currentQuestion() {
         return this.questions[this.currentQuestionIndex] || null;
       },
+      logOut,
 
       // ===== Lifecycle =====
       async init() {
         // Load Navbar & Sidebar
         await Promise.all([
-          loadComponent(
+          window.utils?.loadComponent?.(
             "sidebar-placeholder",
             "/public/components/sidebar-student.html"
           ),
-          loadComponent(
+          window.utils?.loadComponent?.(
             "navbar-placeholder",
             "/public/components/navbar-student.html"
           ),
@@ -121,9 +121,7 @@ document.addEventListener("alpine:init", () => {
 
       async fetchQuestions() {
         try {
-          const res = await api.get(
-            `/Assessments/${this.assessmentId}/questions`
-          );
+          const res = await window.utils?.api?.()?.get?.(`/Assessments/${this.assessmentId}/questions`);
           const data = await res.json();
           this.assessment = data.data;
           this.questions = (data.data.questions || []).map((q) => ({
@@ -284,10 +282,7 @@ document.addEventListener("alpine:init", () => {
         this.isSaving = true;
 
         try {
-          const res = await api.post(
-            "/AssessmentProgress/students/progress/save",
-            payload
-          );
+          const res = await window.utils?.api?.()?.post?.("/AssessmentProgress/students/progress/save", payload);
           if (res.ok) {
             if (hasAnswerChanged) {
               lastSavedHash = currentHash;
@@ -407,7 +402,6 @@ document.addEventListener("alpine:init", () => {
 
         this.timerInterval = window.setInterval(() => {
           remainingSeconds--;
-          this.updateTimerText(remainingSeconds);
           if (remainingSeconds <= 0) {
             window.clearInterval(this.timerInterval);
             Swal.fire(
@@ -417,6 +411,7 @@ document.addEventListener("alpine:init", () => {
             );
             this.submitAssessment();
           }
+          this.updateTimerText(remainingSeconds);
         }, 1000);
       },
 

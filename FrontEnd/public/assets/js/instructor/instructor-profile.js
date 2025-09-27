@@ -153,6 +153,7 @@ function instructorProfile() {
     formatDate(d) {
       return new Date(d).toLocaleDateString();
     },
+    logOut,
   };
 }
 

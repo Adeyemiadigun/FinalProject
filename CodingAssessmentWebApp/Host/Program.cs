@@ -145,11 +145,13 @@ if (app.Environment.IsDevelopment())
 }
 app.UseCors("CLH_App");
 
+
+app.UseMiddleware<ExceptionMiddleware>();
+
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
 
-app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseAuthorization();
 

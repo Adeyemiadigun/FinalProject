@@ -1,4 +1,8 @@
-import { api, loadComponent, logOut } from "../shared/utils.js";
+// Note: utils.js should be included via <script> tag in HTML
+// Access utilities from global scope
+const api = window.utils?.api;
+const loadComponent = window.utils?.loadComponent;
+const logOut = window.utils?.logOut;
 
 window.viewResultPage = function () {
   return {
@@ -14,14 +18,24 @@ window.viewResultPage = function () {
     resultLoaded: false,
 
     async init() {
-      await loadComponent(
-        "sidebar-placeholder",
-        "/public/components/sidebar-student.html"
-      );
-      await loadComponent(
-        "navbar-placeholder",
-        "/public/components/navbar-student.html"
-      );
+      if (!api || !loadComponent || !logOut) {
+        console.error('Required utilities not available');
+        Swal.fire("Error", "System initialization failed", "error");
+        return;
+      }
+
+      try {
+        await loadComponent(
+          "sidebar-placeholder",
+          "/public/components/sidebar-student.html"
+        );
+        await loadComponent(
+          "navbar-placeholder",
+          "/public/components/navbar-student.html"
+        );
+      } catch (error) {
+        console.error("Failed to load components:", error);
+      }
 
       const urlParams = new URLSearchParams(window.location.search);
       const assessmentId = urlParams.get("id");
@@ -32,51 +46,64 @@ window.viewResultPage = function () {
       }
 
       try {
-        const res = await api.get(
-          `/Assessments/${assessmentId}/student-answers`
-        );
-        const json = await res.json();
+        const json = await api.get(`/Assessments/${assessmentId}/student-answers`);
 
-
-        if (!json.status) {
-          Swal.fire("Error", json.message || "Unable to load result.", "error");
+        if (!json || !json.status) {
+          Swal.fire("Error", json?.message || "Unable to load result.", "error");
           return;
         }
 
         const submission = json.data;
-        console.log("Submission Data:", submission);
-        if (
-          !submission.submittedAt ||
-          new Date(submission.assessmentEndDate) > new Date()
-        ) {
-          Swal.fire("Info", "This assessment is still ongoing.", "info").then(
-            () => {
-              window.location.href = "/public/student/dashboard.html";
-            }
-          );
+        if (!submission) {
+          Swal.fire("Error", "No submission data available.", "error");
+          return;
+        }
+
+        // Validate submission data
+        if (!submission.submittedAt || !submission.assessmentEndDate) {
+          Swal.fire("Info", "This assessment is still ongoing.", "info").then(() => {
+            window.location.href = "/public/student/dashboard.html";
+          });
+          return;
+        }
+
+        if (new Date(submission.assessmentEndDate) > new Date()) {
+          Swal.fire("Info", "This assessment is still ongoing.", "info").then(() => {
+            window.location.href = "/public/student/dashboard.html";
+          });
           return;
         }
 
         const submittedAnswers = submission.submittedAnswers || [];
         const correctCount = submittedAnswers.filter((q) => q.isCorrect).length;
-        const wrongCount = submittedAnswers.length - correctCount;
-console.log("Submitted Answers:", submittedAnswers);
+        const wrongCount = Math.max(0, submittedAnswers.length - correctCount);
+
+        // Handle date safely
+        let dateString = "Not Available";
+        if (submission.submittedAt) {
+          try {
+            dateString = new Date(submission.submittedAt).toLocaleDateString();
+          } catch (dateError) {
+            console.warn("Invalid date format:", submission.submittedAt);
+          }
+        }
+
         this.result = {
-          title: submission.title,
-          date: new Date(submission.submittedAt).toLocaleDateString(),
-          score: submission.totalScore,
-          feedback: submission.feedBack,
-          passingPercentage: submission.passingPercentage,
-          totalMarks: submission.totalMarks,
+          title: submission.title || "Untitled Assessment",
+          date: dateString,
+          score: submission.totalScore || 0,
+          feedback: submission.feedback || submission.feedBack || "No feedback provided",
+          passingPercentage: submission.passingPercentage || 0,
+          totalMarks: submission.totalMarks || 0,
           correctCount,
           wrongCount,
           questions: submittedAnswers.map((ans) => ({
             questionId: ans.questionId,
-            questionText: ans.questionText,
+            questionText: ans.questionText || "",
             questionType: this.mapQuestionType(ans.questionType),
-            submittedAnswer: ans.submittedAnswer,
-            isCorrect: ans.isCorrect,
-            score: ans.score,
+            submittedAnswer: ans.submittedAnswer || "",
+            isCorrect: ans.isCorrect || false,
+            score: ans.score || 0,
             options: ans.options || [],
             selectedOptions: ans.selectedOptions || [],
             correctAnswerText: this.extractCorrectAnswer(ans),
@@ -85,16 +112,26 @@ console.log("Submitted Answers:", submittedAnswers);
         };
       } catch (error) {
         console.error("Error fetching result:", error);
-        Swal.fire("Error", "Failed to load assessment result.", "error");
+        Swal.fire("Error", "Failed to load assessment result. " + (error.message || ""), "error");
       } finally {
         this.resultLoaded = true;
       }
     },
 
-    logOut,
+    logOut() {
+      if (logOut) {
+        logOut();
+      } else {
+        // Fallback logout
+        localStorage.clear();
+        window.location.href = "/public/auth/login.html";
+      }
+    },
 
     mapQuestionType(type) {
-      switch (type) {
+      if (type === null || type === undefined) return "Unknown";
+      
+      switch (parseInt(type)) {
         case 1:
           return "MCQ";
         case 2:
@@ -107,14 +144,16 @@ console.log("Submitted Answers:", submittedAnswers);
     },
 
     extractCorrectAnswer(ans) {
-      if (ans.questionType === 1) {
-        // MCQ
-        return (ans.options || [])
-          .filter((o) => o.isCorrect)
-          .map((o) => o.optionText)
-          .join(", ");
-      }
-      return "";
+      if (!ans || ans.questionType !== 1) return "";
+      
+      const options = ans.options || [];
+      const correctOptions = options.filter((o) => o.isCorrect);
+      
+      if (correctOptions.length === 0) return "";
+      
+      return correctOptions
+        .map((o) => o.optionText || "")
+        .join(", ");
     },
   };
 };

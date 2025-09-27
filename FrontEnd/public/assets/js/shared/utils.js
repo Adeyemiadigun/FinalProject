@@ -57,7 +57,14 @@ const api = {
     }
 
     const res = await fetch(`${API_BASE_URL}${endpoint}`, config);
-    return await handleResponse(res);
+    const handledResponse = await handleResponse(res);
+    
+    try {
+      return await handledResponse.json();
+    } catch (error) {
+      // If response has no JSON body, return the response object
+      return handledResponse;
+    }
   },
 
   get(endpoint) {
@@ -67,7 +74,7 @@ const api = {
     return this.request(endpoint, "POST", body);
   },
   postFormData(endpoint, formData) {
-    return this.request(endpoint, "POST", formData,null); // contentType = null
+    return this.request(endpoint, "POST", formData, null);
   },
   put(endpoint, body) {
     return this.request(endpoint, "PUT", body);
